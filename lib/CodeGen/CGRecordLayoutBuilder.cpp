@@ -722,6 +722,30 @@ CGRecordLayout *CodeGenTypes::ComputeRecordLayout(const RecordDecl *D,
 
   // Add bitfield info.
   RL->BitFields.swap(Builder.BitFields);
+#if 1
+{
+  RecordDecl::field_iterator it = D->field_begin();
+  unsigned Idx = 0;
+  for (unsigned i = 0, e = RL->FieldInfo.size(); i != e; ++i, ++it) {
+    const FieldDecl *FD = *it;
+
+    if (Ty->structFieldMap.length())
+      Ty->structFieldMap += ',';
+    if (!FD->isBitField()) {
+      unsigned FieldNo = RL->getLLVMFieldNo(FD);
+      std::string fname;
+      if (const NamedDecl *ND = dyn_cast<NamedDecl>(FD))
+        fname = ND->getDeclName().getAsString();
+      if (Idx > FieldNo) {
+printf("[%s:%d] ERROR in fieldnumber Idx %d Field %d\n", __FUNCTION__, __LINE__, Idx, FieldNo);
+      }
+      while (Idx++ < FieldNo)
+        Ty->structFieldMap += ',';
+      Ty->structFieldMap += fname;
+    }
+  }
+}
+#endif
 
   // Dump the layout, if requested.
   if (getContext().getLangOpts().DumpRecordLayouts) {
