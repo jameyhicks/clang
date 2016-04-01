@@ -524,6 +524,29 @@ static llvm::Value *EmitCXXNewAllocSize(CodeGenFunction &CGF,
   // We multiply the size of all dimensions for NumElements.
   // e.g for 'int[2][3]', ElemType is 'int' and NumElements is 6.
   numElements = CGF.EmitScalarExpr(e->getArraySize());
+#if 1 //jca
+  ASTContext &Context = CGF.getContext();
+  QualType sizeType = Context.getSizeType();
+  QualType Params[] = {sizeType};
+  FunctionProtoType::ExtProtoInfo EPI;
+  //QualType ft =
+  IdentifierInfo *II = &Context.Idents.get("atomiccNewArrayCount");
+  FunctionDecl *call = FunctionDecl::Create(Context, Context.getTranslationUnitDecl(),
+      SourceLocation(), SourceLocation(), II,
+      Context.getFunctionType(sizeType, ArrayRef<QualType>(Params, 1), EPI),
+      //ft,
+      nullptr, SC_Static, false, false);
+  const FunctionProtoType *callType = call->getType()->castAs<FunctionProtoType>();
+  CallArgList callArgs;
+  callArgs.add(RValue::get(numElements), sizeType);
+  llvm::Instruction *CallOrInvoke;
+  //llvm::Value *CalleeAddr =
+  RValue RV = CGF.EmitCall(CGF.CGM.getTypes().
+        arrangeFreeFunctionCall(callArgs, callType, /*chainCall=*/false),
+      CGF.CGM.GetAddrOfFunction(call),
+      ReturnValueSlot(), callArgs, call, &CallOrInvoke);
+  numElements = RV.getScalarVal();
+#endif
   assert(isa<llvm::IntegerType>(numElements->getType()));
 
   // The number of elements can be have an arbitrary integer type;
