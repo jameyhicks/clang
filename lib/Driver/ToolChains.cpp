@@ -1387,6 +1387,19 @@ bool Generic_GCC::GCCInstallationDetector::getBiarchSibling(Multilib &M) const {
       BiarchTripleAliases.append(begin(X86Triples), end(X86Triples));
     }
     break;
+  case llvm::Triple::atomicc:
+    LibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
+    TripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
+    // x32 is always available when x86_64 is available, so adding it as
+    // secondary arch with x86_64 triples
+    if (TargetTriple.getEnvironment() == llvm::Triple::GNUX32) {
+      BiarchLibDirs.append(begin(X32LibDirs), end(X32LibDirs));
+      BiarchTripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
+    } else {
+      BiarchLibDirs.append(begin(X86LibDirs), end(X86LibDirs));
+      BiarchTripleAliases.append(begin(X86Triples), end(X86Triples));
+    }
+    break;
   case llvm::Triple::x86:
     LibDirs.append(begin(X86LibDirs), end(X86LibDirs));
     TripleAliases.append(begin(X86Triples), end(X86Triples));
@@ -3029,6 +3042,11 @@ static std::string getMultiarchTriple(const llvm::Triple &TargetTriple,
         llvm::sys::fs::exists(SysRoot + "/lib/x86_64-linux-gnu"))
       return "x86_64-linux-gnu";
     break;
+  case llvm::Triple::atomicc:
+    if (TargetEnvironment != llvm::Triple::GNUX32 &&
+        llvm::sys::fs::exists(SysRoot + "/lib/x86_64-linux-gnu"))
+      return "x86_64-linux-gnu";
+    break;
   case llvm::Triple::aarch64:
     if (llvm::sys::fs::exists(SysRoot + "/lib/aarch64-linux-gnu"))
       return "aarch64-linux-gnu";
@@ -3425,6 +3443,9 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   ArrayRef<StringRef> MultiarchIncludeDirs;
   switch (getTriple().getArch()) {
   case llvm::Triple::x86_64:
+    MultiarchIncludeDirs = X86_64MultiarchIncludeDirs;
+    break;
+  case llvm::Triple::atomicc:
     MultiarchIncludeDirs = X86_64MultiarchIncludeDirs;
     break;
   case llvm::Triple::x86:

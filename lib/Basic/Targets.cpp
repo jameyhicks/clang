@@ -5931,6 +5931,87 @@ validateAsmConstraint(const char *&Name,
     NumNames = llvm::array_lengthof(GCCRegNames);
   }
 
+#if 1 //jca
+  class AtomiccTargetInfo : public TargetInfo {
+    static const char * const GCCRegNames[];
+  public:
+    AtomiccTargetInfo(const llvm::Triple &Triple) : TargetInfo(Triple) {
+      BigEndian = false;
+      TLSSupported = false;
+      IntWidth = 16; IntAlign = 16;
+      LongWidth = 32; LongLongWidth = 64;
+      LongAlign = LongLongAlign = 16;
+      PointerWidth = 16; PointerAlign = 16;
+      SuitableAlign = 16;
+      SizeType = UnsignedInt;
+      IntMaxType = SignedLongLong;
+      IntPtrType = SignedInt;
+      PtrDiffType = SignedInt;
+      SigAtomicType = SignedLong;
+      DescriptionString = "e-m:e-p:16:16-i32:16:32-a:16-n8:16";
+    }
+    void getTargetDefines(const LangOptions &Opts,
+                          MacroBuilder &Builder) const override {
+      Builder.defineMacro("Atomicc");
+      Builder.defineMacro("__Atomicc__");
+      //Builder.defineMacro("__amd64__");
+      //Builder.defineMacro("__amd64");
+      Builder.defineMacro("__x86_64");
+      Builder.defineMacro("__x86_64__");
+      // FIXME: defines for different 'flavours' of MCU
+    }
+    void getTargetBuiltins(const Builtin::Info *&Records,
+                           unsigned &NumRecords) const override {
+      // FIXME: Implement.
+      Records = nullptr;
+      NumRecords = 0;
+    }
+    bool hasFeature(StringRef Feature) const override {
+      return Feature == "atomicc";
+    }
+    void getGCCRegNames(const char * const *&Names,
+                        unsigned &NumNames) const override;
+    void getGCCRegAliases(const GCCRegAlias *&Aliases,
+                          unsigned &NumAliases) const override {
+      // No aliases.
+      Aliases = nullptr;
+      NumAliases = 0;
+    }
+    bool
+    validateAsmConstraint(const char *&Name,
+                          TargetInfo::ConstraintInfo &info) const override {
+      // FIXME: implement
+      switch (*Name) {
+      case 'K': // the constant 1
+      case 'L': // constant -1^20 .. 1^19
+      case 'M': // constant 1-4:
+        return true;
+      }
+      // No target constraints for now.
+      return false;
+    }
+    const char *getClobbers() const override {
+      // FIXME: Is this really right?
+      return "";
+    }
+    BuiltinVaListKind getBuiltinVaListKind() const override {
+      // FIXME: implement
+      return TargetInfo::CharPtrBuiltinVaList;
+   }
+  };
+
+  const char * const AtomiccTargetInfo::GCCRegNames[] = {
+    "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
+    "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
+  };
+
+  void AtomiccTargetInfo::getGCCRegNames(const char * const *&Names,
+                                        unsigned &NumNames) const {
+    Names = GCCRegNames;
+    NumNames = llvm::array_lengthof(GCCRegNames);
+  }
+#endif
+
   // LLVM and Clang cannot be used directly to output native binaries for
   // target, but is used to compile C code to llvm bitcode with correct
   // type and alignment information.
@@ -7082,6 +7163,8 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple) {
 
   case llvm::Triple::msp430:
     return new MSP430TargetInfo(Triple);
+  case llvm::Triple::atomicc:
+    return new AtomiccTargetInfo(Triple);
 
   case llvm::Triple::mips:
     switch (os) {

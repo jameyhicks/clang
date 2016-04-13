@@ -6587,6 +6587,47 @@ public:
 
 } // End anonymous namespace.
 
+//===----------------------------------------------------------------------===//
+// Atomicc ABI Implementation
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+class AtomiccTargetCodeGenInfo : public TargetCodeGenInfo {
+public:
+  AtomiccTargetCodeGenInfo(CodeGenTypes &CGT)
+    : TargetCodeGenInfo(new DefaultABIInfo(CGT)) {}
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &M) const override;
+};
+
+}
+
+void AtomiccTargetCodeGenInfo::setTargetAttributes(const Decl *D,
+                                                  llvm::GlobalValue *GV,
+                                             CodeGen::CodeGenModule &M) const {
+  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+printf("[%s:%d]VERILOG\n", __FUNCTION__, __LINE__);
+#if 0
+    if (const VerilogInterruptAttr *attr = FD->getAttr<VerilogInterruptAttr>()) {
+      // Handle 'interrupt' attribute:
+      llvm::Function *F = cast<llvm::Function>(GV);
+
+      // Step 1: Set ISR calling convention.
+      F->setCallingConv(llvm::CallingConv::Verilog_INTR);
+
+      // Step 2: Add attributes goodness.
+      F->addFnAttr(llvm::Attribute::NoInline);
+
+      // Step 3: Emit ISR vector alias.
+      unsigned Num = attr->getNumber() / 2;
+      llvm::GlobalAlias::create(llvm::Function::ExternalLinkage,
+                                "__isr_" + Twine(Num), F);
+    }
+#endif
+  }
+}
+
 llvm::Value *XCoreABIInfo::EmitVAArg(llvm::Value *VAListAddr, QualType Ty,
                                      CodeGenFunction &CGF) const {
   CGBuilderTy &Builder = CGF.Builder;
@@ -7185,6 +7226,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
 
   case llvm::Triple::msp430:
     return *(TheTargetCodeGenInfo = new MSP430TargetCodeGenInfo(Types));
+  case llvm::Triple::atomicc:
+    return *(TheTargetCodeGenInfo = new AtomiccTargetCodeGenInfo(Types));
 
   case llvm::Triple::systemz: {
     bool HasVector = getTarget().getABI() == "vector";
