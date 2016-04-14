@@ -5933,10 +5933,9 @@ validateAsmConstraint(const char *&Name,
 
 #if 1 //jca
   class AtomiccTargetInfo : public TargetInfo {
-    static const char * const GCCRegNames[];
   public:
     AtomiccTargetInfo(const llvm::Triple &Triple) : TargetInfo(Triple) {
-      DoubleAlign = LongLongAlign = 64;
+     DoubleAlign = LongLongAlign = 64;
     const bool IsX32 = false; //getTriple().getEnvironment() == llvm::Triple::GNUX32;
     LongWidth = LongAlign = PointerWidth = PointerAlign = IsX32 ? 32 : 64;
     LongDoubleWidth = 128;
@@ -5956,10 +5955,10 @@ validateAsmConstraint(const char *&Name,
                               : "e-m:e-i64:64-f80:128-n8:16:32:64-S128";
 
     // Use fpret only for long double.
-    RealTypeUsesObjCFPRet = (1 << TargetInfo::LongDouble);
+    //RealTypeUsesObjCFPRet = (1 << TargetInfo::LongDouble);
 
     // Use fp2ret for _Complex long double.
-    ComplexLongDoubleUsesFP2Ret = true;
+    //ComplexLongDoubleUsesFP2Ret = true;
 
     // x86-64 has atomics up to 16 bytes.
     MaxAtomicPromoteWidth = 128;
@@ -5983,7 +5982,10 @@ validateAsmConstraint(const char *&Name,
       return Feature == "atomicc";
     }
     void getGCCRegNames(const char * const *&Names,
-                        unsigned &NumNames) const override;
+                        unsigned &NumNames) const override {
+      Names = NULL;
+      NumNames = 0;
+    }
     void getGCCRegAliases(const GCCRegAlias *&Aliases,
                           unsigned &NumAliases) const override {
       // No aliases.
@@ -5993,15 +5995,7 @@ validateAsmConstraint(const char *&Name,
     bool
     validateAsmConstraint(const char *&Name,
                           TargetInfo::ConstraintInfo &info) const override {
-      // FIXME: implement
-      switch (*Name) {
-      case 'K': // the constant 1
-      case 'L': // constant -1^20 .. 1^19
-      case 'M': // constant 1-4:
-        return true;
-      }
-      // No target constraints for now.
-      return false;
+      return true;
     }
     const char *getClobbers() const override {
       // FIXME: Is this really right?
@@ -6012,17 +6006,6 @@ validateAsmConstraint(const char *&Name,
       return TargetInfo::CharPtrBuiltinVaList;
    }
   };
-
-  const char * const AtomiccTargetInfo::GCCRegNames[] = {
-    "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
-    "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
-  };
-
-  void AtomiccTargetInfo::getGCCRegNames(const char * const *&Names,
-                                        unsigned &NumNames) const {
-    Names = GCCRegNames;
-    NumNames = llvm::array_lengthof(GCCRegNames);
-  }
 #endif
 
   // LLVM and Clang cannot be used directly to output native binaries for
@@ -7177,6 +7160,7 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple) {
   case llvm::Triple::msp430:
     return new MSP430TargetInfo(Triple);
   case llvm::Triple::atomicc:
+#if 0
     if (Triple.isOSDarwin()) {
 printf("[%s:%d] atomicc/darwin\n", __FUNCTION__, __LINE__);
 exit(-1);
@@ -7185,12 +7169,11 @@ exit(-1);
 
     switch (os) {
     case llvm::Triple::Linux:
-printf("[%s:%d] atomicc/linux\n", __FUNCTION__, __LINE__);
         return new LinuxTargetInfo<AtomiccTargetInfo>(Triple);
     default: break;
     }
-printf("[%s:%d] atomicc/non-linux\n", __FUNCTION__, __LINE__);
-    return new AtomiccTargetInfo(Triple);
+#endif
+    return new LinuxTargetInfo<AtomiccTargetInfo>(Triple);
 
   case llvm::Triple::mips:
     switch (os) {
