@@ -5936,26 +5936,39 @@ validateAsmConstraint(const char *&Name,
     static const char * const GCCRegNames[];
   public:
     AtomiccTargetInfo(const llvm::Triple &Triple) : TargetInfo(Triple) {
-      BigEndian = false;
-      TLSSupported = false;
-      IntWidth = 16; IntAlign = 16;
-      LongWidth = 32; LongLongWidth = 64;
-      LongAlign = LongLongAlign = 16;
-      PointerWidth = 16; PointerAlign = 16;
-      SuitableAlign = 16;
-      SizeType = UnsignedInt;
-      IntMaxType = SignedLongLong;
-      IntPtrType = SignedInt;
-      PtrDiffType = SignedInt;
-      SigAtomicType = SignedLong;
-      DescriptionString = "e-m:e-p:16:16-i32:16:32-a:16-n8:16";
+      DoubleAlign = LongLongAlign = 64;
+    const bool IsX32 = false; //getTriple().getEnvironment() == llvm::Triple::GNUX32;
+    LongWidth = LongAlign = PointerWidth = PointerAlign = IsX32 ? 32 : 64;
+    LongDoubleWidth = 128;
+    LongDoubleAlign = 128;
+    LargeArrayMinWidth = 128;
+    LargeArrayAlign = 128;
+    SuitableAlign = 128;
+    SizeType    = IsX32 ? UnsignedInt      : UnsignedLong;
+    PtrDiffType = IsX32 ? SignedInt        : SignedLong;
+    IntPtrType  = IsX32 ? SignedInt        : SignedLong;
+    IntMaxType  = IsX32 ? SignedLongLong   : SignedLong;
+    Int64Type   = IsX32 ? SignedLongLong   : SignedLong;
+    RegParmMax = 6;
+
+    // Pointers are 32-bit in x32.
+    DescriptionString = IsX32 ? "e-m:e-p:32:32-i64:64-f80:128-n8:16:32:64-S128"
+                              : "e-m:e-i64:64-f80:128-n8:16:32:64-S128";
+
+    // Use fpret only for long double.
+    RealTypeUsesObjCFPRet = (1 << TargetInfo::LongDouble);
+
+    // Use fp2ret for _Complex long double.
+    ComplexLongDoubleUsesFP2Ret = true;
+
+    // x86-64 has atomics up to 16 bytes.
+    MaxAtomicPromoteWidth = 128;
+    MaxAtomicInlineWidth = 128;
     }
     void getTargetDefines(const LangOptions &Opts,
                           MacroBuilder &Builder) const override {
       Builder.defineMacro("Atomicc");
       Builder.defineMacro("__Atomicc__");
-      //Builder.defineMacro("__amd64__");
-      //Builder.defineMacro("__amd64");
       Builder.defineMacro("__x86_64");
       Builder.defineMacro("__x86_64__");
       // FIXME: defines for different 'flavours' of MCU
@@ -7164,6 +7177,19 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple) {
   case llvm::Triple::msp430:
     return new MSP430TargetInfo(Triple);
   case llvm::Triple::atomicc:
+    if (Triple.isOSDarwin()) {
+printf("[%s:%d] atomicc/darwin\n", __FUNCTION__, __LINE__);
+exit(-1);
+      //return new DarwinI386TargetInfo(Triple);
+    }
+
+    switch (os) {
+    case llvm::Triple::Linux:
+printf("[%s:%d] atomicc/linux\n", __FUNCTION__, __LINE__);
+        return new LinuxTargetInfo<AtomiccTargetInfo>(Triple);
+    default: break;
+    }
+printf("[%s:%d] atomicc/non-linux\n", __FUNCTION__, __LINE__);
     return new AtomiccTargetInfo(Triple);
 
   case llvm::Triple::mips:

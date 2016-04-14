@@ -6607,7 +6607,7 @@ void AtomiccTargetCodeGenInfo::setTargetAttributes(const Decl *D,
                                                   llvm::GlobalValue *GV,
                                              CodeGen::CodeGenModule &M) const {
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-printf("[%s:%d]VERILOG\n", __FUNCTION__, __LINE__);
+//printf("[%s:%d]VERILOG\n", __FUNCTION__, __LINE__);
 #if 0
     if (const VerilogInterruptAttr *attr = FD->getAttr<VerilogInterruptAttr>()) {
       // Handle 'interrupt' attribute:
