@@ -7160,20 +7160,11 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple) {
   case llvm::Triple::msp430:
     return new MSP430TargetInfo(Triple);
   case llvm::Triple::atomicc:
-#if 0
-    if (Triple.isOSDarwin()) {
-printf("[%s:%d] atomicc/darwin\n", __FUNCTION__, __LINE__);
-exit(-1);
-      //return new DarwinI386TargetInfo(Triple);
-    }
-
-    switch (os) {
-    case llvm::Triple::Linux:
-        return new LinuxTargetInfo<AtomiccTargetInfo>(Triple);
-    default: break;
-    }
-#endif
+#ifdef __APPLE__
+    return new DarwinTargetInfo<AtomiccTargetInfo>(Triple);
+#else
     return new LinuxTargetInfo<AtomiccTargetInfo>(Triple);
+#endif
 
   case llvm::Triple::mips:
     switch (os) {
