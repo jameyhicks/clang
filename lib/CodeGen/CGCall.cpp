@@ -1433,6 +1433,8 @@ void CodeGenModule::ConstructAttributeList(const CGFunctionInfo &FI,
       RetAttrs.addAttribute(llvm::Attribute::NoAlias);
     if (TargetDecl->hasAttr<ReturnsNonNullAttr>())
       RetAttrs.addAttribute(llvm::Attribute::NonNull);
+    if (TargetDecl->hasAttr<AtomiccMethodAttr>())
+      FuncAttrs.addAttribute(llvm::Attribute::AtomiccMethod);
 
     HasOptnone = TargetDecl->hasAttr<OptimizeNoneAttr>();
   }
