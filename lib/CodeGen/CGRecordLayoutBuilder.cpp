@@ -745,29 +745,17 @@ printf("[%s:%d] ERROR in fieldnumber Idx %d Field %d\n", __FUNCTION__, __LINE__,
     }
   }
   if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D)) {
-printf("[%s:%d]CASTOOOOOOOOOOOOOOOOOOOOO\n", __FUNCTION__, __LINE__);
-  for (const auto *MD : RD->methods()) {
-    MD = MD->getCanonicalDecl();
-    if (MD->hasAttr<AtomiccMethodAttr>()) {
-    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(MD)) {
-    //StringRef MangledName = getMangledName(MD);
-    //const auto *ND = dyn_cast<NamedDecl>(MD->getDecl());
-    //SmallString<256> Buffer;
-    //llvm::raw_svector_ostream Out(Buffer);
-    //getCXXABI().getMangleContext().mangleName(ND, Out);
-printf("[%s:%d] %s\n", __FUNCTION__, __LINE__, MD->getName().str().c_str());
-//MD->dump();
-//MD->getType()->dump();
-    }
-    }
-#if 0
-        GlobalDecl GD = Component.getFunctionDecl();
-        llvm::Type *Ty = CGM.getTypes().GetFunctionTypeForVTable(GD); 
-        Init = CGM.GetAddrOfFunction(GD, Ty, /*ForVTable=*/true);
-        Init = llvm::ConstantExpr::getBitCast(Init, Int8PtrTy);
+    Ty->structFieldMap += ",/";
+    for (const auto *MD : RD->methods()) {
+      MD = MD->getCanonicalDecl();
+      if (MD->hasAttr<AtomiccMethodAttr>())
+      if (const auto *ND = dyn_cast<NamedDecl>(MD)) {
+        SmallString<256> Buffer;
+        llvm::raw_svector_ostream Out(Buffer);
+        getCXXABI().getMangleContext().mangleName(ND, Out);
+        Ty->structFieldMap += Out.str().str() + ":" + MD->getName().str() + ",";
       }
-#endif
-  }
+    }
   }
 }
 #endif
