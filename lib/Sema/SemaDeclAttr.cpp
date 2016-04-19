@@ -3690,6 +3690,7 @@ static void handleAtomiccMethodAttr(Sema &S, Decl *D,
   D->addAttr(::new (S.Context) 
              AtomiccMethodAttr(Attr.getRange(), S.Context,
                                   Attr.getAttributeSpellingListIndex()));
+  //FuncAttrs.  D->addAttribute("atomicc-method");
 }
 
 //===----------------------------------------------------------------------===//
