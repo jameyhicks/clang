@@ -747,35 +747,24 @@ printf("[%s:%d] ERROR in fieldnumber Idx %d Field %d\n", __FUNCTION__, __LINE__,
   if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D)) {
 printf("[%s:%d]CASTOOOOOOOOOOOOOOOOOOOOO\n", __FUNCTION__, __LINE__);
   for (const auto *MD : RD->methods()) {
-    if (!MD->isVirtual())
-      continue;
     MD = MD->getCanonicalDecl();
+    if (MD->hasAttr<AtomiccMethodAttr>()) {
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(MD)) {
     //StringRef MangledName = getMangledName(MD);
     //const auto *ND = dyn_cast<NamedDecl>(MD->getDecl());
     //SmallString<256> Buffer;
     //llvm::raw_svector_ostream Out(Buffer);
     //getCXXABI().getMangleContext().mangleName(ND, Out);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);//, Out.str().str().c_str());
-    if (MD->hasAttr<AtomiccMethodAttr>()) {
-printf("[%s:%d]AAAAAAAAAAAAAAAAAAAAAAAAAA\n", __FUNCTION__, __LINE__);
-    }
+printf("[%s:%d] %s\n", __FUNCTION__, __LINE__, MD->getName().str().c_str());
 //MD->dump();
 //MD->getType()->dump();
     }
+    }
 #if 0
-      if (Component.getKind() == VTableComponent::CK_FunctionPointer) {
-      GlobalDecl GD = Component.getFunctionDecl();
-      if (cast<CXXMethodDecl>(GD.getDecl())->isPure()) {
-      } else if (cast<CXXMethodDecl>(GD.getDecl())->isDeleted()) {
-      } else {
-        if (NextVTableThunkIndex < NumVTableThunks && VTableThunks[NextVTableThunkIndex].first == I) {
-        } else {
-          llvm::Type *Ty = CGM.getTypes().GetFunctionTypeForVTable(GD); 
-          Init = CGM.GetAddrOfFunction(GD, Ty, /*ForVTable=*/true);
-        } 
+        GlobalDecl GD = Component.getFunctionDecl();
+        llvm::Type *Ty = CGM.getTypes().GetFunctionTypeForVTable(GD); 
+        Init = CGM.GetAddrOfFunction(GD, Ty, /*ForVTable=*/true);
         Init = llvm::ConstantExpr::getBitCast(Init, Int8PtrTy);
-      }
       }
 #endif
   }

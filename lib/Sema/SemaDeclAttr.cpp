@@ -3687,7 +3687,6 @@ static void handleTypeTagForDatatypeAttr(Sema &S, Decl *D,
 
 static void handleAtomiccMethodAttr(Sema &S, Decl *D,
                                          const AttributeList &Attr) {
-printf("[%s:%d]AtomiccMethod attribute\n", __FUNCTION__, __LINE__);
   D->addAttr(::new (S.Context) 
              AtomiccMethodAttr(Attr.getRange(), S.Context,
                                   Attr.getAttributeSpellingListIndex()));
