@@ -5020,6 +5020,14 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   DeclareInheritingConstructors(Record);
 
   checkClassLevelDLLAttribute(Record);
+#if 1 //jca
+  for (auto *M : Record->methods()) {
+    if (M->hasAttr<AtomiccMethodAttr>()) {
+        CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(M);
+        MarkFunctionReferenced(M->getLocation(), MD, true);
+    }
+  }
+#endif
 }
 
 /// Look up the special member function that would be called by a special

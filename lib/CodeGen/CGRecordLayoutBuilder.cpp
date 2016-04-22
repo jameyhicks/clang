@@ -750,8 +750,6 @@ printf("[%s:%d] ERROR in fieldnumber Idx %d Field %d\n", __FUNCTION__, __LINE__,
       MD = MD->getCanonicalDecl();
       if (MD->hasAttr<AtomiccMethodAttr>())
       if (const auto *ND = dyn_cast<NamedDecl>(MD)) {
-        MD->setReferenced(); // Make sure we always generate function body
-        //MD->dropAttr<AtomiccMethodAttr>(); // so that not generated into IR
         SmallString<256> Buffer;
         llvm::raw_svector_ostream Out(Buffer);
         getCXXABI().getMangleContext().mangleName(ND, Out);

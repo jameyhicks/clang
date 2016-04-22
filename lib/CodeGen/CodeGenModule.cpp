@@ -1252,6 +1252,8 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
   // Never defer when EmitAllDecls is specified.
   if (LangOpts.EmitAllDecls)
     return true;
+  if (Global->hasAttr<AtomiccMethodAttr>())
+    return true;
 
   return getContext().DeclMustBeEmitted(Global);
 }
