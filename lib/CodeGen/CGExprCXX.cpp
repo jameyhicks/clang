@@ -529,20 +529,17 @@ static llvm::Value *EmitCXXNewAllocSize(CodeGenFunction &CGF,
   QualType sizeType = Context.getSizeType();
   QualType Params[] = {sizeType};
   FunctionProtoType::ExtProtoInfo EPI;
-  //QualType ft =
   IdentifierInfo *II = &Context.Idents.get("atomiccNewArrayCount");
   FunctionDecl *call = FunctionDecl::Create(Context, Context.getTranslationUnitDecl(),
       SourceLocation(), SourceLocation(), II,
       Context.getFunctionType(sizeType, ArrayRef<QualType>(Params, 1), EPI),
-      //ft,
       nullptr, SC_Static, false, false);
-  const FunctionProtoType *callType = call->getType()->castAs<FunctionProtoType>();
   CallArgList callArgs;
   callArgs.add(RValue::get(numElements), sizeType);
   llvm::Instruction *CallOrInvoke;
-  //llvm::Value *CalleeAddr =
   RValue RV = CGF.EmitCall(CGF.CGM.getTypes().
-        arrangeFreeFunctionCall(callArgs, callType, /*chainCall=*/false),
+        arrangeFreeFunctionCall(callArgs,
+        call->getType()->castAs<FunctionProtoType>(), /*chainCall=*/false),
       CGF.CGM.GetAddrOfFunction(call),
       ReturnValueSlot(), callArgs, call, &CallOrInvoke);
   numElements = RV.getScalarVal();

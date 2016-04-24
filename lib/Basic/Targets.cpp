@@ -5935,34 +5935,21 @@ validateAsmConstraint(const char *&Name,
   class AtomiccTargetInfo : public TargetInfo {
   public:
     AtomiccTargetInfo(const llvm::Triple &Triple) : TargetInfo(Triple) {
-     DoubleAlign = LongLongAlign = 64;
-    const bool IsX32 = false; //getTriple().getEnvironment() == llvm::Triple::GNUX32;
-    LongWidth = LongAlign = PointerWidth = PointerAlign = IsX32 ? 32 : 64;
-    LongDoubleWidth = 128;
-    LongDoubleAlign = 128;
-    LargeArrayMinWidth = 128;
-    LargeArrayAlign = 128;
-    SuitableAlign = 128;
-    SizeType    = IsX32 ? UnsignedInt      : UnsignedLong;
-    PtrDiffType = IsX32 ? SignedInt        : SignedLong;
-    IntPtrType  = IsX32 ? SignedInt        : SignedLong;
-    IntMaxType  = IsX32 ? SignedLongLong   : SignedLong;
-    Int64Type   = IsX32 ? SignedLongLong   : SignedLong;
-    RegParmMax = 6;
+      LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
+      DoubleAlign = LongLongAlign = 64;
+      LongDoubleWidth = LongDoubleAlign = 128;
+      LargeArrayMinWidth = LargeArrayAlign = 128;
+      SuitableAlign = 128;
+      SizeType    = UnsignedLong;
+      PtrDiffType = IntPtrType = IntMaxType = Int64Type = SignedLong;
+      RegParmMax = 0;
 
-    // Pointers are 32-bit in x32.
-    DescriptionString = IsX32 ? "e-m:e-p:32:32-i64:64-f80:128-n8:16:32:64-S128"
-                              : "e-m:e-i64:64-f80:128-n8:16:32:64-S128";
+      // Pointers are 32-bit in x32.
+      DescriptionString = "e-m:e-i64:64-f80:128-n8:16:32:64-S128";
 
-    // Use fpret only for long double.
-    //RealTypeUsesObjCFPRet = (1 << TargetInfo::LongDouble);
-
-    // Use fp2ret for _Complex long double.
-    //ComplexLongDoubleUsesFP2Ret = true;
-
-    // x86-64 has atomics up to 16 bytes.
-    MaxAtomicPromoteWidth = 128;
-    MaxAtomicInlineWidth = 128;
+      // x86-64 has atomics up to 16 bytes.
+      MaxAtomicPromoteWidth = 128;
+      MaxAtomicInlineWidth = 128;
     }
     void getTargetDefines(const LangOptions &Opts,
                           MacroBuilder &Builder) const override {
@@ -5970,11 +5957,9 @@ validateAsmConstraint(const char *&Name,
       Builder.defineMacro("__Atomicc__");
       Builder.defineMacro("__x86_64");
       Builder.defineMacro("__x86_64__");
-      // FIXME: defines for different 'flavours' of MCU
     }
     void getTargetBuiltins(const Builtin::Info *&Records,
                            unsigned &NumRecords) const override {
-      // FIXME: Implement.
       Records = nullptr;
       NumRecords = 0;
     }
@@ -5988,7 +5973,6 @@ validateAsmConstraint(const char *&Name,
     }
     void getGCCRegAliases(const GCCRegAlias *&Aliases,
                           unsigned &NumAliases) const override {
-      // No aliases.
       Aliases = nullptr;
       NumAliases = 0;
     }
@@ -5998,11 +5982,9 @@ validateAsmConstraint(const char *&Name,
       return true;
     }
     const char *getClobbers() const override {
-      // FIXME: Is this really right?
       return "";
     }
     BuiltinVaListKind getBuiltinVaListKind() const override {
-      // FIXME: implement
       return TargetInfo::CharPtrBuiltinVaList;
    }
   };

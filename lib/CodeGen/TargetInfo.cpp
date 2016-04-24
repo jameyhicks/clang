@@ -6590,14 +6590,11 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace {
-
 class AtomiccABIInfo : public ABIInfo {
  public:
   AtomiccABIInfo(CodeGen::CodeGenTypes &CGT) : ABIInfo(CGT) {}
-
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType RetTy) const;
-
   void computeInfo(CGFunctionInfo &FI) const override {
     if (!getCXXABI().classifyReturnType(FI))
       FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
@@ -6612,21 +6609,13 @@ class AtomiccABIInfo : public ABIInfo {
 
 ABIArgInfo AtomiccABIInfo::classifyArgumentType(QualType Ty) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
-
   if (isAggregateTypeForABI(Ty)) {
-    //return ABIArgInfo::getDirect();
-    // Records with non-trivial destructors/copy-constructors should not be
-    // passed by value.
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
       return ABIArgInfo::getIndirect(0, RAA == CGCXXABI::RAA_DirectInMemory);
-
     return ABIArgInfo::getIndirect(0);
   }
-
-  // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
     Ty = EnumTy->getDecl()->getIntegerType();
-
   return (Ty->isPromotableIntegerType() ?
           ABIArgInfo::getExtend() : ABIArgInfo::getDirect());
 }
@@ -6634,17 +6623,10 @@ ABIArgInfo AtomiccABIInfo::classifyArgumentType(QualType Ty) const {
 ABIArgInfo AtomiccABIInfo::classifyReturnType(QualType RetTy) const {
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
-
-  // In the Atomicc ABI we always return records/structures in regsters
-  if (isAggregateTypeForABI(RetTy)) {
-    //return ABIArgInfo::getDirect();
+  if (isAggregateTypeForABI(RetTy))
     return ABIArgInfo::getIndirect(0);
-  }
-
-  // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
     RetTy = EnumTy->getDecl()->getIntegerType();
-
   return (RetTy->isPromotableIntegerType() ?
           ABIArgInfo::getExtend() : ABIArgInfo::getDirect());
 }
@@ -6658,10 +6640,7 @@ public:
 };
 
 void AtomiccTargetCodeGenInfo::setTargetAttributes(const Decl *D,
-                                                  llvm::GlobalValue *GV,
-                                             CodeGen::CodeGenModule &M) const {
-  //if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-  //}
+           llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
 }
 } // End anonymous namespace.
 
