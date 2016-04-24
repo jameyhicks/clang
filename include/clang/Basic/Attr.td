@@ -960,13 +960,6 @@ def ReturnsNonNull : InheritableAttr {
   let Documentation = [ReturnsNonNullDocs];
 }
 
-def AtomiccMethod : InheritableAttr {
-  let Spellings = [CXX11<"clang", "atomicc_method">];
-  let Subjects = SubjectList<[ObjCMethod, Function], WarnDiag,
-                             "ExpectedFunctionOrMethod">;
-  let Documentation = [AtomiccMethodDocs];
-}
-
 // Nullability type attributes.
 def TypeNonNull : TypeAttr {
   let Spellings = [Keyword<"_Nonnull">];

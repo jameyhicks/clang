@@ -1433,8 +1433,10 @@ void CodeGenModule::ConstructAttributeList(const CGFunctionInfo &FI,
       RetAttrs.addAttribute(llvm::Attribute::NoAlias);
     if (TargetDecl->hasAttr<ReturnsNonNullAttr>())
       RetAttrs.addAttribute(llvm::Attribute::NonNull);
-    if (TargetDecl->hasAttr<AtomiccMethodAttr>())
-      FuncAttrs.addAttribute(llvm::Attribute::AtomiccMethod);
+    if (const auto *TD = TargetDecl->getAttr<TargetAttr>()) {
+      StringRef FeaturesStr = TD->getFeatures();
+      FuncAttrs.addAttribute("atomicc-method");
+    }
 
     HasOptnone = TargetDecl->hasAttr<OptimizeNoneAttr>();
   }

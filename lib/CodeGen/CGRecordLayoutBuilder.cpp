@@ -748,12 +748,14 @@ printf("[%s:%d] ERROR in fieldnumber Idx %d Field %d\n", __FUNCTION__, __LINE__,
     Ty->structFieldMap += ",/";
     for (auto *MD : RD->methods()) {
       MD = MD->getCanonicalDecl();
-      if (MD->hasAttr<AtomiccMethodAttr>())
+      if (const auto *TD = MD->getAttr<TargetAttr>()) {
+        StringRef FeaturesStr = TD->getFeatures();
       if (const auto *ND = dyn_cast<NamedDecl>(MD)) {
         SmallString<256> Buffer;
         llvm::raw_svector_ostream Out(Buffer);
         getCXXABI().getMangleContext().mangleName(ND, Out);
         Ty->structFieldMap += Out.str().str() + ":" + MD->getName().str() + ",";
+      }
       }
     }
   }

@@ -5022,7 +5022,8 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   checkClassLevelDLLAttribute(Record);
 #if 1 //jca
   for (auto *M : Record->methods()) {
-    if (M->hasAttr<AtomiccMethodAttr>()) {
+    if (const auto *TD = M->getAttr<TargetAttr>()) {
+        StringRef FeaturesStr = TD->getFeatures();
         CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(M);
         MarkFunctionReferenced(M->getLocation(), MD, true);
     }

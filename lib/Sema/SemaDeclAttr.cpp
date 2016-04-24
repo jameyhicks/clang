@@ -3685,14 +3685,6 @@ static void handleTypeTagForDatatypeAttr(Sema &S, Decl *D,
                                     Attr.getAttributeSpellingListIndex()));
 }
 
-static void handleAtomiccMethodAttr(Sema &S, Decl *D,
-                                         const AttributeList &Attr) {
-  D->addAttr(::new (S.Context) 
-             AtomiccMethodAttr(Attr.getRange(), S.Context,
-                                  Attr.getAttributeSpellingListIndex()));
-  //FuncAttrs.  D->addAttribute("atomicc-method");
-}
-
 //===----------------------------------------------------------------------===//
 // Checker-specific attribute handlers.
 //===----------------------------------------------------------------------===//
@@ -5091,11 +5083,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_TypeTagForDatatype:
     handleTypeTagForDatatypeAttr(S, D, Attr);
-    break;
-
-  // Atomicc attributes
-  case AttributeList::AT_AtomiccMethod:
-    handleAtomiccMethodAttr(S, D, Attr);
     break;
   }
 }
