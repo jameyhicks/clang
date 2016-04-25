@@ -5987,6 +5987,9 @@ validateAsmConstraint(const char *&Name,
     BuiltinVaListKind getBuiltinVaListKind() const override {
       return TargetInfo::CharPtrBuiltinVaList;
    }
+   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    return (CC == CC_C || CC == CC_X86VectorCall || CC == CC_X86Pascal) ? CCCR_OK : CCCR_Warning;
+   }
   };
 #endif
 

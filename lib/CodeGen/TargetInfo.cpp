@@ -6594,13 +6594,12 @@ class AtomiccABIInfo : public ABIInfo {
   AtomiccABIInfo(CodeGen::CodeGenTypes &CGT) : ABIInfo(CGT) {}
   void computeInfo(CGFunctionInfo &FI) const override {
     bool isAtomiccMethod = false;
-#if 0
-    if (const auto *TD = FI.getAttr<TargetAttr>()) {
-      StringRef FeaturesStr = TD->getFeatures();
+    //if (const auto *TD = FI.getAttr<TargetAttr>()) {
+      //StringRef FeaturesStr = TD->getFeatures();
+    if (FI.getCallingConvention() == CC_X86Pascal) {
       isAtomiccMethod = true;
 printf("[%s:%d] ATOMICCABIMETH\n", __FUNCTION__, __LINE__);
     }
-#endif
     if (!getCXXABI().classifyReturnType(FI)) {
       QualType RetTy = FI.getReturnType();
       if (RetTy->isVoidType())
