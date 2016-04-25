@@ -6588,60 +6588,60 @@ public:
 //===----------------------------------------------------------------------===//
 // Atomicc ABI Implementation
 //===----------------------------------------------------------------------===//
-
 namespace {
 class AtomiccABIInfo : public ABIInfo {
  public:
   AtomiccABIInfo(CodeGen::CodeGenTypes &CGT) : ABIInfo(CGT) {}
-  ABIArgInfo classifyReturnType(QualType RetTy) const;
-  ABIArgInfo classifyArgumentType(QualType RetTy) const;
   void computeInfo(CGFunctionInfo &FI) const override {
-    if (!getCXXABI().classifyReturnType(FI))
-      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
-    for (auto &I : FI.arguments())
-      I.info = classifyArgumentType(I.type);
+    bool isAtomiccMethod = false;
+#if 0
+    if (const auto *TD = FI.getAttr<TargetAttr>()) {
+      StringRef FeaturesStr = TD->getFeatures();
+      isAtomiccMethod = true;
+printf("[%s:%d] ATOMICCABIMETH\n", __FUNCTION__, __LINE__);
+    }
+#endif
+    if (!getCXXABI().classifyReturnType(FI)) {
+      QualType RetTy = FI.getReturnType();
+      if (RetTy->isVoidType())
+        FI.getReturnInfo() = ABIArgInfo::getIgnore();
+      else if (isAggregateTypeForABI(RetTy))
+        FI.getReturnInfo() = ABIArgInfo::getIndirect(0);
+      else {
+        if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
+          RetTy = EnumTy->getDecl()->getIntegerType();
+        FI.getReturnInfo() = (RetTy->isPromotableIntegerType() ?
+              ABIArgInfo::getExtend() : ABIArgInfo::getDirect());
+      }
+    }
+    for (auto &I : FI.arguments()) {
+      QualType Ty = useFirstFieldIfTransparentUnion(I.type);
+      if (isAggregateTypeForABI(Ty)) {
+        if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
+          I.info = ABIArgInfo::getIndirect(0, RAA == CGCXXABI::RAA_DirectInMemory);
+        else
+          I.info = ABIArgInfo::getIndirect(0);
+      }
+      else {
+      if (const EnumType *EnumTy = Ty->getAs<EnumType>())
+        Ty = EnumTy->getDecl()->getIntegerType();
+      I.info = (Ty->isPromotableIntegerType() ?
+              ABIArgInfo::getExtend() : ABIArgInfo::getDirect());
+      }
+    }
   }
   llvm::Value *EmitVAArg(llvm::Value *VAListAddr, QualType Ty,
                          CodeGenFunction &CGF) const override {
     return nullptr;
   }
 };
-
-ABIArgInfo AtomiccABIInfo::classifyArgumentType(QualType Ty) const {
-  Ty = useFirstFieldIfTransparentUnion(Ty);
-  if (isAggregateTypeForABI(Ty)) {
-    if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-      return ABIArgInfo::getIndirect(0, RAA == CGCXXABI::RAA_DirectInMemory);
-    return ABIArgInfo::getIndirect(0);
-  }
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
-  return (Ty->isPromotableIntegerType() ?
-          ABIArgInfo::getExtend() : ABIArgInfo::getDirect());
-}
-
-ABIArgInfo AtomiccABIInfo::classifyReturnType(QualType RetTy) const {
-  if (RetTy->isVoidType())
-    return ABIArgInfo::getIgnore();
-  if (isAggregateTypeForABI(RetTy))
-    return ABIArgInfo::getIndirect(0);
-  if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-    RetTy = EnumTy->getDecl()->getIntegerType();
-  return (RetTy->isPromotableIntegerType() ?
-          ABIArgInfo::getExtend() : ABIArgInfo::getDirect());
-}
-
 class AtomiccTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   AtomiccTargetCodeGenInfo(CodeGenTypes &CGT)
     : TargetCodeGenInfo(new AtomiccABIInfo(CGT)) {}
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &M) const override;
+       CodeGen::CodeGenModule &M) const override {}
 };
-
-void AtomiccTargetCodeGenInfo::setTargetAttributes(const Decl *D,
-           llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-}
 } // End anonymous namespace.
 
 llvm::Value *XCoreABIInfo::EmitVAArg(llvm::Value *VAListAddr, QualType Ty,
