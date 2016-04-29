@@ -1905,6 +1905,12 @@ llvm::DIType *CGDebugInfo::CreateType(const AtomicType *Ty, llvm::DIFile *U) {
   // FIXME: What is the correct representation?
   return getOrCreateType(Ty->getValueType(), U);
 }
+llvm::DIType *CGDebugInfo::CreateType(const AtomiccBitsType *Ty, llvm::DIFile *U) {
+  // Ignore the atomic wrapping
+  // FIXME: What is the correct representation?
+printf("[%s:%d] STUB\n", __FUNCTION__, __LINE__);
+  return NULL; //getOrCreateType(Ty->getValueType(), U);
+}
 
 llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
   const EnumDecl *ED = Ty->getDecl();
@@ -2155,6 +2161,9 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
 
   case Type::Atomic:
     return CreateType(cast<AtomicType>(Ty), Unit);
+  case Type::AtomiccBits:
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    return CreateType(cast<AtomiccBitsType>(Ty), Unit);
 
   case Type::TemplateSpecialization:
     return CreateType(cast<TemplateSpecializationType>(Ty), Unit);

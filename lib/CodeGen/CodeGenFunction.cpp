@@ -127,6 +127,7 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
       llvm_unreachable("undeduced auto type in IR-generation");
 
     // Various scalar types.
+    case Type::AtomiccBits:
     case Type::Builtin:
     case Type::Pointer:
     case Type::BlockPointer:
@@ -1533,6 +1534,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
       llvm_unreachable("unexpected dependent type!");
 
     // These types are never variably-modified.
+    case Type::AtomiccBits:
     case Type::Builtin:
     case Type::Complex:
     case Type::Vector:

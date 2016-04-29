@@ -878,6 +878,15 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     break;
   }
 
+  case Type::AtomiccBits: {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    //if (!IsStructurallyEquivalent(Context,
+                                  //cast<AtomiccBitsType>(T1)->getValueType(),
+                                  //cast<AtomiccBitsType>(T2)->getValueType()))
+      return false;
+    break;
+  }
+
   } // end switch
 
   return true;

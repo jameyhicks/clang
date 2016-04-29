@@ -383,6 +383,17 @@ def AlignValue : Attr {
   let Documentation = [AlignValueDocs];
 }
 
+def AtomiccWidth : Attr {
+  let Spellings = [
+      //CXX11<"clang", "atomicc_width">
+      GNU<"atomicc_width">
+  ];
+  let Args = [ExprArgument<"Width">];
+  let Subjects = SubjectList<[Var, TypedefName], WarnDiag,
+                             "ExpectedVariableOrTypedef">;
+  let Documentation = [AtomiccWidthDocs];
+}
+
 def AlignMac68k : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];

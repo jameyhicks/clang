@@ -3491,6 +3491,21 @@ public:
   }
 };
 
+class AtomiccBitsType : public Type {
+public:
+  //AtomiccBitsType(QualType BaseTy, QualType UnderlyingTy, QualType CanonicalTy);
+  AtomiccBitsType(QualType BaseType, QualType UnderlyingType, QualType CanonicalType)
+    : Type(AtomiccBits, CanonicalType, UnderlyingType->isDependentType(),
+         UnderlyingType->isInstantiationDependentType(),
+         UnderlyingType->isVariablyModifiedType(),
+         BaseType->containsUnexpandedParameterPack()) {}
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == AtomiccBits;
+  }
+};
+
 class TagType : public Type {
   /// Stores the TagDecl associated with this type. The decl may point to any
   /// TagDecl that declares the entity.

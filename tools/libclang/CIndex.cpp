@@ -1633,6 +1633,10 @@ bool CursorVisitor::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
 
   return false;
 }
+bool CursorVisitor::VisitAtomiccBitsTypeLoc(AtomiccBitsTypeLoc TL) {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+  return false;
+}
 
 bool CursorVisitor::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
   if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))

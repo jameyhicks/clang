@@ -12893,6 +12893,7 @@ bool Sema::tryCaptureVariable(
           QTy = QualType();
           break;
         // These types are never variably-modified.
+        case Type::AtomiccBits:
         case Type::Builtin:
         case Type::Complex:
         case Type::Vector:

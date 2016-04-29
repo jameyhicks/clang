@@ -4639,6 +4639,9 @@ namespace {
         Visit(TL.getValueLoc());
       }
     }
+    void VisitAtomiccBitsTypeLoc(AtomiccBitsTypeLoc TL) {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    }
 
     void VisitTypeLoc(TypeLoc TL) {
       // FIXME: add other typespec types and change this to an assert.
@@ -6231,6 +6234,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       // Otherwise, handle the possible delays.
       else if (!handleFunctionTypeAttr(state, attr, type))
         distributeFunctionTypeAttr(state, attr, type);
+      break;
+
+    case AttributeList::AT_AtomiccWidth:
+printf("[%s:%d]ATOMICCWIDTH\n", __FUNCTION__, __LINE__);
+      attr.setUsedAsTypeAttr();
       break;
     }
   } while ((attrs = next));

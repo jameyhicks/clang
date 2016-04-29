@@ -3782,6 +3782,9 @@ AST_TYPE_MATCHER(TemplateSpecializationType, templateSpecializationType);
 ///   matches "__underlying_type(T)"
 AST_TYPE_MATCHER(UnaryTransformType, unaryTransformType);
 
+/// \brief Atomicc
+AST_TYPE_MATCHER(AtomiccBitsType, atomiccBitsType);
+
 /// \brief Matches record types (e.g. structs, classes).
 ///
 /// Given

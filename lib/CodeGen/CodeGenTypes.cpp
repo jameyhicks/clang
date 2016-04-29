@@ -355,6 +355,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::WChar_U:
     case BuiltinType::Char16:
     case BuiltinType::Char32:
+printf("[%s:%d] convert to LLVM type \n", __FUNCTION__, __LINE__);
+T.dump();
+Ty->dump();
       ResultType = llvm::IntegerType::get(getLLVMContext(),
                                  static_cast<unsigned>(Context.getTypeSize(T)));
       break;
@@ -402,6 +405,14 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 #include "clang/AST/BuiltinTypes.def"
       llvm_unreachable("Unexpected placeholder builtin type!");
     }
+    break;
+  }
+  case Type::AtomiccBits: {
+printf("[%s:%d] ACCconvert to LLVM type \n", __FUNCTION__, __LINE__);
+T.dump();
+Ty->dump();
+    ResultType = llvm::IntegerType::get(getLLVMContext(),
+                                 static_cast<unsigned>(Context.getTypeSize(T)));
     break;
   }
   case Type::Auto:

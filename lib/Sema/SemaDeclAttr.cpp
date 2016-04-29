@@ -2883,6 +2883,72 @@ void Sema::AddAlignValueAttr(SourceRange AttrRange, Decl *D, Expr *E,
   return;
 }
 
+static void handleAtomiccWidthAttr(Sema &S, Decl *D,
+                                 const AttributeList &Attr) {
+  AtomiccWidthAttr TmpAttr(Attr.getRange(), S.Context, Attr.getArgAsExpr(0), Attr.getAttributeSpellingListIndex());
+  SourceLocation AttrLoc = Attr.getRange().getBegin();
+
+  QualType T;
+  if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(D))
+    T = TD->getUnderlyingType();
+  else if (ValueDecl *VD = dyn_cast<ValueDecl>(D))
+    T = VD->getType();
+  else
+    llvm_unreachable("Unknown decl type for atomicc_width");
+
+  if (!T->isIntegerType()) {
+    printf("[%s:%d] atomicc_width not integer type\n", __FUNCTION__, __LINE__);
+    //Diag(AttrLoc, diag::warn_attribute_pointer_or_reference_only)
+      //<< &TmpAttr /*TmpAttr.getName()*/ << T << D->getSourceRange();
+    //return;
+  }
+
+printf("[%s:%d] depend %d\n", __FUNCTION__, __LINE__, Attr.getArgAsExpr(0)->isValueDependent());
+  if (!Attr.getArgAsExpr(0)->isValueDependent()) {
+    llvm::APSInt Alignment(32);
+    ExprResult ICE
+      = S.VerifyIntegerConstantExpression(Attr.getArgAsExpr(0), &Alignment,
+          diag::err_align_value_attribute_argument_not_int,
+            /*AllowFold*/ false);
+    if (ICE.isInvalid())
+      return;
+
+    unsigned DestWidth = 9;
+    if (auto val = dyn_cast<IntegerLiteral>(ICE.get())) {
+      DestWidth = val->getValue().getZExtValue();
+const IdentifierInfo *foo = T.getBaseTypeIdentifier();
+printf("[%s:%d] value %d qual %p %s\n", __FUNCTION__, __LINE__, DestWidth, foo, foo? foo->getNameStart():"none");
+    }
+    QualType NewTy = QualType(T.getTypePtr(), 0);
+//S.Context.UnsignedShortTy;
+#if 0
+    NewTy = S.Context.getAtomiccBitsType(T, T, AtomiccBitsType::EnumUnderlyingType);
+#else
+{
+QualType BaseType = T;
+QualType UnderlyingType = T;
+  AtomiccBitsType *Ty = new (S.Context, TypeAlignment)
+       AtomiccBitsType (BaseType, UnderlyingType,
+       UnderlyingType->isDependentType() ?  QualType() : S.Context.getCanonicalType(UnderlyingType));
+  //S.Context.Types.push_back(Ty);
+  NewTy = QualType(Ty, 0);
+}
+#endif
+  NewTy = T;
+
+    // Install the new type.
+    if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(D))
+      TD->setModedTypeSourceInfo(TD->getTypeSourceInfo(), NewTy);
+    else
+      cast<ValueDecl>(D)->setType(NewTy);
+    D->addAttr(::new (S.Context)
+               AtomiccWidthAttr(Attr.getRange(), S.Context, ICE.get(),
+               Attr.getAttributeSpellingListIndex()));
+  }
+  else // Save dependent expressions in the AST to be instantiated.
+      D->addAttr(::new (S.Context) AtomiccWidthAttr(TmpAttr));
+}
+
 static void handleAlignedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   // check the attribute arguments.
   if (Attr.getNumArgs() > 1) {
@@ -4638,6 +4704,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_AlignValue:
     handleAlignValueAttr(S, D, Attr);
+    break;
+  case AttributeList::AT_AtomiccWidth:
+    handleAtomiccWidthAttr(S, D, Attr);
     break;
   case AttributeList::AT_AlwaysInline:
     handleAlwaysInlineAttr(S, D, Attr);

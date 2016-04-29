@@ -275,6 +275,12 @@ void ASTTypeWriter::VisitUnaryTransformType(const UnaryTransformType *T) {
   Code = TYPE_UNARY_TRANSFORM;
 }
 
+void ASTTypeWriter::VisitAtomiccBitsType(const AtomiccBitsType *T) {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+  //Writer.AddTypeRef(T->getUnderlyingType(), Record);
+  Code = TYPE_ATOMICC_BITS;
+}
+
 void ASTTypeWriter::VisitAutoType(const AutoType *T) {
   Writer.AddTypeRef(T->getDeducedType(), Record);
   Record.push_back(T->isDecltypeAuto());
@@ -570,6 +576,9 @@ void TypeLocWriter::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
   Writer.AddSourceLocation(TL.getLParenLoc(), Record);
   Writer.AddSourceLocation(TL.getRParenLoc(), Record);
   Writer.AddTypeSourceInfo(TL.getUnderlyingTInfo(), Record);
+}
+void TypeLocWriter::VisitAtomiccBitsTypeLoc(AtomiccBitsTypeLoc TL) {
+  Writer.AddSourceLocation(TL.getNameLoc(), Record);
 }
 void TypeLocWriter::VisitAutoTypeLoc(AutoTypeLoc TL) {
   Writer.AddSourceLocation(TL.getNameLoc(), Record);

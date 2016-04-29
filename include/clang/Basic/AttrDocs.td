@@ -1266,6 +1266,13 @@ behavior of the program is undefined.
   }];
 }
 
+def AtomiccWidthDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The atomicc_width attribute can be added to int ...
+  }];
+}
+
 def FlagEnumDocs : Documentation {
   let Category = DocCatType;
   let Content = [{

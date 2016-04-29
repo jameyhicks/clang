@@ -6594,18 +6594,20 @@ class AtomiccABIInfo : public ABIInfo {
   AtomiccABIInfo(CodeGen::CodeGenTypes &CGT) : ABIInfo(CGT) {}
   void computeInfo(CGFunctionInfo &FI) const override {
     bool isAtomiccMethod = false;
-    //if (const auto *TD = FI.getAttr<TargetAttr>()) {
-      //StringRef FeaturesStr = TD->getFeatures();
-    if (FI.getCallingConvention() == CC_X86Pascal) {
+    if (FI.getCallingConvention() == llvm::CallingConv::X86_VectorCall) {
       isAtomiccMethod = true;
-printf("[%s:%d] ATOMICCABIMETH\n", __FUNCTION__, __LINE__);
     }
-    if (!getCXXABI().classifyReturnType(FI)) {
+    if (isAtomiccMethod || !getCXXABI().classifyReturnType(FI)) {
       QualType RetTy = FI.getReturnType();
       if (RetTy->isVoidType())
         FI.getReturnInfo() = ABIArgInfo::getIgnore();
-      else if (isAggregateTypeForABI(RetTy))
-        FI.getReturnInfo() = ABIArgInfo::getIndirect(0);
+      else if (isAggregateTypeForABI(RetTy)) {
+printf("[%s:%d] AGGREGATERETURN %d\n", __FUNCTION__, __LINE__, isAtomiccMethod);
+        if (isAtomiccMethod)
+            FI.getReturnInfo() = ABIArgInfo::getDirect();
+        else
+            FI.getReturnInfo() = ABIArgInfo::getIndirect(0);
+      }
       else {
         if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
           RetTy = EnumTy->getDecl()->getIntegerType();
@@ -6616,15 +6618,17 @@ printf("[%s:%d] ATOMICCABIMETH\n", __FUNCTION__, __LINE__);
     for (auto &I : FI.arguments()) {
       QualType Ty = useFirstFieldIfTransparentUnion(I.type);
       if (isAggregateTypeForABI(Ty)) {
-        if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
+        if (isAtomiccMethod)
+          I.info = ABIArgInfo::getDirect();
+        else if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
           I.info = ABIArgInfo::getIndirect(0, RAA == CGCXXABI::RAA_DirectInMemory);
         else
           I.info = ABIArgInfo::getIndirect(0);
       }
       else {
-      if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-        Ty = EnumTy->getDecl()->getIntegerType();
-      I.info = (Ty->isPromotableIntegerType() ?
+        if (const EnumType *EnumTy = Ty->getAs<EnumType>())
+          Ty = EnumTy->getDecl()->getIntegerType();
+        I.info = (Ty->isPromotableIntegerType() ?
               ABIArgInfo::getExtend() : ABIArgInfo::getDirect());
       }
     }
