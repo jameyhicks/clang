@@ -3492,13 +3492,15 @@ public:
 };
 
 class AtomiccBitsType : public Type {
+  QualType BaseType;
 public:
-  //AtomiccBitsType(QualType BaseTy, QualType UnderlyingTy, QualType CanonicalTy);
-  AtomiccBitsType(QualType BaseType, QualType UnderlyingType, QualType CanonicalType)
-    : Type(AtomiccBits, CanonicalType, UnderlyingType->isDependentType(),
-         UnderlyingType->isInstantiationDependentType(),
-         UnderlyingType->isVariablyModifiedType(),
-         BaseType->containsUnexpandedParameterPack()) {}
+  int accbWidth;
+  AtomiccBitsType(QualType BaseType, int width)
+    //: Type(AtomiccBits, BaseType, false, false, false, false), accbWidth(width) {}
+    : Type(AtomiccBits, QualType(), /*Dependent=*/false,
+           /*InstantiationDependent=*/false,
+           /*VariablyModified=*/false, /*Unexpanded paramter pack=*/false), BaseType(BaseType), accbWidth(width) {}
+  QualType getBaseType() const { return BaseType; }
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
   static bool classof(const Type *T) {

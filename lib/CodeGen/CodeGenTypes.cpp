@@ -355,7 +355,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::WChar_U:
     case BuiltinType::Char16:
     case BuiltinType::Char32:
-printf("[%s:%d] convert to LLVM type \n", __FUNCTION__, __LINE__);
+printf("[%s:%d] buildinconvert to LLVM type \n", __FUNCTION__, __LINE__);
 T.dump();
 Ty->dump();
       ResultType = llvm::IntegerType::get(getLLVMContext(),
@@ -408,7 +408,8 @@ Ty->dump();
     break;
   }
   case Type::AtomiccBits: {
-printf("[%s:%d] ACCconvert to LLVM type \n", __FUNCTION__, __LINE__);
+    const AtomiccBitsType *ATy = cast<AtomiccBitsType>(Ty);
+printf("[%s:%d] ACCconverttoLLVMtype, width %d\n", __FUNCTION__, __LINE__, ATy->accbWidth);
 T.dump();
 Ty->dump();
     ResultType = llvm::IntegerType::get(getLLVMContext(),

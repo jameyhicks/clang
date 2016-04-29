@@ -2921,20 +2921,9 @@ printf("[%s:%d] value %d qual %p %s\n", __FUNCTION__, __LINE__, DestWidth, foo, 
     }
     QualType NewTy = QualType(T.getTypePtr(), 0);
 //S.Context.UnsignedShortTy;
-#if 0
-    NewTy = S.Context.getAtomiccBitsType(T, T, AtomiccBitsType::EnumUnderlyingType);
-#else
-{
-QualType BaseType = T;
-QualType UnderlyingType = T;
-  AtomiccBitsType *Ty = new (S.Context, TypeAlignment)
-       AtomiccBitsType (BaseType, UnderlyingType,
-       UnderlyingType->isDependentType() ?  QualType() : S.Context.getCanonicalType(UnderlyingType));
-  //S.Context.Types.push_back(Ty);
-  NewTy = QualType(Ty, 0);
-}
-#endif
-  //NewTy = T;
+    AtomiccBitsType *Ty = new (S.Context, TypeAlignment)AtomiccBitsType(T, DestWidth);
+    //S.Context.Types.push_back(Ty);
+    NewTy = QualType(Ty, 0);
 
     // Install the new type.
     if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(D))
