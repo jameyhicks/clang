@@ -578,6 +578,7 @@ void TypeLocWriter::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
   Writer.AddTypeSourceInfo(TL.getUnderlyingTInfo(), Record);
 }
 void TypeLocWriter::VisitAtomiccBitsTypeLoc(AtomiccBitsTypeLoc TL) {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   Writer.AddSourceLocation(TL.getNameLoc(), Record);
 }
 void TypeLocWriter::VisitAutoTypeLoc(AutoTypeLoc TL) {

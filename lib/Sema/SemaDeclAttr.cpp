@@ -2934,7 +2934,7 @@ QualType UnderlyingType = T;
   NewTy = QualType(Ty, 0);
 }
 #endif
-  NewTy = T;
+  //NewTy = T;
 
     // Install the new type.
     if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(D))

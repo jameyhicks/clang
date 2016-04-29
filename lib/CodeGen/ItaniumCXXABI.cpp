@@ -2529,6 +2529,9 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
   case Type::Auto:
     llvm_unreachable("Undeduced auto type shouldn't get here");
 
+  case Type::AtomiccBits:
+    VTableName = "_ZTVN10__KKKKKKKKKKKKKKKKKKKKKK";
+    break;
   case Type::Builtin:
   // GCC treats vector and complex types as fundamental types.
   case Type::Vector:
@@ -2739,6 +2742,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force) {
     llvm_unreachable("Non-canonical and dependent types shouldn't get here");
 
   // GCC treats vector types as fundamental types.
+  case Type::AtomiccBits:
   case Type::Builtin:
   case Type::Vector:
   case Type::ExtVector:

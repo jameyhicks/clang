@@ -3156,6 +3156,8 @@ static CachedProperties computeCachedProperties(const Type *T) {
     //   A type is said to have linkage if and only if:
     //     - it is a fundamental type (3.9.1); or
     return CachedProperties(ExternalLinkage, false);
+  case Type::AtomiccBits:
+    return CachedProperties(ExternalLinkage, false);
 
   case Type::Record:
   case Type::Enum: {
@@ -3249,6 +3251,9 @@ static LinkageInfo computeLinkageInfo(const Type *T) {
     return LinkageInfo::external();
 
   case Type::Builtin:
+    return LinkageInfo::external();
+  case Type::AtomiccBits:
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     return LinkageInfo::external();
 
   case Type::Auto:
@@ -3358,6 +3363,8 @@ bool Type::canHaveNullability() const {
   case Type::BlockPointer:
   case Type::MemberPointer:
   case Type::ObjCObjectPointer:
+    return true;
+  case Type::AtomiccBits:
     return true;
 
   // Dependent types that could instantiate to pointer types.
