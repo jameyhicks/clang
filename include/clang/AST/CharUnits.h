@@ -166,6 +166,10 @@ namespace clang {
       /// greater than or equal to this quantity and is a multiple of \p Align.
       /// Align must be non-zero.
       CharUnits RoundUpToAlignment(const CharUnits &Align) const {
+if (Align.isZero()) {
+printf("[%s:%d] align zero\n", __FUNCTION__, __LINE__);
+        return CharUnits(llvm::RoundUpToAlignment(Quantity, 32));
+}
         return CharUnits(llvm::RoundUpToAlignment(Quantity, 
                                                   Align.Quantity));
       }

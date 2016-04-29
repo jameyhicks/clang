@@ -2501,9 +2501,8 @@ void CXXNameMangler::mangleType(const TypeOfExprType *T) {
   Out << "u6typeof";
 }
 void CXXNameMangler::mangleType(const AtomiccBitsType *T) {
-  // FIXME: this is pretty unsatisfactory, but there isn't an obvious
-  // "extension with parameters" mangling.
-  Out << "ACCBITSMANGLE";
+  Out << 'i'; // BuiltinType::Int: 
+  //Out << 'j'; // BuiltinType::UInt: 
 }
 
 void CXXNameMangler::mangleType(const DecltypeType *T) {
