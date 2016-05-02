@@ -809,8 +809,8 @@ void TypePrinter::printAtomiccBitsBefore(const AtomiccBitsType *T, raw_ostream &
   }
 else printf("[%s:%d] FAILLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL\n", __FUNCTION__, __LINE__);
   spaceBeforePlaceHolder(OS);
-} 
-void TypePrinter::printAtomiccBitsAfter(const AtomiccBitsType *T, raw_ostream &OS) { } 
+}
+void TypePrinter::printAtomiccBitsAfter(const AtomiccBitsType *T, raw_ostream &OS) { }
 
 void TypePrinter::printUnaryTransformBefore(const UnaryTransformType *T,
                                             raw_ostream &OS) {
