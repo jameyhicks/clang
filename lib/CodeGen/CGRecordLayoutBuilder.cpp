@@ -611,7 +611,7 @@ void CGRecordLowering::insertPadding() {
     if (!Member->Data)
       continue;
     CharUnits Offset = Member->Offset;
-    if(Offset >= Size) {
+    if(Offset < Size) {
 printf("[%s:%d] BADPAD\n", __FUNCTION__, __LINE__);
         return;
     }

@@ -1805,7 +1805,7 @@ unsigned ASTContext::getOpenMPDefaultSimdAlign(QualType T) const {
 
 /// toCharUnitsFromBits - Convert a size in bits to a size in characters.
 CharUnits ASTContext::toCharUnitsFromBits(int64_t BitSize) const {
-  return CharUnits::fromQuantity(BitSize / getCharWidth());
+  return CharUnits::fromQuantity((BitSize + getCharWidth()-1) / getCharWidth());
 }
 
 /// toBits - Convert a size in characters to a size in characters.
@@ -2604,7 +2604,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
     return type;
 
   case Type::AtomiccBits:
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+printf("[%s:%d]ABITTT\n", __FUNCTION__, __LINE__);
     return type;
 
   // These types can be variably-modified.  All these modifications
