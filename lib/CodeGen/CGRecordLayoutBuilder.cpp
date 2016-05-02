@@ -788,11 +788,13 @@ printf("[%s:%d] ERROR in fieldnumber Idx %d Field %d\n", __FUNCTION__, __LINE__,
   uint64_t TypeSizeInBits = getContext().toBits(Layout.getSize());
   if (TypeSizeInBits != getDataLayout().getTypeAllocSizeInBits(Ty)) {
 printf("[%s:%d] typesize %d allocsize %d\n", __FUNCTION__, __LINE__, (int)TypeSizeInBits, (int) getDataLayout().getTypeAllocSizeInBits(Ty));
+#if 0
     llvm::outs() << "\n*** Dumping IRgen Record Layout\n";
     llvm::outs() << "Record: ";
     D->dump(llvm::outs());
     llvm::outs() << "\nLayout: ";
     RL->print(llvm::outs());
+#endif
 return RL;
 }
   assert(TypeSizeInBits == getDataLayout().getTypeAllocSizeInBits(Ty) &&

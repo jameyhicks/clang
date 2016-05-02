@@ -1666,6 +1666,7 @@ llvm::Constant *CodeGenModule::GetAddrOfFunction(GlobalDecl GD,
     Ty = getTypes().ConvertType(cast<ValueDecl>(GD.getDecl())->getType());
   
   StringRef MangledName = getMangledName(GD);
+//printf("[%s:%d] %s\n", __FUNCTION__, __LINE__, MangledName.str().c_str());
   return GetOrCreateLLVMFunction(MangledName, Ty, GD, ForVTable, DontDefer);
 }
 
