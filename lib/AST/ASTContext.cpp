@@ -1647,8 +1647,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     break;
   case Type::AtomiccBits:
     Width = cast<AtomiccBitsType>(T)->accbWidth;
-    //Width = Target->getIntWidth();
-    Align = 1; //Target->getIntAlign();
+    Align = 1;
 printf("[%s:%d] ATOMICCBITS w %d al %d\n", __FUNCTION__, __LINE__, (int)Width, (int)Align);
     break;
   case Type::BlockPointer: {
