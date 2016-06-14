@@ -2885,8 +2885,9 @@ void Sema::AddAlignValueAttr(SourceRange AttrRange, Decl *D, Expr *E,
 
 static void handleAtomiccWidthAttr(Sema &S, Decl *D,
                                  const AttributeList &Attr) {
-  AtomiccWidthAttr TmpAttr(Attr.getRange(), S.Context, Attr.getArgAsExpr(0), Attr.getAttributeSpellingListIndex());
-  SourceLocation AttrLoc = Attr.getRange().getBegin();
+  Expr *E = Attr.getArgAsExpr(0);
+  AtomiccWidthAttr TmpAttr(Attr.getRange(), S.Context, E, Attr.getAttributeSpellingListIndex());
+  //SourceLocation AttrLoc = Attr.getRange().getBegin();
 
   QualType T;
   if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(D))
@@ -2903,27 +2904,19 @@ static void handleAtomiccWidthAttr(Sema &S, Decl *D,
     //return;
   }
 
-printf("[%s:%d] depend %d\n", __FUNCTION__, __LINE__, Attr.getArgAsExpr(0)->isValueDependent());
-  if (!Attr.getArgAsExpr(0)->isValueDependent()) {
-    llvm::APSInt Alignment(32);
-    unsigned DestWidth = 9;
-    ExprResult ICE
-      = S.VerifyIntegerConstantExpression(Attr.getArgAsExpr(0), &Alignment,
-          diag::err_align_value_attribute_argument_not_int,
-            /*AllowFold*/ false);
-    if (ICE.isInvalid()) {
-printf("[%s:%d] ISINVALID\n", __FUNCTION__, __LINE__);
-      //return;
+printf("[%s:%d] depend %d\n", __FUNCTION__, __LINE__, E->isValueDependent());
+  unsigned DestWidth = 9;
+  if (!E->isValueDependent()) {
+//E->isTypeDependent() ||
+    llvm::APSInt itemWidth(32);
+    if (E->isIntegerConstantExpr(itemWidth, S.Context)) {
+      DestWidth = itemWidth.getZExtValue();
+      const IdentifierInfo *foo = T.getBaseTypeIdentifier();
+      printf("[%s:%d] value %d qual %p %s\n", __FUNCTION__, __LINE__, DestWidth, foo, foo? foo->getNameStart():"none");
     }
-    else if (auto val = dyn_cast<IntegerLiteral>(ICE.get())) {
-      DestWidth = val->getValue().getZExtValue();
-const IdentifierInfo *foo = T.getBaseTypeIdentifier();
-printf("[%s:%d] value %d qual %p %s\n", __FUNCTION__, __LINE__, DestWidth, foo, foo? foo->getNameStart():"none");
-    }
-else
-printf("[%s:%d] NOTINTEGERLITERAL\n", __FUNCTION__, __LINE__);
+    else
+      printf("[%s:%d] NOTINTEGERLITERAL\n", __FUNCTION__, __LINE__);
     QualType NewTy = QualType(T.getTypePtr(), 0);
-//S.Context.UnsignedShortTy;
     AtomiccBitsType *Ty = new (S.Context, TypeAlignment)AtomiccBitsType(T, DestWidth);
     //S.Context.Types.push_back(Ty);
     NewTy = QualType(Ty, 0);
@@ -2934,7 +2927,7 @@ printf("[%s:%d] NOTINTEGERLITERAL\n", __FUNCTION__, __LINE__);
     else
       cast<ValueDecl>(D)->setType(NewTy);
     D->addAttr(::new (S.Context)
-               AtomiccWidthAttr(Attr.getRange(), S.Context, ICE.get(),
+               AtomiccWidthAttr(Attr.getRange(), S.Context, E,
                Attr.getAttributeSpellingListIndex()));
   }
   else // Save dependent expressions in the AST to be instantiated.
