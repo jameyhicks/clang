@@ -934,6 +934,7 @@ void IndexingContext::getEntityInfo(const NamedDecl *D,
   if (const TagDecl *TD = dyn_cast<TagDecl>(D)) {
     switch (TD->getTagKind()) {
     case TTK_Struct:
+    case TTK_AInterface:
       EntityInfo.kind = CXIdxEntity_Struct; break;
     case TTK_Union:
       EntityInfo.kind = CXIdxEntity_Union; break;

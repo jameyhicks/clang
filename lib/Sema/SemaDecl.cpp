@@ -512,6 +512,7 @@ DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {
     if (const TagDecl *TD = R.getAsSingle<TagDecl>()) {
       switch (TD->getTagKind()) {
       case TTK_Struct: return DeclSpec::TST_struct;
+      case TTK_AInterface: return DeclSpec::TST_ainterface;
       case TTK_Interface: return DeclSpec::TST_interface;
       case TTK_Union:  return DeclSpec::TST_union;
       case TTK_Class:  return DeclSpec::TST_class;
@@ -3627,6 +3628,7 @@ static unsigned GetDiagnosticTypeSpecifierID(DeclSpec::TST T) {
   case DeclSpec::TST_class:
     return 0;
   case DeclSpec::TST_struct:
+  case DeclSpec::TST_ainterface:
     return 1;
   case DeclSpec::TST_interface:
     return 2;
@@ -3650,6 +3652,7 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   TagDecl *Tag = nullptr;
   if (DS.getTypeSpecType() == DeclSpec::TST_class ||
       DS.getTypeSpecType() == DeclSpec::TST_struct ||
+      DS.getTypeSpecType() == DeclSpec::TST_ainterface ||
       DS.getTypeSpecType() == DeclSpec::TST_interface ||
       DS.getTypeSpecType() == DeclSpec::TST_union ||
       DS.getTypeSpecType() == DeclSpec::TST_enum) {
@@ -3860,6 +3863,7 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
     DeclSpec::TST TypeSpecType = DS.getTypeSpecType();
     if (TypeSpecType == DeclSpec::TST_class ||
         TypeSpecType == DeclSpec::TST_struct ||
+        TypeSpecType == DeclSpec::TST_ainterface ||
         TypeSpecType == DeclSpec::TST_interface ||
         TypeSpecType == DeclSpec::TST_union ||
         TypeSpecType == DeclSpec::TST_enum) {
@@ -11235,6 +11239,7 @@ TypedefDecl *Sema::ParseTypedefDecl(Scope *S, Declarator &D, QualType T,
   switch (D.getDeclSpec().getTypeSpecType()) {
   case TST_enum:
   case TST_struct:
+  case TST_ainterface:
   case TST_interface:
   case TST_union:
   case TST_class: {

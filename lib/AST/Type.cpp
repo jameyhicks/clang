@@ -2336,6 +2336,7 @@ TypeWithKeyword::getKeywordForTypeSpec(unsigned TypeSpec) {
   case TST_typename: return ETK_Typename;
   case TST_class: return ETK_Class;
   case TST_struct: return ETK_Struct;
+  case TST_ainterface: return ETK_AInterface;
   case TST_interface: return ETK_Interface;
   case TST_union: return ETK_Union;
   case TST_enum: return ETK_Enum;
@@ -2347,6 +2348,7 @@ TypeWithKeyword::getTagTypeKindForTypeSpec(unsigned TypeSpec) {
   switch(TypeSpec) {
   case TST_class: return TTK_Class;
   case TST_struct: return TTK_Struct;
+  case TST_ainterface: return TTK_AInterface;
   case TST_interface: return TTK_Interface;
   case TST_union: return TTK_Union;
   case TST_enum: return TTK_Enum;
@@ -2360,6 +2362,7 @@ TypeWithKeyword::getKeywordForTagTypeKind(TagTypeKind Kind) {
   switch (Kind) {
   case TTK_Class: return ETK_Class;
   case TTK_Struct: return ETK_Struct;
+  case TTK_AInterface: return ETK_AInterface;
   case TTK_Interface: return ETK_Interface;
   case TTK_Union: return ETK_Union;
   case TTK_Enum: return ETK_Enum;
@@ -2372,6 +2375,7 @@ TypeWithKeyword::getTagTypeKindForKeyword(ElaboratedTypeKeyword Keyword) {
   switch (Keyword) {
   case ETK_Class: return TTK_Class;
   case ETK_Struct: return TTK_Struct;
+  case ETK_AInterface: return TTK_AInterface;
   case ETK_Interface: return TTK_Interface;
   case ETK_Union: return TTK_Union;
   case ETK_Enum: return TTK_Enum;
@@ -2390,6 +2394,7 @@ TypeWithKeyword::KeywordIsTagTypeKind(ElaboratedTypeKeyword Keyword) {
     return false;
   case ETK_Class:
   case ETK_Struct:
+  case ETK_AInterface:
   case ETK_Interface:
   case ETK_Union:
   case ETK_Enum:
@@ -2403,6 +2408,7 @@ StringRef TypeWithKeyword::getKeywordName(ElaboratedTypeKeyword Keyword) {
   case ETK_None: return "";
   case ETK_Typename: return "typename";
   case ETK_Class:  return "class";
+  case ETK_AInterface: return "ainterface";
   case ETK_Struct: return "struct";
   case ETK_Interface: return "__interface";
   case ETK_Union:  return "union";

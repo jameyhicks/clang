@@ -1197,6 +1197,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   DeclSpec::TST TagType;
   if (TagTokKind == tok::kw_struct)
     TagType = DeclSpec::TST_struct;
+  else if (TagTokKind == tok::kw_ainterface)
+    TagType = DeclSpec::TST_ainterface;
   else if (TagTokKind == tok::kw___interface)
     TagType = DeclSpec::TST_interface;
   else if (TagTokKind == tok::kw_class)
@@ -2788,6 +2790,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
                                          ParsedAttributesWithRange &Attrs,
                                          unsigned TagType, Decl *TagDecl) {
   assert((TagType == DeclSpec::TST_struct ||
+         TagType == DeclSpec::TST_ainterface ||
          TagType == DeclSpec::TST_interface ||
          TagType == DeclSpec::TST_union  ||
          TagType == DeclSpec::TST_class) && "Invalid TagType!");

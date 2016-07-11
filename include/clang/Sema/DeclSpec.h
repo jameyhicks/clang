@@ -292,6 +292,7 @@ public:
   static const TST TST_enum = clang::TST_enum;
   static const TST TST_union = clang::TST_union;
   static const TST TST_struct = clang::TST_struct;
+  static const TST TST_ainterface = clang::TST_ainterface;
   static const TST TST_interface = clang::TST_interface;
   static const TST TST_class = clang::TST_class;
   static const TST TST_typename = clang::TST_typename;
@@ -407,7 +408,7 @@ private:
   void operator=(const DeclSpec &) = delete;
 public:
   static bool isDeclRep(TST T) {
-    return (T == TST_enum || T == TST_struct ||
+    return (T == TST_enum || T == TST_struct || T == TST_ainterface ||
             T == TST_interface || T == TST_union ||
             T == TST_class);
   }

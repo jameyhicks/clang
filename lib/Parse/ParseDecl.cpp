@@ -3324,6 +3324,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     // class-specifier:
     case tok::kw_class:
     case tok::kw_struct:
+    case tok::kw_ainterface:
     case tok::kw___interface:
     case tok::kw_union: {
       tok::TokenKind Kind = Tok.getKind();
@@ -4254,6 +4255,7 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
   case tok::kw_struct:
+  case tok::kw_ainterface:
   case tok::kw___interface:
   case tok::kw_union:
     // enum-specifier
@@ -4326,6 +4328,7 @@ bool Parser::isTypeSpecifierQualifier() {
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
   case tok::kw_struct:
+  case tok::kw_ainterface:
   case tok::kw___interface:
   case tok::kw_union:
     // enum-specifier
@@ -4474,6 +4477,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
   case tok::kw_struct:
+  case tok::kw_ainterface:
   case tok::kw_union:
   case tok::kw___interface:
     // enum-specifier
