@@ -685,6 +685,10 @@ static bool isTagTypeWithMissingTag(Sema &SemaRef, LookupResult &Result,
         FixItTagName = "struct ";
         break;
 
+      case TTK_AInterface:
+        FixItTagName = "ainterface ";
+        break;
+
       case TTK_Interface:
         FixItTagName = "__interface ";
         break;
@@ -12401,6 +12405,10 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
   AdjustDeclIfTemplate(TagD);
   TagDecl *Tag = cast<TagDecl>(TagD);
   Tag->setRBraceLoc(RBraceLoc);
+if (Tag->getTagKind() == TTK_AInterface) {
+    printf("[%s:%d] isaCXX %d\n", __FUNCTION__, __LINE__, isa<CXXRecordDecl>(Tag));
+    TagD->dump();
+}
 
   // Make sure we "complete" the definition even it is invalid.
   if (Tag->isBeingDefined()) {
