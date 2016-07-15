@@ -753,6 +753,8 @@ printf("[%s:%d] ERROR in fieldnumber Idx %d Field %d\n", __FUNCTION__, __LINE__,
       if (const auto *ND = dyn_cast<NamedDecl>(MD)) {
         SmallString<256> Buffer;
         llvm::raw_svector_ostream Out(Buffer);
+printf("[%s:%d] beforemangleName\n", __FUNCTION__, __LINE__);
+ND->dump();
         getCXXABI().getMangleContext().mangleName(ND, Out);
         Ty->structFieldMap += Out.str().str() + ":" + MD->getName().str() + ",";
       }

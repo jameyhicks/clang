@@ -12405,10 +12405,74 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
   AdjustDeclIfTemplate(TagD);
   TagDecl *Tag = cast<TagDecl>(TagD);
   Tag->setRBraceLoc(RBraceLoc);
-if (Tag->getTagKind() == TTK_AInterface) {
-    printf("[%s:%d] isaCXX %d\n", __FUNCTION__, __LINE__, isa<CXXRecordDecl>(Tag));
-    TagD->dump();
+  if (Tag->getTagKind() == TTK_AInterface)
+  if (CXXRecordDecl *cdecl = dyn_cast<CXXRecordDecl>(Tag)) {
+    printf("[%s:%d] cdecl %p\n", __FUNCTION__, __LINE__, cdecl);
+    for (auto item: cdecl->fields()) {
+printf("[%s:%d] fields\n", __FUNCTION__, __LINE__);
+//FieldDecl
+        item->dump();
+    }
+    for (auto item: cdecl->methods()) {
+//CXXMethodDecl
+//FunctionDecl
+printf("[%s:%d] method\n", __FUNCTION__, __LINE__);
+      if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
+        StringRef Str("HAHAHOHO");
+        unsigned Index = 0; //Attrs->getAttributeSpellingListIndex();
+        item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, Str, Index));
+        item->dump();
+        for (auto pitem: item->params()) {
+printf("[%s:%d] param\n", __FUNCTION__, __LINE__);
+            pitem->dump();
+        }
+      }
+    }
+    for (auto item: cdecl->ctors()) {
+//CXXConstructorDecl
+printf("[%s:%d] ctors\n", __FUNCTION__, __LINE__);
+        item->dump();
+    }
+    llvm::errs() << "ALLDONE";
+#if 0
+void Sema::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) 
+{
+  if (ObjCInterfaceDecl *OID = ObjCImplementation->getClassInterface()) {
+    SmallVector<ObjCIvarDecl*, 8> ivars;
+    CollectIvarsToConstructOrDestruct(OID, ivars);
+    if (ivars.empty()) return;
+    SmallVector<CXXCtorInitializer*, 32> AllToInit;
+    for (unsigned i = 0; i < ivars.size(); i++) {
+      FieldDecl *Field = ivars[i];
+      if (Field->isInvalidDecl())
+        continue; 
+      CXXCtorInitializer *Member;
+      InitializedEntity InitEntity = InitializedEntity::InitializeMember(Field);
+      InitializationKind InitKind = InitializationKind::CreateDefault(ObjCImplementation->getLocation()); 
+      InitializationSequence InitSeq(*this, InitEntity, InitKind, None);
+      ExprResult MemberInit = InitSeq.Perform(*this, InitEntity, InitKind, None);
+      MemberInit = MaybeCreateExprWithCleanups(MemberInit);
+      // Note, MemberInit could actually come back empty if no initialization 
+      // is required (e.g., because it would call a trivial default constructor)
+      if (!MemberInit.get() || MemberInit.isInvalid())
+        continue; 
+      Member = new (Context) CXXCtorInitializer(Context, Field, SourceLocation(), SourceLocation(), MemberInit.getAs<Expr>(), SourceLocation());
+      AllToInit.push_back(Member); 
+      // Be sure that the destructor is accessible and is marked as referenced.
+      if (const RecordType *RecordTy = Context.getBaseElementType(Field->getType())->getAs<RecordType>()) {
+        CXXRecordDecl *RD = cast<CXXRecordDecl>(RecordTy->getDecl());
+        if (CXXDestructorDecl *Destructor = LookupDestructor(RD)) {
+          MarkFunctionReferenced(Field->getLocation(), Destructor);
+          CheckDestructorAccess(Field->getLocation(), Destructor, PDiag(diag::err_access_dtor_ivar) << Context.getBaseElementType(Field->getType()));
+        }
+      }      
+    }
+    ObjCImplementation->setIvarInitializers(Context, AllToInit.data(), AllToInit.size());
+  }
 }
+#endif
+    //cdecl->dump();
+  }
 
   // Make sure we "complete" the definition even it is invalid.
   if (Tag->isBeingDefined()) {
