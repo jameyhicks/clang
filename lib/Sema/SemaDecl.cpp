@@ -12408,11 +12408,6 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
   if (Tag->getTagKind() == TTK_AInterface)
   if (CXXRecordDecl *cdecl = dyn_cast<CXXRecordDecl>(Tag)) {
     printf("[%s:%d] cdecl %p\n", __FUNCTION__, __LINE__, cdecl);
-    for (auto item: cdecl->fields()) {
-printf("[%s:%d] fields\n", __FUNCTION__, __LINE__);
-//FieldDecl
-        item->dump();
-    }
     for (auto item: cdecl->methods()) {
 //CXXMethodDecl
 //FunctionDecl
@@ -12423,10 +12418,25 @@ printf("[%s:%d] method\n", __FUNCTION__, __LINE__);
         item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, Str, Index));
         item->dump();
         for (auto pitem: item->params()) {
-printf("[%s:%d] param\n", __FUNCTION__, __LINE__);
+printf("[%s:%d] param %s: %s\n", __FUNCTION__, __LINE__, item->getName().str().c_str(), pitem->getName().str().c_str());
             pitem->dump();
         }
+#if 1
+  //static FieldDecl *Create(const ASTContext &C, DeclContext *DC, SourceLocation StartLoc, SourceLocation IdLoc,
+    //IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo, Expr *BW, bool Mutable, InClassInitStyle InitStyle);
+  NamedDecl *newField = FieldDecl::Create(Context, cdecl, item->getLocation(), item->getLocation(),
+       &Context.Idents.get(item->getName().str() + "bozo"),
+       Context.IntTy, nullptr, nullptr, false, ICIS_NoInit);
+  newField->setIsUsed();
+  newField->setAccess(AS_public);
+  cdecl->addDecl(newField);
+#endif
       }
+    }
+    for (auto item: cdecl->fields()) {
+printf("[%s:%d] fields\n", __FUNCTION__, __LINE__);
+//FieldDecl
+        item->dump();
     }
     for (auto item: cdecl->ctors()) {
 //CXXConstructorDecl
