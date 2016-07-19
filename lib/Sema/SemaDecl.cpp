@@ -12407,7 +12407,6 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
   Tag->setRBraceLoc(RBraceLoc);
   if (Tag->getTagKind() == TTK_AInterface)
   if (CXXRecordDecl *cdecl = dyn_cast<CXXRecordDecl>(Tag)) {
-    printf("[%s:%d] cdecl %p\n", __FUNCTION__, __LINE__, cdecl);
     for (auto item: cdecl->methods()) {
 //CXXMethodDecl
 //FunctionDecl
@@ -12416,30 +12415,24 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
         StringRef Str("HAHAHOHO");
         unsigned Index = 0; //Attrs->getAttributeSpellingListIndex();
         item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, Str, Index));
-#if 0
-        item->dump();
-        for (auto pitem: item->params()) {
-            printf("[%s:%d] param %s: %s\n", __FUNCTION__, __LINE__, item->getName().str().c_str(), pitem->getName().str().c_str());
-            pitem->dump();
-        }
-#endif
         const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
-//printf("[%s:%d] FDTy %p\n", __FUNCTION__, __LINE__, FDTy);
-//FDTy->dump();
-        QualType retType = FDTy->getReturnType();
-        auto paramTypes = FDTy->getParamTypes();
+        ArrayRef<QualType> paramTypes = FDTy->getParamTypes();
+        QualType *A = ::new (Context) QualType[paramTypes.size() + 1];
+        A[0] = Context.VoidPtrTy;
+        if (!paramTypes.empty())
+            std::copy(paramTypes.begin(), paramTypes.end(), A+1);
+        ArrayRef<QualType> newParam = llvm::makeArrayRef(A, paramTypes.size() + 1);
         FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
         EPI.TypeQuals = 0;
-        QualType newtt = Context.getPointerType(Context.getFunctionType(retType, paramTypes, EPI));
-printf("[%s:%d] newtt\n", __FUNCTION__, __LINE__);
-newtt->dump();
-//item->getType();
         NamedDecl *newField = FieldDecl::Create(Context, cdecl, item->getLocation(), item->getLocation(),
-             &Context.Idents.get(item->getName().str() + "bozo"), newtt,
-             nullptr, nullptr, false, ICIS_NoInit);
+            &Context.Idents.get(item->getName().str() + "bozo"),
+            Context.getPointerType(Context.getFunctionType(FDTy->getReturnType(), newParam, EPI)),
+            nullptr, nullptr, false, ICIS_NoInit);
         newField->setIsUsed();
         newField->setAccess(AS_public);
         cdecl->addDecl(newField);
+printf("[%s:%d] newtt\n", __FUNCTION__, __LINE__);
+newField->dump();
       }
     }
     for (auto item: cdecl->fields()) {
@@ -12452,7 +12445,6 @@ printf("[%s:%d] fields\n", __FUNCTION__, __LINE__);
 printf("[%s:%d] ctors\n", __FUNCTION__, __LINE__);
         item->dump();
     }
-    llvm::errs() << "ALLDONE";
 #if 0
 void Sema::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) 
 {
