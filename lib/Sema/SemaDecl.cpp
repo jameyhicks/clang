@@ -12424,9 +12424,41 @@ printf("[%s:%d] param %s: %s\n", __FUNCTION__, __LINE__, item->getName().str().c
 #if 1
   //static FieldDecl *Create(const ASTContext &C, DeclContext *DC, SourceLocation StartLoc, SourceLocation IdLoc,
     //IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo, Expr *BW, bool Mutable, InClassInitStyle InitStyle);
+  //const FunctionProtoType *FDTy = dyn_cast<FunctionProtoType>(item->getType().getTypePtr());
+  const Type *FD = item->getType().getTypePtr();
+  const FunctionProtoType *FDTy = FD->getAs<FunctionProtoType>();
+printf("[%s:%d] FDTy %p\n", __FUNCTION__, __LINE__, FDTy);
+FDTy->dump();
+#if 1
+  QualType retType = FDTy->getReturnType();
+  auto paramTypes = FDTy->getParamTypes();
+  //const Type *PTy = PointerType::get(FDTy);
+retType->dump();
+printf("[%s:%d] param\n", __FUNCTION__, __LINE__);
+for (auto pitem: paramTypes) {
+pitem->dump();
+}
+#if 1
+  FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
+  EPI.TypeQuals = 0;
+  QualType newtt = Context.getFunctionType(retType, paramTypes, EPI);
+printf("[%s:%d] newtt\n", __FUNCTION__, __LINE__);
+newtt->dump();
+#endif
+#endif
+#if 0
+    FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
+    Type *NTy = getFunctionType(FDTy->getReturnType(), FDTy->getParamTypes(), EPI);
+printf("[%s:%d] NTy %p\n", __FUNCTION__, __LINE__, NTy);
+NTy->dump();
+  QualType Ty =  QualType(NTy, 0);
+#endif
+//item->getType();
   NamedDecl *newField = FieldDecl::Create(Context, cdecl, item->getLocation(), item->getLocation(),
        &Context.Idents.get(item->getName().str() + "bozo"),
-       Context.IntTy, nullptr, nullptr, false, ICIS_NoInit);
+       Context.IntTy,
+//Context.getPointerType(Ty),
+       nullptr, nullptr, false, ICIS_NoInit);
   newField->setIsUsed();
   newField->setAccess(AS_public);
   cdecl->addDecl(newField);
