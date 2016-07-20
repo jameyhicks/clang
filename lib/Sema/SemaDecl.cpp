@@ -12425,7 +12425,7 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
         FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
         EPI.TypeQuals = 0;
         NamedDecl *newField = FieldDecl::Create(Context, cdecl, item->getLocation(), item->getLocation(),
-            &Context.Idents.get(item->getName().str() + "bozo"),
+            &Context.Idents.get(item->getName().str() + "_temp"),
             Context.getPointerType(Context.getFunctionType(FDTy->getReturnType(), newParam, EPI)),
             nullptr, nullptr, false, ICIS_NoInit);
         newField->setIsUsed();
@@ -12435,6 +12435,35 @@ printf("[%s:%d] newtt\n", __FUNCTION__, __LINE__);
 newField->dump();
       }
     }
+#if 0
+{
+  SourceRange IntroducerRange;
+  TypeSourceInfo *MethodTypeInfo;
+  SourceLocation EndLoc;
+  ArrayRef<ParmVarDecl *> Params;
+  QualType MethodType = MethodTypeInfo->getType();
+  const FunctionProtoType *FPT = MethodType->castAs<FunctionProtoType>();
+  MethodType = Context.getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), FPT->getExtProtoInfo());
+  DeclarationName MethodName = Context.DeclarationNames.getCXXOperatorName(OO_Call);
+  DeclarationNameLoc MethodNameLoc;
+  MethodNameLoc.CXXOperatorName.BeginOpNameLoc = IntroducerRange.getBegin().getRawEncoding();
+  MethodNameLoc.CXXOperatorName.EndOpNameLoc = IntroducerRange.getEnd().getRawEncoding();
+  CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, EndLoc,
+     DeclarationNameInfo(MethodName, IntroducerRange.getBegin(), MethodNameLoc),
+     MethodType, MethodTypeInfo, SC_None, /*isInline=*/true, /*isConstExpr=*/false, EndLoc);
+  Method->setAccess(AS_public);
+  Method->setLexicalDeclContext(CurContext);  
+  Method->setParams(Params);
+  CheckParmsForFunctionDef(const_cast<ParmVarDecl **>(Params.begin()), const_cast<ParmVarDecl **>(Params.end()), /*CheckParameterNames=*/false); 
+  for (auto P : Method->params())
+    P->setOwningFunction(Method);
+  Decl *ManglingContextDecl;
+  if (MangleNumberingContext *MCtx = getCurrentMangleNumberContext(cdecl->getDeclContext(), ManglingContextDecl)) {
+    cdecl->setLambdaMangling(MCtx->getManglingNumber(Method), ManglingContextDecl);
+  }
+  //return Method;
+}
+#endif
     for (auto item: cdecl->fields()) {
 printf("[%s:%d] fields\n", __FUNCTION__, __LINE__);
 //FieldDecl
