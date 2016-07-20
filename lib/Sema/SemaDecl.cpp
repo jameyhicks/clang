@@ -12433,37 +12433,45 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
         cdecl->addDecl(newField);
 printf("[%s:%d] newtt\n", __FUNCTION__, __LINE__);
 newField->dump();
+item->dump();
+printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
+        //ArrayRef<ParmVarDecl *> nParams;
+        SmallVector<ParmVarDecl*, 16> nParams;
+        QualType *newType = ::new (Context) QualType[3];
+        for (unsigned i = 0, e = 3; i != e; ++i) {
+          newType[i] = Context.IntTy;
+          ParmVarDecl *parm = ParmVarDecl::Create(Context, nullptr//Method
+, item->getLocation(), item->getLocation(),
+             nullptr, Context.IntTy, /*TInfo=*/nullptr, SC_None, nullptr);
+          parm->setScopeInfo(0, i);
+          nParams.push_back(parm);
+        }
+        ArrayRef<QualType> newParam2 = llvm::makeArrayRef(newType, 3);
+//A, 4);
+        const IdentifierInfo &IDI = Context.Idents.get(item->getName().str() + "_EXTRA");
+        CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, item->getLocation(),
+           DeclarationNameInfo(Context.DeclarationNames.getIdentifier(&IDI), item->getLocation()),
+           Context.getFunctionType(Context.IntTy, newParam2, EPI),
+           //Context.IntTy,
+           nullptr, SC_None, /*isInline=*/false, /*isConstExpr=*/false, item->getLocation());
+        Method->setAccess(AS_public);
+        Method->setLexicalDeclContext(CurContext);  
+        Method->setParams(nParams);
+        IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getTypeSize(Context.IntTy),
+            (uint64_t) 1), Context.IntTy, item->getLocation());
+        Stmt *Return = new (Context) ReturnStmt(item->getLocation(), IL, nullptr);
+        Method->setBody(new (Context) CompoundStmt(Context, Return, item->getLocation(), item->getLocation()));
+        for (auto P : Method->params())
+          P->setOwningFunction(Method);
+//cdecl->addDecl(Method);
+Method->dump();
+  //CheckParmsForFunctionDef(const_cast<ParmVarDecl **>(nParams.begin()), const_cast<ParmVarDecl **>(nParams.end()), /*CheckParameterNames=*/false); 
+  //Decl *ManglingContextDecl;
+  //if (MangleNumberingContext *MCtx = getCurrentMangleNumberContext(cdecl->getDeclContext(), ManglingContextDecl)) {
+    //cdecl->setLambdaMangling(MCtx->getManglingNumber(Method), ManglingContextDecl);
+  //}
       }
     }
-#if 0
-{
-  SourceRange IntroducerRange;
-  TypeSourceInfo *MethodTypeInfo;
-  SourceLocation EndLoc;
-  ArrayRef<ParmVarDecl *> Params;
-  QualType MethodType = MethodTypeInfo->getType();
-  const FunctionProtoType *FPT = MethodType->castAs<FunctionProtoType>();
-  MethodType = Context.getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), FPT->getExtProtoInfo());
-  DeclarationName MethodName = Context.DeclarationNames.getCXXOperatorName(OO_Call);
-  DeclarationNameLoc MethodNameLoc;
-  MethodNameLoc.CXXOperatorName.BeginOpNameLoc = IntroducerRange.getBegin().getRawEncoding();
-  MethodNameLoc.CXXOperatorName.EndOpNameLoc = IntroducerRange.getEnd().getRawEncoding();
-  CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, EndLoc,
-     DeclarationNameInfo(MethodName, IntroducerRange.getBegin(), MethodNameLoc),
-     MethodType, MethodTypeInfo, SC_None, /*isInline=*/true, /*isConstExpr=*/false, EndLoc);
-  Method->setAccess(AS_public);
-  Method->setLexicalDeclContext(CurContext);  
-  Method->setParams(Params);
-  CheckParmsForFunctionDef(const_cast<ParmVarDecl **>(Params.begin()), const_cast<ParmVarDecl **>(Params.end()), /*CheckParameterNames=*/false); 
-  for (auto P : Method->params())
-    P->setOwningFunction(Method);
-  Decl *ManglingContextDecl;
-  if (MangleNumberingContext *MCtx = getCurrentMangleNumberContext(cdecl->getDeclContext(), ManglingContextDecl)) {
-    cdecl->setLambdaMangling(MCtx->getManglingNumber(Method), ManglingContextDecl);
-  }
-  //return Method;
-}
-#endif
     for (auto item: cdecl->fields()) {
 printf("[%s:%d] fields\n", __FUNCTION__, __LINE__);
 //FieldDecl
