@@ -12462,6 +12462,7 @@ printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
            //Context.IntTy,
            nullptr, SC_None, /*isInline=*/false, /*isConstExpr=*/false, item->getLocation());
         Method->setIsUsed();
+        Method->addAttr(UsedAttr::CreateImplicit(Context));
         Method->setAccess(AS_public);
         Method->setLexicalDeclContext(CurContext);  
         Method->setParams(nParams);
@@ -12476,6 +12477,7 @@ printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
         Method->setBody(new (Context) CompoundStmt(Context, Return, item->getLocation(), item->getLocation()));
         for (auto P : Method->params())
           P->setOwningFunction(Method);
+        Consumer.HandleInlineMethodDefinition(Method);
         cdecl->addDecl(Method);
 Method->dump();
   //CheckParmsForFunctionDef(const_cast<ParmVarDecl **>(nParams.begin()), const_cast<ParmVarDecl **>(nParams.end()), /*CheckParameterNames=*/false); 
