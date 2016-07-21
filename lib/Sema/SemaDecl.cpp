@@ -12434,6 +12434,14 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
 printf("[%s:%d] newtt\n", __FUNCTION__, __LINE__);
 newField->dump();
 item->dump();
+        bool isNewMeth = false;
+        if (const auto *TD = item->getAttr<TargetAttr>()) {
+            StringRef FeaturesStr = TD->getFeatures();
+printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str());
+            if (FeaturesStr == "NEWNEW")
+                isNewMeth = true;
+        }
+        if (!isNewMeth) {
 printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
         //ArrayRef<ParmVarDecl *> nParams;
         SmallVector<ParmVarDecl*, 16> nParams;
@@ -12447,7 +12455,6 @@ printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
           nParams.push_back(parm);
         }
         ArrayRef<QualType> newParam2 = llvm::makeArrayRef(newType, 3);
-//A, 4);
         const IdentifierInfo &IDI = Context.Idents.get(item->getName().str() + "_EXTRA");
         CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, item->getLocation(),
            DeclarationNameInfo(Context.DeclarationNames.getIdentifier(&IDI), item->getLocation()),
@@ -12457,19 +12464,23 @@ printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
         Method->setAccess(AS_public);
         Method->setLexicalDeclContext(CurContext);  
         Method->setParams(nParams);
+        StringRef nStr("NEWNEW");
+        unsigned nIndex = 0; //Attrs->getAttributeSpellingListIndex();
+        Method->addAttr(::new (Context) TargetAttr(Method->getLocation(), Context, nStr, nIndex));
         IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getTypeSize(Context.IntTy),
             (uint64_t) 1), Context.IntTy, item->getLocation());
         Stmt *Return = new (Context) ReturnStmt(item->getLocation(), IL, nullptr);
         Method->setBody(new (Context) CompoundStmt(Context, Return, item->getLocation(), item->getLocation()));
         for (auto P : Method->params())
           P->setOwningFunction(Method);
-//cdecl->addDecl(Method);
+        cdecl->addDecl(Method);
 Method->dump();
   //CheckParmsForFunctionDef(const_cast<ParmVarDecl **>(nParams.begin()), const_cast<ParmVarDecl **>(nParams.end()), /*CheckParameterNames=*/false); 
   //Decl *ManglingContextDecl;
   //if (MangleNumberingContext *MCtx = getCurrentMangleNumberContext(cdecl->getDeclContext(), ManglingContextDecl)) {
     //cdecl->setLambdaMangling(MCtx->getManglingNumber(Method), ManglingContextDecl);
   //}
+      }
       }
     }
     for (auto item: cdecl->fields()) {
