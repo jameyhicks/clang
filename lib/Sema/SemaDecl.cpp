@@ -12412,6 +12412,18 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
 //FunctionDecl
       printf("[%s:%d] method\n", __FUNCTION__, __LINE__);
       if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
+        std::string mname = item->getName();
+        if (mname == "init")
+            continue;
+        bool isNewMeth = false;
+        if (const auto *TD = item->getAttr<TargetAttr>()) {
+            StringRef FeaturesStr = TD->getFeatures();
+printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str());
+            if (FeaturesStr == "NEWNEW")
+                isNewMeth = true;
+        }
+        if (isNewMeth)
+            continue;
         StringRef Str("HAHAHOHO");
         unsigned Index = 0; //Attrs->getAttributeSpellingListIndex();
         item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, Str, Index));
@@ -12425,25 +12437,16 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
         FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
         EPI.TypeQuals = 0;
         NamedDecl *newField = FieldDecl::Create(Context, cdecl, item->getLocation(), item->getLocation(),
-            &Context.Idents.get(item->getName().str() + "_temp"),
+            &Context.Idents.get(mname + "p"),
             Context.getPointerType(Context.getFunctionType(FDTy->getReturnType(), newParam, EPI)),
             nullptr, nullptr, false, ICIS_NoInit);
         newField->setIsUsed();
         newField->setAccess(AS_public);
         cdecl->addDecl(newField);
-printf("[%s:%d] newtt\n", __FUNCTION__, __LINE__);
-newField->dump();
-item->dump();
-        bool isNewMeth = false;
-        if (const auto *TD = item->getAttr<TargetAttr>()) {
-            StringRef FeaturesStr = TD->getFeatures();
-printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str());
-            if (FeaturesStr == "NEWNEW")
-                isNewMeth = true;
-        }
-        if (!isNewMeth) {
-printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
-        //ArrayRef<ParmVarDecl *> nParams;
+//printf("[%s:%d] newtt\n", __FUNCTION__, __LINE__);
+//newField->dump();
+//item->dump();
+//printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
         SmallVector<ParmVarDecl*, 16> nParams;
         QualType *newType = ::new (Context) QualType[3];
         for (unsigned i = 0, e = 3; i != e; ++i) {
@@ -12455,11 +12458,10 @@ printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
           nParams.push_back(parm);
         }
         ArrayRef<QualType> newParam2 = llvm::makeArrayRef(newType, 3);
-        const IdentifierInfo &IDI = Context.Idents.get(item->getName().str() + "_EXTRA");
+        const IdentifierInfo &IDI = Context.Idents.get(mname + "_EXTRA");
         CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, item->getLocation(),
            DeclarationNameInfo(Context.DeclarationNames.getIdentifier(&IDI), item->getLocation()),
            Context.getFunctionType(Context.IntTy, newParam2, EPI),
-           //Context.IntTy,
            nullptr, SC_None, /*isInline=*/false, /*isConstExpr=*/false, item->getLocation());
         Method->setIsUsed();
         Method->addAttr(UsedAttr::CreateImplicit(Context));
@@ -12479,13 +12481,6 @@ printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
           P->setOwningFunction(Method);
         Consumer.HandleInlineMethodDefinition(Method);
         cdecl->addDecl(Method);
-Method->dump();
-  //CheckParmsForFunctionDef(const_cast<ParmVarDecl **>(nParams.begin()), const_cast<ParmVarDecl **>(nParams.end()), /*CheckParameterNames=*/false); 
-  //Decl *ManglingContextDecl;
-  //if (MangleNumberingContext *MCtx = getCurrentMangleNumberContext(cdecl->getDeclContext(), ManglingContextDecl)) {
-    //cdecl->setLambdaMangling(MCtx->getManglingNumber(Method), ManglingContextDecl);
-  //}
-      }
       }
     }
     for (auto item: cdecl->fields()) {
