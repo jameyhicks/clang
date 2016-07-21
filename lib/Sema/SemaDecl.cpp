@@ -12461,12 +12461,15 @@ printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
            Context.getFunctionType(Context.IntTy, newParam2, EPI),
            //Context.IntTy,
            nullptr, SC_None, /*isInline=*/false, /*isConstExpr=*/false, item->getLocation());
+        Method->setIsUsed();
         Method->setAccess(AS_public);
         Method->setLexicalDeclContext(CurContext);  
         Method->setParams(nParams);
         StringRef nStr("NEWNEW");
         unsigned nIndex = 0; //Attrs->getAttributeSpellingListIndex();
         Method->addAttr(::new (Context) TargetAttr(Method->getLocation(), Context, nStr, nIndex));
+        StringRef naStr("atomicc_method");
+        Method->addAttr(::new (Context) TargetAttr(Method->getLocation(), Context, naStr, nIndex));
         IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getTypeSize(Context.IntTy),
             (uint64_t) 1), Context.IntTy, item->getLocation());
         Stmt *Return = new (Context) ReturnStmt(item->getLocation(), IL, nullptr);
