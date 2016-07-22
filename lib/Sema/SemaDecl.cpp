@@ -12421,35 +12421,32 @@ static void createField(ASTContext &Context, CXXRecordDecl *cdecl, CXXMethodDecl
 //printf("[%s:%d] newtt\n", __FUNCTION__, __LINE__);
 //newField->dump();
 }
-static CXXMethodDecl *createMethod(ASTContext &Context, DeclContext *CurContext, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname)
+static CXXMethodDecl *createMethod(ASTContext &Context, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname, ArrayRef<QualType>newType)
 {
-    SmallVector<ParmVarDecl*, 16> nParams;
-    QualType *newType = ::new (Context) QualType[3];
-    for (unsigned i = 0, e = 3; i != e; ++i) {
-      newType[i] = Context.IntTy;
-      ParmVarDecl *parm = ParmVarDecl::Create(Context, nullptr/*Method*/, item->getLocation(), item->getLocation(),
-         nullptr, Context.IntTy, /*TInfo=*/nullptr, SC_None, nullptr);
-      parm->setScopeInfo(0, i);
-      nParams.push_back(parm);
-    }
     const IdentifierInfo &IDI = Context.Idents.get(mname);
     const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
     FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
     EPI.TypeQuals = 0;
     CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, item->getLocation(),
        DeclarationNameInfo(Context.DeclarationNames.getIdentifier(&IDI), item->getLocation()),
-       Context.getFunctionType(Context.IntTy, llvm::makeArrayRef(newType, 3), EPI),
+       Context.getFunctionType(Context.IntTy, newType, EPI),
        nullptr, SC_None, /*isInline=*/false, /*isConstExpr=*/false, item->getLocation());
     Method->setAccess(AS_public);
-    Method->setLexicalDeclContext(CurContext);  
+    SmallVector<ParmVarDecl*, 16> nParams;
+    for (unsigned i = 0, e = 3; i != e; ++i) {
+      ParmVarDecl *parm = ParmVarDecl::Create(Context, Method, item->getLocation(), item->getLocation(),
+         nullptr, newType[i], /*TInfo=*/nullptr, SC_None, nullptr);
+      parm->setScopeInfo(0, i);
+      nParams.push_back(parm);
+    }
     Method->setParams(nParams);
     Method->addAttr(::new (Context) TargetAttr(Method->getLocation(), Context, StringRef("NEWNEW"), 0));
     IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getTypeSize(Context.IntTy),
         (uint64_t) 1), Context.IntTy, item->getLocation());
     Stmt *Return = new (Context) ReturnStmt(item->getLocation(), IL, nullptr);
     Method->setBody(new (Context) CompoundStmt(Context, Return, item->getLocation(), item->getLocation()));
-    for (auto P : Method->params())
-      P->setOwningFunction(Method);
+    //for (auto P : Method->params())
+      //P->setOwningFunction(Method);
     cdecl->addDecl(Method);
     //MarkFunctionReferenced(Field->getLocation(), Destructor);
     return Method;
@@ -12483,7 +12480,11 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
         if (!isNewMeth) {
             createField(Context, cdecl, item, mname + "p");
 //printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
-            CXXMethodDecl *Method = createMethod(Context, CurContext, cdecl, item, mname + "_EXTRA");
+            QualType *newType = ::new (Context) QualType[3];
+            for (unsigned i = 0, e = 3; i != e; ++i)
+              newType[i] = Context.IntTy;
+            CXXMethodDecl *Method = createMethod(Context, cdecl, item, mname + "_EXTRA", llvm::makeArrayRef(newType, 3));
+            Method->setLexicalDeclContext(CurContext);
             Consumer.HandleInlineMethodDefinition(Method);
         }
       }
