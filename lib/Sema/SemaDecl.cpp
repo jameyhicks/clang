@@ -12423,12 +12423,10 @@ static void createField(ASTContext &Context, CXXRecordDecl *cdecl, CXXMethodDecl
 //printf("[%s:%d] newtt\n", __FUNCTION__, __LINE__);
 //newField->dump();
 }
-static CXXMethodDecl *createMethod(ASTContext &Context, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname, QualType retType, std::vector<QualType> paramTypes)
+static CXXMethodDecl *createMethod(ASTContext &Context, CXXRecordDecl *cdecl, std::string mname, QualType retType, std::vector<QualType> paramTypes)
 {
     const IdentifierInfo &IDI = Context.Idents.get(mname);
-    const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
-    FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
-    EPI.TypeQuals = 0;
+    FunctionProtoType::ExtProtoInfo EPI;
     CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, cdecl->getLocation(),
        DeclarationNameInfo(Context.DeclarationNames.getIdentifier(&IDI), cdecl->getLocation()),
        Context.getFunctionType(retType, paramTypes, EPI),
@@ -12460,7 +12458,6 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
     std::vector<QualType> initParamTypes;
     initParamTypes.push_back(Context.getPointerType(Context.getConstType(Context.CharTy))); //name
     initParamTypes.push_back(Context.VoidPtrTy); //ap
-    CXXMethodDecl *lastItem = NULL;
     for (auto item: cdecl->methods()) {
       printf("[%s:%d] method\n", __FUNCTION__, __LINE__);
       if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
@@ -12470,8 +12467,8 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
         item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, StringRef("atomicc_method"), 0));
         item->setIsUsed();
         item->addAttr(UsedAttr::CreateImplicit(Context));
-        if (mname == "init")
-            continue;
+        //if (mname == "init")
+            //continue;
         if (const auto *TD = item->getAttr<TargetAttr>()) {
             StringRef FeaturesStr = TD->getFeatures();
 printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str());
@@ -12485,7 +12482,7 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
                 (uint64_t) 1), Context.BoolTy, cdecl->getLocation());
             Stmt *iReturn = new (Context) ReturnStmt(cdecl->getLocation(), iIL, nullptr);
             item->setBody(new (Context) CompoundStmt(Context, iReturn, cdecl->getLocation(), cdecl->getLocation()));
-            CXXMethodDecl *Method = createMethod(Context, cdecl, item, mname + "__RDY", Context.BoolTy, paramTypes);
+            CXXMethodDecl *Method = createMethod(Context, cdecl, mname + "__RDY", Context.BoolTy, paramTypes);
             IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
                 (uint64_t) 1), Context.BoolTy, cdecl->getLocation());
             Stmt *Return = new (Context) ReturnStmt(cdecl->getLocation(), IL, nullptr);
@@ -12496,19 +12493,16 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
             createField(Context, cdecl, item, mname + "p");
             initParamTypes.push_back(Context.UnsignedLongTy); //axxx__RDYp
             initParamTypes.push_back(Context.UnsignedLongTy); //axxxp
-            lastItem = item;
         }
       }
     }
-    if (lastItem) {
-    CXXMethodDecl *Method = createMethod(Context, cdecl, lastItem, "init", Context.VoidTy, initParamTypes);
+    CXXMethodDecl *Method = createMethod(Context, cdecl, "init", Context.VoidTy, initParamTypes);
     IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
-        (uint64_t) 1), Context.BoolTy, lastItem->getLocation());
-    Stmt *Return = new (Context) ReturnStmt(lastItem->getLocation(), IL, nullptr);
-    Method->setBody(new (Context) CompoundStmt(Context, Return, lastItem->getLocation(), lastItem->getLocation()));
+        (uint64_t) 1), Context.BoolTy, cdecl->getLocation());
+    Stmt *Return = new (Context) ReturnStmt(cdecl->getLocation(), IL, nullptr);
+    Method->setBody(new (Context) CompoundStmt(Context, Return, cdecl->getLocation(), cdecl->getLocation()));
     Method->setLexicalDeclContext(CurContext);
     Consumer.HandleInlineMethodDefinition(Method);
-    }
     for (auto item: cdecl->fields()) {
 printf("[%s:%d] fields\n", __FUNCTION__, __LINE__);
         item->dump();
