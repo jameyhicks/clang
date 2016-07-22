@@ -12400,6 +12400,31 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
          "Broken injected-class-name");
 }
 
+static void createField(ASTContext &Context, DeclContext *CurContext, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname)
+{
+    StringRef Str("HAHAHOHO");
+    unsigned Index = 0; //Attrs->getAttributeSpellingListIndex();
+    item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, Str, Index));
+    const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
+    ArrayRef<QualType> paramTypes = FDTy->getParamTypes();
+    QualType *A = ::new (Context) QualType[paramTypes.size() + 1];
+    A[0] = Context.VoidPtrTy;
+    if (!paramTypes.empty())
+        std::copy(paramTypes.begin(), paramTypes.end(), A+1);
+    ArrayRef<QualType> newParam = llvm::makeArrayRef(A, paramTypes.size() + 1);
+    FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
+    EPI.TypeQuals = 0;
+    NamedDecl *newField = FieldDecl::Create(Context, cdecl, item->getLocation(), item->getLocation(),
+        &Context.Idents.get(mname + "p"),
+        Context.getPointerType(Context.getFunctionType(FDTy->getReturnType(), newParam, EPI)),
+        nullptr, nullptr, false, ICIS_NoInit);
+    newField->setIsUsed();
+    newField->setAccess(AS_public);
+    cdecl->addDecl(newField);
+//printf("[%s:%d] newtt\n", __FUNCTION__, __LINE__);
+//newField->dump();
+//item->dump();
+}
 static CXXMethodDecl *createMethod(ASTContext &Context, DeclContext *CurContext, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname)
 {
     unsigned nIndex = 0; //Attrs->getAttributeSpellingListIndex();
@@ -12462,33 +12487,12 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
             if (FeaturesStr == "NEWNEW")
                 isNewMeth = true;
         }
-        if (isNewMeth)
-            continue;
-        StringRef Str("HAHAHOHO");
-        unsigned Index = 0; //Attrs->getAttributeSpellingListIndex();
-        item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, Str, Index));
-        const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
-        ArrayRef<QualType> paramTypes = FDTy->getParamTypes();
-        QualType *A = ::new (Context) QualType[paramTypes.size() + 1];
-        A[0] = Context.VoidPtrTy;
-        if (!paramTypes.empty())
-            std::copy(paramTypes.begin(), paramTypes.end(), A+1);
-        ArrayRef<QualType> newParam = llvm::makeArrayRef(A, paramTypes.size() + 1);
-        FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
-        EPI.TypeQuals = 0;
-        NamedDecl *newField = FieldDecl::Create(Context, cdecl, item->getLocation(), item->getLocation(),
-            &Context.Idents.get(mname + "p"),
-            Context.getPointerType(Context.getFunctionType(FDTy->getReturnType(), newParam, EPI)),
-            nullptr, nullptr, false, ICIS_NoInit);
-        newField->setIsUsed();
-        newField->setAccess(AS_public);
-        cdecl->addDecl(newField);
-//printf("[%s:%d] newtt\n", __FUNCTION__, __LINE__);
-//newField->dump();
-//item->dump();
+        if (!isNewMeth) {
+            createField(Context, CurContext, cdecl, item, mname);
 //printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
-        CXXMethodDecl *Method = createMethod(Context, CurContext, cdecl, item, mname);
-        Consumer.HandleInlineMethodDefinition(Method);
+            CXXMethodDecl *Method = createMethod(Context, CurContext, cdecl, item, mname);
+            Consumer.HandleInlineMethodDefinition(Method);
+        }
       }
     }
     for (auto item: cdecl->fields()) {
