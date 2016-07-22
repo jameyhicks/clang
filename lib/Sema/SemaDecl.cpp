@@ -12402,8 +12402,6 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
 
 static void createField(ASTContext &Context, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname)
 {
-    //StringRef Str("HAHAHOHO");
-    //item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, Str, 0));
     const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
     ArrayRef<QualType> paramTypes = FDTy->getParamTypes();
     QualType *A = ::new (Context) QualType[paramTypes.size() + 1];
@@ -12434,19 +12432,17 @@ static CXXMethodDecl *createMethod(ASTContext &Context, DeclContext *CurContext,
       parm->setScopeInfo(0, i);
       nParams.push_back(parm);
     }
-    ArrayRef<QualType> newParam2 = llvm::makeArrayRef(newType, 3);
     const IdentifierInfo &IDI = Context.Idents.get(mname);
     const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
     FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
     CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, item->getLocation(),
        DeclarationNameInfo(Context.DeclarationNames.getIdentifier(&IDI), item->getLocation()),
-       Context.getFunctionType(Context.IntTy, newParam2, EPI),
+       Context.getFunctionType(Context.IntTy, llvm::makeArrayRef(newType, 3), EPI),
        nullptr, SC_None, /*isInline=*/false, /*isConstExpr=*/false, item->getLocation());
     Method->setAccess(AS_public);
     Method->setLexicalDeclContext(CurContext);  
     Method->setParams(nParams);
-    StringRef nStr("NEWNEW");
-    Method->addAttr(::new (Context) TargetAttr(Method->getLocation(), Context, nStr, 0));
+    Method->addAttr(::new (Context) TargetAttr(Method->getLocation(), Context, StringRef("NEWNEW"), 0));
     IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getTypeSize(Context.IntTy),
         (uint64_t) 1), Context.IntTy, item->getLocation());
     Stmt *Return = new (Context) ReturnStmt(item->getLocation(), IL, nullptr);
@@ -12472,8 +12468,7 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
         bool isNewMeth = false;
         std::string mname = item->getName();
         mnameList.push_back(mname);
-        StringRef naStr("atomicc_method");
-        item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, naStr, 0));
+        item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, StringRef("atomicc_method"), 0));
         item->setIsUsed();
         item->addAttr(UsedAttr::CreateImplicit(Context));
         if (mname == "init")
@@ -12496,11 +12491,11 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
 printf("[%s:%d] fields\n", __FUNCTION__, __LINE__);
         item->dump();
     }
-    for (auto item: cdecl->ctors()) {
+    //for (auto item: cdecl->ctors()) {
         //CXXConstructorDecl
         //printf("[%s:%d] ctors\n", __FUNCTION__, __LINE__);
         //item->dump();
-    }
+    //}
   }
 
   // Make sure we "complete" the definition even it is invalid.
