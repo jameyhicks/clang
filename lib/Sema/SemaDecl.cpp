@@ -12472,18 +12472,20 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
                 isNewMeth = true;
         }
         if (!isNewMeth) {
-            createField(Context, cdecl, item, mname + "p");
 //printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
             std::vector<QualType> paramTypes;
-            for (unsigned i = 0, e = 3; i != e; ++i)
-              paramTypes.push_back(Context.IntTy);
-            CXXMethodDecl *Method = createMethod(Context, cdecl, item, mname + "_EXTRA", Context.IntTy, paramTypes);
-            IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getTypeSize(Context.IntTy),
-                (uint64_t) 1), Context.IntTy, item->getLocation());
+  //VoidTy; BoolTy;
+            //for (unsigned i = 0, e = 3; i != e; ++i)
+              //paramTypes.push_back(Context.IntTy);
+            CXXMethodDecl *Method = createMethod(Context, cdecl, item, mname + "__RDY", Context.BoolTy, paramTypes);
+            IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
+                (uint64_t) 1), Context.BoolTy, item->getLocation());
             Stmt *Return = new (Context) ReturnStmt(item->getLocation(), IL, nullptr);
             Method->setBody(new (Context) CompoundStmt(Context, Return, item->getLocation(), item->getLocation()));
             Method->setLexicalDeclContext(CurContext);
             Consumer.HandleInlineMethodDefinition(Method);
+            createField(Context, cdecl, Method, mname + "__RDYp");
+            createField(Context, cdecl, item, mname + "p");
         }
       }
     }
