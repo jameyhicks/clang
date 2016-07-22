@@ -12400,11 +12400,10 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
          "Broken injected-class-name");
 }
 
-static void createField(ASTContext &Context, DeclContext *CurContext, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname)
+static void createField(ASTContext &Context, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname)
 {
-    StringRef Str("HAHAHOHO");
-    unsigned Index = 0; //Attrs->getAttributeSpellingListIndex();
-    item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, Str, Index));
+    //StringRef Str("HAHAHOHO");
+    //item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, Str, 0));
     const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
     ArrayRef<QualType> paramTypes = FDTy->getParamTypes();
     QualType *A = ::new (Context) QualType[paramTypes.size() + 1];
@@ -12415,7 +12414,7 @@ static void createField(ASTContext &Context, DeclContext *CurContext, CXXRecordD
     FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
     EPI.TypeQuals = 0;
     NamedDecl *newField = FieldDecl::Create(Context, cdecl, item->getLocation(), item->getLocation(),
-        &Context.Idents.get(mname + "p"),
+        &Context.Idents.get(mname),
         Context.getPointerType(Context.getFunctionType(FDTy->getReturnType(), newParam, EPI)),
         nullptr, nullptr, false, ICIS_NoInit);
     newField->setIsUsed();
@@ -12423,23 +12422,20 @@ static void createField(ASTContext &Context, DeclContext *CurContext, CXXRecordD
     cdecl->addDecl(newField);
 //printf("[%s:%d] newtt\n", __FUNCTION__, __LINE__);
 //newField->dump();
-//item->dump();
 }
 static CXXMethodDecl *createMethod(ASTContext &Context, DeclContext *CurContext, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname)
 {
-    unsigned nIndex = 0; //Attrs->getAttributeSpellingListIndex();
     SmallVector<ParmVarDecl*, 16> nParams;
     QualType *newType = ::new (Context) QualType[3];
     for (unsigned i = 0, e = 3; i != e; ++i) {
       newType[i] = Context.IntTy;
-      ParmVarDecl *parm = ParmVarDecl::Create(Context, nullptr//Method
-, item->getLocation(), item->getLocation(),
+      ParmVarDecl *parm = ParmVarDecl::Create(Context, nullptr/*Method*/, item->getLocation(), item->getLocation(),
          nullptr, Context.IntTy, /*TInfo=*/nullptr, SC_None, nullptr);
       parm->setScopeInfo(0, i);
       nParams.push_back(parm);
     }
     ArrayRef<QualType> newParam2 = llvm::makeArrayRef(newType, 3);
-    const IdentifierInfo &IDI = Context.Idents.get(mname + "_EXTRA");
+    const IdentifierInfo &IDI = Context.Idents.get(mname);
     const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
     FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
     CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, item->getLocation(),
@@ -12450,7 +12446,7 @@ static CXXMethodDecl *createMethod(ASTContext &Context, DeclContext *CurContext,
     Method->setLexicalDeclContext(CurContext);  
     Method->setParams(nParams);
     StringRef nStr("NEWNEW");
-    Method->addAttr(::new (Context) TargetAttr(Method->getLocation(), Context, nStr, nIndex));
+    Method->addAttr(::new (Context) TargetAttr(Method->getLocation(), Context, nStr, 0));
     IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getTypeSize(Context.IntTy),
         (uint64_t) 1), Context.IntTy, item->getLocation());
     Stmt *Return = new (Context) ReturnStmt(item->getLocation(), IL, nullptr);
@@ -12458,29 +12454,30 @@ static CXXMethodDecl *createMethod(ASTContext &Context, DeclContext *CurContext,
     for (auto P : Method->params())
       P->setOwningFunction(Method);
     cdecl->addDecl(Method);
+    //MarkFunctionReferenced(Field->getLocation(), Destructor);
     return Method;
 }
 
 void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
                                     SourceLocation RBraceLoc) {
+  std::list<std::string> mnameList;
   AdjustDeclIfTemplate(TagD);
   TagDecl *Tag = cast<TagDecl>(TagD);
   Tag->setRBraceLoc(RBraceLoc);
   if (Tag->getTagKind() == TTK_AInterface)
   if (CXXRecordDecl *cdecl = dyn_cast<CXXRecordDecl>(Tag)) {
     for (auto item: cdecl->methods()) {
-//CXXMethodDecl
-//FunctionDecl
       printf("[%s:%d] method\n", __FUNCTION__, __LINE__);
       if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
+        bool isNewMeth = false;
         std::string mname = item->getName();
+        mnameList.push_back(mname);
         StringRef naStr("atomicc_method");
         item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, naStr, 0));
         item->setIsUsed();
         item->addAttr(UsedAttr::CreateImplicit(Context));
         if (mname == "init")
             continue;
-        bool isNewMeth = false;
         if (const auto *TD = item->getAttr<TargetAttr>()) {
             StringRef FeaturesStr = TD->getFeatures();
 printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str());
@@ -12488,61 +12485,22 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
                 isNewMeth = true;
         }
         if (!isNewMeth) {
-            createField(Context, CurContext, cdecl, item, mname);
+            createField(Context, cdecl, item, mname + "p");
 //printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
-            CXXMethodDecl *Method = createMethod(Context, CurContext, cdecl, item, mname);
+            CXXMethodDecl *Method = createMethod(Context, CurContext, cdecl, item, mname + "_EXTRA");
             Consumer.HandleInlineMethodDefinition(Method);
         }
       }
     }
     for (auto item: cdecl->fields()) {
 printf("[%s:%d] fields\n", __FUNCTION__, __LINE__);
-//FieldDecl
         item->dump();
     }
     for (auto item: cdecl->ctors()) {
-//CXXConstructorDecl
-printf("[%s:%d] ctors\n", __FUNCTION__, __LINE__);
-        item->dump();
+        //CXXConstructorDecl
+        //printf("[%s:%d] ctors\n", __FUNCTION__, __LINE__);
+        //item->dump();
     }
-#if 0
-void Sema::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) 
-{
-  if (ObjCInterfaceDecl *OID = ObjCImplementation->getClassInterface()) {
-    SmallVector<ObjCIvarDecl*, 8> ivars;
-    CollectIvarsToConstructOrDestruct(OID, ivars);
-    if (ivars.empty()) return;
-    SmallVector<CXXCtorInitializer*, 32> AllToInit;
-    for (unsigned i = 0; i < ivars.size(); i++) {
-      FieldDecl *Field = ivars[i];
-      if (Field->isInvalidDecl())
-        continue; 
-      CXXCtorInitializer *Member;
-      InitializedEntity InitEntity = InitializedEntity::InitializeMember(Field);
-      InitializationKind InitKind = InitializationKind::CreateDefault(ObjCImplementation->getLocation()); 
-      InitializationSequence InitSeq(*this, InitEntity, InitKind, None);
-      ExprResult MemberInit = InitSeq.Perform(*this, InitEntity, InitKind, None);
-      MemberInit = MaybeCreateExprWithCleanups(MemberInit);
-      // Note, MemberInit could actually come back empty if no initialization 
-      // is required (e.g., because it would call a trivial default constructor)
-      if (!MemberInit.get() || MemberInit.isInvalid())
-        continue; 
-      Member = new (Context) CXXCtorInitializer(Context, Field, SourceLocation(), SourceLocation(), MemberInit.getAs<Expr>(), SourceLocation());
-      AllToInit.push_back(Member); 
-      // Be sure that the destructor is accessible and is marked as referenced.
-      if (const RecordType *RecordTy = Context.getBaseElementType(Field->getType())->getAs<RecordType>()) {
-        CXXRecordDecl *RD = cast<CXXRecordDecl>(RecordTy->getDecl());
-        if (CXXDestructorDecl *Destructor = LookupDestructor(RD)) {
-          MarkFunctionReferenced(Field->getLocation(), Destructor);
-          CheckDestructorAccess(Field->getLocation(), Destructor, PDiag(diag::err_access_dtor_ivar) << Context.getBaseElementType(Field->getType()));
-        }
-      }      
-    }
-    ObjCImplementation->setIvarInitializers(Context, AllToInit.data(), AllToInit.size());
-  }
-}
-#endif
-    //cdecl->dump();
   }
 
   // Make sure we "complete" the definition even it is invalid.
