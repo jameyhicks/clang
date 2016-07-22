@@ -12421,7 +12421,7 @@ static void createField(ASTContext &Context, CXXRecordDecl *cdecl, CXXMethodDecl
 //printf("[%s:%d] newtt\n", __FUNCTION__, __LINE__);
 //newField->dump();
 }
-static CXXMethodDecl *createMethod(ASTContext &Context, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname, ArrayRef<QualType>newType)
+static CXXMethodDecl *createMethod(ASTContext &Context, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname, QualType retType, std::vector<QualType> paramTypes)
 {
     const IdentifierInfo &IDI = Context.Idents.get(mname);
     const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
@@ -12429,24 +12429,18 @@ static CXXMethodDecl *createMethod(ASTContext &Context, CXXRecordDecl *cdecl, CX
     EPI.TypeQuals = 0;
     CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, item->getLocation(),
        DeclarationNameInfo(Context.DeclarationNames.getIdentifier(&IDI), item->getLocation()),
-       Context.getFunctionType(Context.IntTy, newType, EPI),
+       Context.getFunctionType(retType, paramTypes, EPI),
        nullptr, SC_None, /*isInline=*/false, /*isConstExpr=*/false, item->getLocation());
     Method->setAccess(AS_public);
-    SmallVector<ParmVarDecl*, 16> nParams;
-    for (unsigned i = 0, e = 3; i != e; ++i) {
+    std::vector<ParmVarDecl*> nParams;
+    for (unsigned i = 0, e = paramTypes.size(); i != e; ++i) {
       ParmVarDecl *parm = ParmVarDecl::Create(Context, Method, item->getLocation(), item->getLocation(),
-         nullptr, newType[i], /*TInfo=*/nullptr, SC_None, nullptr);
+         nullptr, paramTypes[i], /*TInfo=*/nullptr, SC_None, nullptr);
       parm->setScopeInfo(0, i);
       nParams.push_back(parm);
     }
     Method->setParams(nParams);
     Method->addAttr(::new (Context) TargetAttr(Method->getLocation(), Context, StringRef("NEWNEW"), 0));
-    IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getTypeSize(Context.IntTy),
-        (uint64_t) 1), Context.IntTy, item->getLocation());
-    Stmt *Return = new (Context) ReturnStmt(item->getLocation(), IL, nullptr);
-    Method->setBody(new (Context) CompoundStmt(Context, Return, item->getLocation(), item->getLocation()));
-    //for (auto P : Method->params())
-      //P->setOwningFunction(Method);
     cdecl->addDecl(Method);
     //MarkFunctionReferenced(Field->getLocation(), Destructor);
     return Method;
@@ -12480,10 +12474,14 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
         if (!isNewMeth) {
             createField(Context, cdecl, item, mname + "p");
 //printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
-            QualType *newType = ::new (Context) QualType[3];
+            std::vector<QualType> paramTypes;
             for (unsigned i = 0, e = 3; i != e; ++i)
-              newType[i] = Context.IntTy;
-            CXXMethodDecl *Method = createMethod(Context, cdecl, item, mname + "_EXTRA", llvm::makeArrayRef(newType, 3));
+              paramTypes.push_back(Context.IntTy);
+            CXXMethodDecl *Method = createMethod(Context, cdecl, item, mname + "_EXTRA", Context.IntTy, paramTypes);
+            IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getTypeSize(Context.IntTy),
+                (uint64_t) 1), Context.IntTy, item->getLocation());
+            Stmt *Return = new (Context) ReturnStmt(item->getLocation(), IL, nullptr);
+            Method->setBody(new (Context) CompoundStmt(Context, Return, item->getLocation(), item->getLocation()));
             Method->setLexicalDeclContext(CurContext);
             Consumer.HandleInlineMethodDefinition(Method);
         }
@@ -12493,11 +12491,7 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
 printf("[%s:%d] fields\n", __FUNCTION__, __LINE__);
         item->dump();
     }
-    //for (auto item: cdecl->ctors()) {
-        //CXXConstructorDecl
-        //printf("[%s:%d] ctors\n", __FUNCTION__, __LINE__);
-        //item->dump();
-    //}
+    //for (auto item: cdecl->ctors()) { //CXXConstructorDecl //}
   }
 
   // Make sure we "complete" the definition even it is invalid.
