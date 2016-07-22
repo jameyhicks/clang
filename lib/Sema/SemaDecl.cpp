@@ -12455,11 +12455,16 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
     std::vector<QualType> initParamTypes;
     initParamTypes.push_back(Context.getPointerType(Context.getConstType(Context.CharTy))); //name
     initParamTypes.push_back(Context.VoidPtrTy); //ap
+    bool vmethodFlag = false;
     for (auto item: cdecl->methods()) {
       printf("[%s:%d] method\n", __FUNCTION__, __LINE__);
       if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
         bool isNewMeth = false;
         std::string mname = item->getName();
+        if (mname == "VMETHODDECL") {
+            vmethodFlag = true;
+            continue;
+        }
         item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, StringRef("atomicc_method"), 0));
         item->setIsUsed();
         item->addAttr(UsedAttr::CreateImplicit(Context));
@@ -12475,14 +12480,15 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
                 cdecl->getLocation(), cdecl->getLocation()));
 //printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
             std::vector<QualType> paramTypes;
-            CXXMethodDecl *Method = createMethod(Context, cdecl, mname + "__RDY", Context.BoolTy, paramTypes);
+            std::string readyString = vmethodFlag ? "__READY" : "__RDY";
+            CXXMethodDecl *Method = createMethod(Context, cdecl, mname + readyString, Context.BoolTy, paramTypes);
             IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
                 (uint64_t) 1), Context.BoolTy, cdecl->getLocation());
             Stmt *Return = new (Context) ReturnStmt(cdecl->getLocation(), IL, nullptr);
             Method->setBody(new (Context) CompoundStmt(Context, Return, cdecl->getLocation(), cdecl->getLocation()));
             Method->setLexicalDeclContext(CurContext);
             Consumer.HandleInlineMethodDefinition(Method);
-            createField(Context, cdecl, Method, mname + "__RDYp");
+            createField(Context, cdecl, Method, mname + readyString + "p");
             createField(Context, cdecl, item, mname + "p");
             initParamTypes.push_back(Context.UnsignedLongTy); //axxx__RDYp
             initParamTypes.push_back(Context.UnsignedLongTy); //axxxp
