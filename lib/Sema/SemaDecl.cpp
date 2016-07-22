@@ -12435,6 +12435,7 @@ static CXXMethodDecl *createMethod(ASTContext &Context, DeclContext *CurContext,
     const IdentifierInfo &IDI = Context.Idents.get(mname);
     const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
     FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
+    EPI.TypeQuals = 0;
     CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, item->getLocation(),
        DeclarationNameInfo(Context.DeclarationNames.getIdentifier(&IDI), item->getLocation()),
        Context.getFunctionType(Context.IntTy, llvm::makeArrayRef(newType, 3), EPI),
