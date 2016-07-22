@@ -12400,6 +12400,42 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
          "Broken injected-class-name");
 }
 
+static CXXMethodDecl *createMethod(ASTContext &Context, DeclContext *CurContext, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname)
+{
+    unsigned nIndex = 0; //Attrs->getAttributeSpellingListIndex();
+    SmallVector<ParmVarDecl*, 16> nParams;
+    QualType *newType = ::new (Context) QualType[3];
+    for (unsigned i = 0, e = 3; i != e; ++i) {
+      newType[i] = Context.IntTy;
+      ParmVarDecl *parm = ParmVarDecl::Create(Context, nullptr//Method
+, item->getLocation(), item->getLocation(),
+         nullptr, Context.IntTy, /*TInfo=*/nullptr, SC_None, nullptr);
+      parm->setScopeInfo(0, i);
+      nParams.push_back(parm);
+    }
+    ArrayRef<QualType> newParam2 = llvm::makeArrayRef(newType, 3);
+    const IdentifierInfo &IDI = Context.Idents.get(mname + "_EXTRA");
+    const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
+    FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
+    CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, item->getLocation(),
+       DeclarationNameInfo(Context.DeclarationNames.getIdentifier(&IDI), item->getLocation()),
+       Context.getFunctionType(Context.IntTy, newParam2, EPI),
+       nullptr, SC_None, /*isInline=*/false, /*isConstExpr=*/false, item->getLocation());
+    Method->setAccess(AS_public);
+    Method->setLexicalDeclContext(CurContext);  
+    Method->setParams(nParams);
+    StringRef nStr("NEWNEW");
+    Method->addAttr(::new (Context) TargetAttr(Method->getLocation(), Context, nStr, nIndex));
+    IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getTypeSize(Context.IntTy),
+        (uint64_t) 1), Context.IntTy, item->getLocation());
+    Stmt *Return = new (Context) ReturnStmt(item->getLocation(), IL, nullptr);
+    Method->setBody(new (Context) CompoundStmt(Context, Return, item->getLocation(), item->getLocation()));
+    for (auto P : Method->params())
+      P->setOwningFunction(Method);
+    cdecl->addDecl(Method);
+    return Method;
+}
+
 void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
                                     SourceLocation RBraceLoc) {
   AdjustDeclIfTemplate(TagD);
@@ -12413,6 +12449,10 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
       printf("[%s:%d] method\n", __FUNCTION__, __LINE__);
       if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
         std::string mname = item->getName();
+        StringRef naStr("atomicc_method");
+        item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, naStr, 0));
+        item->setIsUsed();
+        item->addAttr(UsedAttr::CreateImplicit(Context));
         if (mname == "init")
             continue;
         bool isNewMeth = false;
@@ -12447,40 +12487,8 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
 //newField->dump();
 //item->dump();
 //printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
-        SmallVector<ParmVarDecl*, 16> nParams;
-        QualType *newType = ::new (Context) QualType[3];
-        for (unsigned i = 0, e = 3; i != e; ++i) {
-          newType[i] = Context.IntTy;
-          ParmVarDecl *parm = ParmVarDecl::Create(Context, nullptr//Method
-, item->getLocation(), item->getLocation(),
-             nullptr, Context.IntTy, /*TInfo=*/nullptr, SC_None, nullptr);
-          parm->setScopeInfo(0, i);
-          nParams.push_back(parm);
-        }
-        ArrayRef<QualType> newParam2 = llvm::makeArrayRef(newType, 3);
-        const IdentifierInfo &IDI = Context.Idents.get(mname + "_EXTRA");
-        CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, item->getLocation(),
-           DeclarationNameInfo(Context.DeclarationNames.getIdentifier(&IDI), item->getLocation()),
-           Context.getFunctionType(Context.IntTy, newParam2, EPI),
-           nullptr, SC_None, /*isInline=*/false, /*isConstExpr=*/false, item->getLocation());
-        Method->setIsUsed();
-        Method->addAttr(UsedAttr::CreateImplicit(Context));
-        Method->setAccess(AS_public);
-        Method->setLexicalDeclContext(CurContext);  
-        Method->setParams(nParams);
-        StringRef nStr("NEWNEW");
-        unsigned nIndex = 0; //Attrs->getAttributeSpellingListIndex();
-        Method->addAttr(::new (Context) TargetAttr(Method->getLocation(), Context, nStr, nIndex));
-        StringRef naStr("atomicc_method");
-        Method->addAttr(::new (Context) TargetAttr(Method->getLocation(), Context, naStr, nIndex));
-        IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getTypeSize(Context.IntTy),
-            (uint64_t) 1), Context.IntTy, item->getLocation());
-        Stmt *Return = new (Context) ReturnStmt(item->getLocation(), IL, nullptr);
-        Method->setBody(new (Context) CompoundStmt(Context, Return, item->getLocation(), item->getLocation()));
-        for (auto P : Method->params())
-          P->setOwningFunction(Method);
+        CXXMethodDecl *Method = createMethod(Context, CurContext, cdecl, item, mname);
         Consumer.HandleInlineMethodDefinition(Method);
-        cdecl->addDecl(Method);
       }
     }
     for (auto item: cdecl->fields()) {
