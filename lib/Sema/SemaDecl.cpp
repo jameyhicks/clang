@@ -12400,7 +12400,7 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
          "Broken injected-class-name");
 }
 
-static NamedDecl *createField(ASTContext &Context, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname)
+static NamedDecl *createField(ASTContext &Context, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname, TypeSourceInfo *TSInfo)
 {
     QualType fType = Context.VoidPtrTy;
     if (item) {
@@ -12416,7 +12416,7 @@ static NamedDecl *createField(ASTContext &Context, CXXRecordDecl *cdecl, CXXMeth
         fType = Context.getPointerType(Context.getFunctionType(FDTy->getReturnType(), newParam, EPI));
     }
     NamedDecl *newField = FieldDecl::Create(Context, cdecl, cdecl->getLocation(), cdecl->getLocation(),
-        &Context.Idents.get(mname), fType, nullptr, nullptr, false, ICIS_NoInit);
+        &Context.Idents.get(mname), fType, TSInfo, nullptr, false, ICIS_NoInit);
     newField->setIsUsed();
     newField->setAccess(AS_public);
     cdecl->addDecl(newField);
@@ -12424,19 +12424,19 @@ printf("[%s:%d] new field\n", __FUNCTION__, __LINE__);
 newField->dump();
     return newField;
 }
-static CXXMethodDecl *createMethod(ASTContext &Context, CXXRecordDecl *cdecl, std::string mname, QualType retType, std::vector<QualType> paramTypes)
+static CXXMethodDecl *createMethod(ASTContext &Context, CXXRecordDecl *cdecl, std::string mname, QualType retType, std::vector<QualType> paramTypes, TypeSourceInfo *TSInfo)
 {
     const IdentifierInfo &IDI = Context.Idents.get(mname);
     FunctionProtoType::ExtProtoInfo EPI;
     CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, cdecl->getLocation(),
        DeclarationNameInfo(Context.DeclarationNames.getIdentifier(&IDI), cdecl->getLocation()),
        Context.getFunctionType(retType, paramTypes, EPI),
-       nullptr, SC_None, /*isInline=*/false, /*isConstExpr=*/false, cdecl->getLocation());
+       TSInfo, SC_None, /*isInline=*/false, /*isConstExpr=*/false, cdecl->getLocation());
     Method->setAccess(AS_public);
     std::vector<ParmVarDecl*> nParams;
     for (unsigned i = 0, e = paramTypes.size(); i != e; ++i) {
       ParmVarDecl *parm = ParmVarDecl::Create(Context, Method, cdecl->getLocation(), cdecl->getLocation(),
-         nullptr, paramTypes[i], /*TInfo=*/nullptr, SC_None, nullptr);
+         nullptr, paramTypes[i], TSInfo, SC_None, nullptr);
       parm->setScopeInfo(0, i);
       nParams.push_back(parm);
     }
@@ -12456,7 +12456,13 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
   Tag->setRBraceLoc(RBraceLoc);
   if (Tag->getTagKind() == TTK_AInterface)
   if (CXXRecordDecl *cdecl = dyn_cast<CXXRecordDecl>(Tag)) {
-    NamedDecl *pfield = createField(Context, cdecl, NULL, "p");
+    TypeSourceInfo *TSInfo = NULL;
+    int num = cdecl->getNumBases();
+//printf("[%s:%d] num %d\n", __FUNCTION__, __LINE__, num);
+    for (auto item: cdecl->bases())
+        TSInfo = item.getTypeSourceInfo();
+//printf("[%s:%d] TSInfo %p\n", __FUNCTION__, __LINE__, TSInfo);
+    NamedDecl *pfield = createField(Context, cdecl, NULL, "p", TSInfo);
     pfield->setLexicalDeclContext(CurContext);
     std::vector<QualType> initParamTypes;
     initParamTypes.push_back(Context.getPointerType(Context.getConstType(Context.CharTy))); //name
@@ -12487,23 +12493,23 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
 //printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
             std::vector<QualType> paramTypes;
             std::string readyString = vmethodFlag ? "__READY" : "__RDY";
-            CXXMethodDecl *Method = createMethod(Context, cdecl, mname + readyString, Context.BoolTy, paramTypes);
+            CXXMethodDecl *Method = createMethod(Context, cdecl, mname + readyString, Context.BoolTy, paramTypes, TSInfo);
             IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
                 (uint64_t) 1), Context.BoolTy, cdecl->getLocation());
             Stmt *Return = new (Context) ReturnStmt(cdecl->getLocation(), IL, nullptr);
             Method->setBody(new (Context) CompoundStmt(Context, Return, cdecl->getLocation(), cdecl->getLocation()));
             Method->setLexicalDeclContext(CurContext);
             Consumer.HandleInlineMethodDefinition(Method);
-            NamedDecl *field = createField(Context, cdecl, Method, mname + readyString + "p");
+            NamedDecl *field = createField(Context, cdecl, Method, mname + readyString + "p", TSInfo);
             field->setLexicalDeclContext(CurContext);
-            field = createField(Context, cdecl, item, mname + "p");
+            field = createField(Context, cdecl, item, mname + "p", TSInfo);
             field->setLexicalDeclContext(CurContext);
             initParamTypes.push_back(Context.UnsignedLongTy); //axxx__RDYp
             initParamTypes.push_back(Context.UnsignedLongTy); //axxxp
         }
       }
     }
-    CXXMethodDecl *Method = createMethod(Context, cdecl, "init", Context.VoidTy, initParamTypes);
+    CXXMethodDecl *Method = createMethod(Context, cdecl, "init", Context.VoidTy, initParamTypes, TSInfo);
     Method->setBody(new (Context) CompoundStmt(Context,
         new (Context) ReturnStmt(cdecl->getLocation(), nullptr, nullptr),
         cdecl->getLocation(), cdecl->getLocation()));
