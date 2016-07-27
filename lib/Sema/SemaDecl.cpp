@@ -4904,81 +4904,38 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
 
     New = ActOnTypedefDeclarator(S, D, DC, TInfo, Previous);
   } else if (R->isFunctionType()) {
-  const char *Dummy;
-  AttributeFactory attrFactory;
-  DeclSpec DS(attrFactory);
-  unsigned DiagID;
-  bool Error = DS.SetTypeSpecType(DeclSpec::TST_bool, D.getLocStart(), Dummy, DiagID, Context.getPrintingPolicy());
-  Declarator DNew(DS,
-//D.getDeclSpec(), 
-D.getContext());
-  TypeSourceInfo *TInfoNew = NULL;
-if (auto CC = dyn_cast<TagDecl>(DC))
-if (CC->getTagKind() == TTK_AInterface) {
-printf("[%s:%d] before ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
-  for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i) {
-    //unsigned chunkIndex = e - i - 1;
-    DeclaratorChunk &DeclType = D.getTypeObject(i);
-printf("[%s:%d] [%d] KIND %d\n", __FUNCTION__, __LINE__, i, DeclType.Kind);
-    switch (DeclType.Kind) {
-    default: break;
-    case DeclaratorChunk::Function: {
-      const DeclaratorChunk::FunctionTypeInfo &FTI = DeclType.Fun;
-      for (unsigned i = 0, e = FTI.NumParams; i != e; ++i) {
-          ParmVarDecl *Param = cast<ParmVarDecl>(FTI.Params[i].Param);
-          QualType ParamTy = Param->getType();
-printf("[%s:%d] param %d\n", __FUNCTION__, __LINE__, i);
-ParamTy->dump();
-      }
-      break;
-    }
-    }
-#if 0
-//Context.BoolTy,
-  Declarator D(DS, Declarator::BlockContext);
-#endif
-    //DNew.AddInnermostTypeInfo(DeclTypeN);
-    SourceLocation loc = DNew.getLocStart();
-    SourceLocation NoLoc;
-    DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction(
-      /*HasProto=*/true,
-      /*IsAmbiguous=*/false,
-      /*LParenLoc=*/NoLoc,
-      /*ArgInfo=*/nullptr,
-      /*NumArgs=*/0,
-      /*EllipsisLoc=*/NoLoc,
-      /*RParenLoc=*/NoLoc,
-      /*TypeQuals=*/0,
-      /*RefQualifierIsLvalueRef=*/true,
-      /*RefQualifierLoc=*/NoLoc,
-      /*ConstQualifierLoc=*/NoLoc,
-      /*VolatileQualifierLoc=*/NoLoc,
-      /*RestrictQualifierLoc=*/NoLoc,
-      /*MutableLoc=*/NoLoc, EST_None,
-      /*ESpecLoc=*/NoLoc,
-      /*Exceptions=*/nullptr,
-      /*ExceptionRanges=*/nullptr,
-      /*NumExceptions=*/0,
-      /*NoexceptExpr=*/nullptr,
-      /*ExceptionSpecTokens=*/nullptr,
-      loc, loc, DNew));
-  }
-  DNew.setFunctionDefinitionKind(D.getFunctionDefinitionKind());
-  IdentifierInfo &IDI = Context.Idents.get(D.getName().Identifier->getName().str() + "__RDY");
-  DNew.SetIdentifier(&IDI, D.getName().StartLocation);
-  //DeclarationNameInfo NameInfoNew(Context.DeclarationNames.getIdentifier(&IDI), D.getName().StartLocation);
-  //std::string IIS = NameInfoNew.getName().getAsString();
-printf("[%s:%d] IIIIIIIname kind %d str %s\n", __FUNCTION__, __LINE__, D.getName().getKind(), DNew.getName().Identifier->getName().str().c_str());
-  TInfoNew = GetTypeForDeclarator(DNew, S);
-R->dump();
-TInfoNew->getType()->dump();
-}
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
                                   TemplateParamLists,
                                   AddToScope);
 if (auto CC = dyn_cast<TagDecl>(DC))
 if (CC->getTagKind() == TTK_AInterface) {
 printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
+  const char *Dummy;
+  AttributeFactory attrFactory;
+  DeclSpec DS(attrFactory);
+  unsigned DiagID;
+  (void)DS.SetTypeSpecType(DeclSpec::TST_bool, D.getLocStart(), Dummy, DiagID, Context.getPrintingPolicy());
+  Declarator DNew(DS, D.getContext());
+  SourceLocation loc = DNew.getLocStart();
+  SourceLocation NoLoc;
+  DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction(
+      /*HasProto=*/true, /*IsAmbiguous=*/false, /*LParenLoc=*/NoLoc,
+      /*ArgInfo=*/nullptr, /*NumArgs=*/0,
+      /*EllipsisLoc=*/NoLoc, /*RParenLoc=*/NoLoc, /*TypeQuals=*/0,
+      /*RefQualifierIsLvalueRef=*/true, /*RefQualifierLoc=*/NoLoc,
+      /*ConstQualifierLoc=*/NoLoc, /*VolatileQualifierLoc=*/NoLoc,
+      /*RestrictQualifierLoc=*/NoLoc, /*MutableLoc=*/NoLoc, EST_None,
+      /*ESpecLoc=*/NoLoc,
+      /*Exceptions=*/nullptr, /*ExceptionRanges=*/nullptr,
+      /*NumExceptions=*/0, /*NoexceptExpr=*/nullptr,
+      /*ExceptionSpecTokens=*/nullptr, loc, loc, DNew));
+  DNew.setFunctionDefinitionKind(D.getFunctionDefinitionKind());
+  IdentifierInfo &IDI = Context.Idents.get(D.getName().Identifier->getName().str() + "__RDY");
+  DNew.SetIdentifier(&IDI, D.getName().StartLocation);
+printf("[%s:%d] IIIIIIIname kind %d str %s\n", __FUNCTION__, __LINE__, D.getName().getKind(), DNew.getName().Identifier->getName().str().c_str());
+  TypeSourceInfo *TInfoNew = GetTypeForDeclarator(DNew, S);
+R->dump();
+TInfoNew->getType()->dump();
     auto NewExtra = ActOnFunctionDeclarator(S, DNew, DC, TInfoNew, Previous,
                                   TemplateParamLists,
                                   AddToScope);
