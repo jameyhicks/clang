@@ -4932,7 +4932,6 @@ printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
   DNew.setFunctionDefinitionKind(D.getFunctionDefinitionKind());
   IdentifierInfo &IDI = Context.Idents.get(D.getName().Identifier->getName().str() + "__RDY");
   DNew.SetIdentifier(&IDI, D.getName().StartLocation);
-printf("[%s:%d] IIIIIIIname kind %d str %s\n", __FUNCTION__, __LINE__, D.getName().getKind(), DNew.getName().Identifier->getName().str().c_str());
   TypeSourceInfo *TInfoNew = GetTypeForDeclarator(DNew, S);
 R->dump();
 TInfoNew->getType()->dump();
@@ -12519,7 +12518,7 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
             if (FeaturesStr == "NEWNEW")
                 isNewMeth = true;
         }
-        if (!isNewMeth) {
+        if (!isNewMeth && mname != "init") {
             TSInfoF = item->getTypeSourceInfo();
 printf("[%s:%d] SSSSSSSSSSTSInfo %p\n", __FUNCTION__, __LINE__, TSInfoF);
             item->setBody(new (Context) CompoundStmt(Context,
@@ -12527,7 +12526,7 @@ printf("[%s:%d] SSSSSSSSSSTSInfo %p\n", __FUNCTION__, __LINE__, TSInfoF);
                 cdecl->getLocation(), cdecl->getLocation()));
 //printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
             //std::vector<QualType> paramTypes;
-            std::string readyString = vmethodFlag ? "__READY" : "__RDY";
+            //std::string readyString = vmethodFlag ? "__READY" : "__RDY";
             //CXXMethodDecl *Method = createMethod(Context, cdecl, mname + readyString, Context.BoolTy, paramTypes, TSInfoF);
             //IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
                 //(uint64_t) 1), Context.BoolTy, cdecl->getLocation());

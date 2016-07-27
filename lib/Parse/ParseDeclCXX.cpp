@@ -3041,62 +3041,52 @@ printf("[%s:%d] BEFOREParseCXXClassMemberDeclaration\n", __FUNCTION__, __LINE__)
       // Parse all the comma separated declarators.
       ParseCXXClassMemberDeclaration(CurAS, AccessAttrs.getList());
     }
-if(TagType == DeclSpec::TST_ainterface) {//jca
-printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
-  ParsingDeclSpec DS(*this, nullptr);
-  const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo();
-  MultiTemplateParamsArg TemplateParams(
-      TemplateInfo.TemplateParams? TemplateInfo.TemplateParams->data() : nullptr,
-      TemplateInfo.TemplateParams? TemplateInfo.TemplateParams->size() : 0);
-  ParsingDeclarator DeclaratorInfo(*this, DS, Declarator::MemberContext);
-  //DeclaratorInfo.setFunctionDefinitionKind(FDK_Declaration);
-  //Declarator &D = DeclaratorInfo;
-#if 1
-  DeclContext *DC = Actions.CurContext;
-  bool AddToScope = true;
-  const char *Dummy;
-  AttributeFactory attrFactory;
-  DeclSpec NDS(attrFactory);
-  unsigned DiagID;
-  (void)NDS.SetTypeSpecType(DeclSpec::TST_void, Tok.getLocation()
-//DeclaratorInfo.getLocStart()
-, Dummy, DiagID, Actions.Context.getPrintingPolicy());
-  Declarator DNew(NDS, Declarator::MemberContext);
-  SourceLocation loc = DNew.getLocStart();
-  SourceLocation NoLoc;
-  DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction(
-      /*HasProto=*/true, /*IsAmbiguous=*/false, /*LParenLoc=*/NoLoc,
-      /*ArgInfo=*/nullptr, /*NumArgs=*/0,
-      /*EllipsisLoc=*/NoLoc, /*RParenLoc=*/NoLoc, /*TypeQuals=*/0,
-      /*RefQualifierIsLvalueRef=*/true, /*RefQualifierLoc=*/NoLoc,
-      /*ConstQualifierLoc=*/NoLoc, /*VolatileQualifierLoc=*/NoLoc,
-      /*RestrictQualifierLoc=*/NoLoc, /*MutableLoc=*/NoLoc, EST_None,
-      /*ESpecLoc=*/NoLoc,
-      /*Exceptions=*/nullptr, /*ExceptionRanges=*/nullptr,
-      /*NumExceptions=*/0, /*NoexceptExpr=*/nullptr,
-      /*ExceptionSpecTokens=*/nullptr, loc, loc, DNew));
-  DNew.setFunctionDefinitionKind(FDK_Declaration);
-  IdentifierInfo &IDI = Actions.Context.Idents.get("init");
-  DNew.SetIdentifier(&IDI, DNew.getName().StartLocation);
-  TypeSourceInfo *TInfoNew = Actions.GetTypeForDeclarator(DNew, getCurScope());
-TInfoNew->getType()->dump();
-  DeclarationNameInfo zzNameInfo = Actions.GetNameForDeclarator(DNew);
-  LookupResult Previous(Actions, zzNameInfo, Sema::LookupOrdinaryName, Sema::ForRedeclaration);
-    auto New = Actions.ActOnFunctionDeclarator(getCurScope(), DNew, DC, TInfoNew, Previous,
-                                  TemplateParams,
-                                  AddToScope);
-New->dump();
-  if (New->getDeclName() && AddToScope &&
-       !(DNew.isRedeclaration() && New->isInvalidDecl())) {
-    bool AddToContext = !DNew.isRedeclaration() || !New->isLocalExternDecl();
-    //PushOnScopeChains(New, getCurScope(), AddToContext);
-      Actions.CurContext->addHiddenDecl(New);
-  }
-  //New->setAccess(AS);
-#endif
-    //DeclaratorInfo.complete(ThisDecl);
-}
 
+    if(TagType == DeclSpec::TST_ainterface) {//jca
+printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
+      MultiTemplateParamsArg TemplateParams(nullptr, (size_t)0);
+      const char *Dummy;
+      AttributeFactory attrFactory;
+      DeclSpec NDS(attrFactory);
+      unsigned DiagID;
+      (void)NDS.SetTypeSpecType(DeclSpec::TST_void, Tok.getLocation(), Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      Declarator DNew(NDS, Declarator::MemberContext);
+      SourceLocation loc = DNew.getLocStart();
+      SourceLocation NoLoc;
+    std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
+    //ParamInfo(IdentifierInfo *ident, SourceLocation iloc, Decl *param,
+#if 0
+    initParamTypes.push_back(Actions.Context.getPointerType(Actions.Context.getConstType(Actions.Context.CharTy))); //name
+    initParamTypes.push_back(Actions.Context.VoidPtrTy); //ap
+            initParamTypes.push_back(Actions.Context.UnsignedLongTy); //axxx__RDYp
+            initParamTypes.push_back(Actions.Context.UnsignedLongTy); //axxxp
+#endif
+      DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction(
+          /*HasProto=*/true, /*IsAmbiguous=*/false, /*LParenLoc=*/NoLoc,
+          /*ArgInfo=*/
+//initParamTypes
+nullptr, /*NumArgs=*/initParamTypes.size(),
+          /*EllipsisLoc=*/NoLoc, /*RParenLoc=*/NoLoc, /*TypeQuals=*/0,
+          /*RefQualifierIsLvalueRef=*/true, /*RefQualifierLoc=*/NoLoc,
+          /*ConstQualifierLoc=*/NoLoc, /*VolatileQualifierLoc=*/NoLoc,
+          /*RestrictQualifierLoc=*/NoLoc, /*MutableLoc=*/NoLoc, EST_None,
+          /*ESpecLoc=*/NoLoc,
+          /*Exceptions=*/nullptr, /*ExceptionRanges=*/nullptr,
+          /*NumExceptions=*/0, /*NoexceptExpr=*/nullptr,
+          /*ExceptionSpecTokens=*/nullptr, loc, loc, DNew));
+      DNew.setFunctionDefinitionKind(FDK_Declaration);
+      IdentifierInfo &IDI = Actions.Context.Idents.get("init");
+      DNew.SetIdentifier(&IDI, DNew.getName().StartLocation);
+      TypeSourceInfo *TInfoNew = Actions.GetTypeForDeclarator(DNew, getCurScope());
+TInfoNew->getType()->dump();
+      LookupResult Previous(Actions, Actions.GetNameForDeclarator(DNew), Sema::LookupOrdinaryName, Sema::ForRedeclaration);
+      bool AddToScope = true;
+      auto New = Actions.ActOnFunctionDeclarator(getCurScope(), DNew, Actions.CurContext, TInfoNew, Previous, TemplateParams, AddToScope);
+New->dump();
+      //PushOnScopeChains(New, getCurScope(), true);
+      Actions.CurContext->addHiddenDecl(New);
+      //New->setAccess(AS);
+    }
     T.consumeClose();
   } else {
     SkipUntil(tok::r_brace);
@@ -3106,8 +3096,6 @@ New->dump();
   ParsedAttributes attrs(AttrFactory);
   MaybeParseGNUAttributes(attrs);
 
-if(TagType == DeclSpec::TST_ainterface) //jca
-printf("[%s:%d] BEFOREFINISH\n", __FUNCTION__, __LINE__);
   if (TagDecl)
     Actions.ActOnFinishCXXMemberSpecification(getCurScope(), RecordLoc, TagDecl,
                                               T.getOpenLocation(), 
