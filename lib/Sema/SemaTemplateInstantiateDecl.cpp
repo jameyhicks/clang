@@ -1338,6 +1338,12 @@ static QualType adjustFunctionTypeForInstantiation(ASTContext &Context,
                                                    TypeSourceInfo *TInfo) {
   const FunctionProtoType *OrigFunc
     = D->getType()->castAs<FunctionProtoType>();
+if (CXXMethodDecl *CD = dyn_cast<CXXMethodDecl>(D))
+if (CD->getAttr<TargetAttr>()) {
+printf("[%s:%d] D %p TInfo %p\n", __FUNCTION__, __LINE__, D, TInfo);
+D->dump();
+TInfo->getType()->dump();
+}
   const FunctionProtoType *NewFunc
     = TInfo->getType()->castAs<FunctionProtoType>();
   if (OrigFunc->getExtInfo() == NewFunc->getExtInfo())
@@ -1384,6 +1390,10 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D,
 
   SmallVector<ParmVarDecl *, 4> Params;
   TypeSourceInfo *TInfo = SubstFunctionType(D, Params);
+if (CXXMethodDecl *CD = dyn_cast<CXXMethodDecl>(D))
+if (CD->getAttr<TargetAttr>()) {
+printf("[%s:%d] TInfo %p\n", __FUNCTION__, __LINE__, TInfo);
+}
   if (!TInfo)
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
@@ -1632,6 +1642,10 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
                                       TemplateParameterList *TemplateParams,
                                       bool IsClassScopeSpecialization) {
   FunctionTemplateDecl *FunctionTemplate = D->getDescribedFunctionTemplate();
+if (CXXMethodDecl *CD = dyn_cast<CXXMethodDecl>(D))
+if (CD->getAttr<TargetAttr>()) {
+printf("[%s:%d] START\n", __FUNCTION__, __LINE__);
+}
   if (FunctionTemplate && !TemplateParams) {
     // We are creating a function template specialization from a function
     // template. Check whether there is already a function template
@@ -1674,6 +1688,10 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
 
   SmallVector<ParmVarDecl *, 4> Params;
   TypeSourceInfo *TInfo = SubstFunctionType(D, Params);
+if (CXXMethodDecl *CD = dyn_cast<CXXMethodDecl>(D))
+if (CD->getAttr<TargetAttr>()) {
+printf("[%s:%d] TInfo %p\n", __FUNCTION__, __LINE__, TInfo);
+}
   if (!TInfo)
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
@@ -1764,6 +1782,11 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
                                    StartLoc, NameInfo, T, TInfo,
                                    SC, D->isInlineSpecified(),
                                    D->isConstexpr(), D->getLocEnd());
+if ((cast<TagDecl>(Record))->getTagKind() == TTK_AInterface) {
+printf("[%s:%d] after CXXMethodDecl::Create owner %p method %p\n", __FUNCTION__, __LINE__, Owner, Method);
+//Record->dump();
+Method->dump();
+}
   }
 
   if (D->isInlined())

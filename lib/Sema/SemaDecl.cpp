@@ -4792,8 +4792,16 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     }
   }
 
+if (auto CC = dyn_cast<TagDecl>(DC))
+if (CC->getTagKind() == TTK_AInterface) {
+printf("[%s:%d] before GetTypeForDeclarator\n", __FUNCTION__, __LINE__);
+}
   TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
   QualType R = TInfo->getType();
+if (auto CC = dyn_cast<TagDecl>(DC))
+if (CC->getTagKind() == TTK_AInterface) {
+printf("[%s:%d] after GetTypeForDeclarator\n", __FUNCTION__, __LINE__);
+}
 
   if (!R->isFunctionType() && DiagnoseClassNameShadow(DC, NameInfo))
     // If this is a typedef, we'll end up spewing multiple diagnostics.
@@ -4904,9 +4912,37 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
 
     New = ActOnTypedefDeclarator(S, D, DC, TInfo, Previous);
   } else if (R->isFunctionType()) {
+  Declarator DNew(D.getDeclSpec(), D.getContext());
+  TypeSourceInfo *TInfoNew = NULL;
+if (auto CC = dyn_cast<TagDecl>(DC))
+if (CC->getTagKind() == TTK_AInterface) {
+printf("[%s:%d] before ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
+  for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i) {
+    //unsigned chunkIndex = e - i - 1;
+    DNew.AddInnermostTypeInfo(D.getTypeObject(i));
+  }
+  DNew.setFunctionDefinitionKind(D.getFunctionDefinitionKind());
+  IdentifierInfo &IDI = Context.Idents.get(D.getName().Identifier->getName().str() + "BOOZ");
+  DNew.SetIdentifier(&IDI, D.getName().StartLocation);
+  DeclarationNameInfo NameInfoNew(Context.DeclarationNames.getIdentifier(&IDI), D.getName().StartLocation);
+  std::string IIS = NameInfoNew.getName().getAsString();
+printf("[%s:%d] IIIIIIIname kind %d str %s\n", __FUNCTION__, __LINE__, D.getName().getKind(), IIS.c_str());
+  TInfoNew = GetTypeForDeclarator(DNew, S);
+  QualType RNew = TInfoNew->getType();
+R->dump();
+RNew->dump();
+}
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
                                   TemplateParamLists,
                                   AddToScope);
+if (auto CC = dyn_cast<TagDecl>(DC))
+if (CC->getTagKind() == TTK_AInterface) {
+printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
+    auto NewExtra = ActOnFunctionDeclarator(S, DNew, DC, TInfoNew, Previous,
+                                  TemplateParamLists,
+                                  AddToScope);
+NewExtra->dump();
+}
   } else {
     New = ActOnVariableDeclarator(S, D, DC, TInfo, Previous, TemplateParamLists,
                                   AddToScope);
@@ -12424,7 +12460,7 @@ printf("[%s:%d] new field\n", __FUNCTION__, __LINE__);
 newField->dump();
     return newField;
 }
-static CXXMethodDecl *createMethod(ASTContext &Context, CXXRecordDecl *cdecl, std::string mname, QualType retType, std::vector<QualType> paramTypes, TypeSourceInfo *TSInfo)
+CXXMethodDecl *createMethod(ASTContext &Context, CXXRecordDecl *cdecl, std::string mname, QualType retType, std::vector<QualType> paramTypes, TypeSourceInfo *TSInfo)
 {
     const IdentifierInfo &IDI = Context.Idents.get(mname);
     FunctionProtoType::ExtProtoInfo EPI;
@@ -12457,11 +12493,10 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
   if (Tag->getTagKind() == TTK_AInterface)
   if (CXXRecordDecl *cdecl = dyn_cast<CXXRecordDecl>(Tag)) {
     TypeSourceInfo *TSInfo = NULL;
-    int num = cdecl->getNumBases();
-//printf("[%s:%d] num %d\n", __FUNCTION__, __LINE__, num);
-    for (auto item: cdecl->bases())
-        TSInfo = item.getTypeSourceInfo();
-//printf("[%s:%d] TSInfo %p\n", __FUNCTION__, __LINE__, TSInfo);
+    TypeSourceInfo *TSInfoF = NULL;
+    for (auto bitem: cdecl->bases())
+        TSInfo = bitem.getTypeSourceInfo();
+printf("[%s:%d] TSInfo %p\n", __FUNCTION__, __LINE__, TSInfo);
     NamedDecl *pfield = createField(Context, cdecl, NULL, "p", TSInfo);
     pfield->setLexicalDeclContext(CurContext);
     std::vector<QualType> initParamTypes;
@@ -12487,13 +12522,15 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
                 isNewMeth = true;
         }
         if (!isNewMeth) {
+            TSInfoF = item->getTypeSourceInfo();
+printf("[%s:%d] SSSSSSSSSSTSInfo %p\n", __FUNCTION__, __LINE__, TSInfoF);
             item->setBody(new (Context) CompoundStmt(Context,
                 new (Context) ReturnStmt(cdecl->getLocation(), nullptr, nullptr),
                 cdecl->getLocation(), cdecl->getLocation()));
 //printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
             std::vector<QualType> paramTypes;
             std::string readyString = vmethodFlag ? "__READY" : "__RDY";
-            CXXMethodDecl *Method = createMethod(Context, cdecl, mname + readyString, Context.BoolTy, paramTypes, TSInfo);
+            CXXMethodDecl *Method = createMethod(Context, cdecl, mname + readyString, Context.BoolTy, paramTypes, TSInfoF);
             IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
                 (uint64_t) 1), Context.BoolTy, cdecl->getLocation());
             Stmt *Return = new (Context) ReturnStmt(cdecl->getLocation(), IL, nullptr);
@@ -12509,7 +12546,7 @@ printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str()
         }
       }
     }
-    CXXMethodDecl *Method = createMethod(Context, cdecl, "init", Context.VoidTy, initParamTypes, TSInfo);
+    CXXMethodDecl *Method = createMethod(Context, cdecl, "init", Context.VoidTy, initParamTypes, TSInfoF);
     Method->setBody(new (Context) CompoundStmt(Context,
         new (Context) ReturnStmt(cdecl->getLocation(), nullptr, nullptr),
         cdecl->getLocation(), cdecl->getLocation()));

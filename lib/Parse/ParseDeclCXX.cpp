@@ -1197,8 +1197,10 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   DeclSpec::TST TagType;
   if (TagTokKind == tok::kw_struct)
     TagType = DeclSpec::TST_struct;
-  else if (TagTokKind == tok::kw_ainterface)
+  else if (TagTokKind == tok::kw_ainterface) {
     TagType = DeclSpec::TST_ainterface;
+printf("[%s:%d]BEGIN\n", __FUNCTION__, __LINE__);
+}
   else if (TagTokKind == tok::kw___interface)
     TagType = DeclSpec::TST_interface;
   else if (TagTokKind == tok::kw_class)
@@ -1775,6 +1777,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       Tok.setKind(tok::semi);
     }
   }
+if (TagTokKind == tok::kw_ainterface) //jca
+printf("[%s:%d]END\n", __FUNCTION__, __LINE__);
 }
 
 /// ParseBaseClause - Parse the base-clause of a C++ class [C++ class.derived].
@@ -2794,6 +2798,8 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
          TagType == DeclSpec::TST_interface ||
          TagType == DeclSpec::TST_union  ||
          TagType == DeclSpec::TST_class) && "Invalid TagType!");
+if(TagType == DeclSpec::TST_ainterface) //jca
+printf("[%s:%d] BEGIN\n", __FUNCTION__, __LINE__);
 
   PrettyDeclStackTraceEntry CrashInfo(Actions, TagDecl, RecordLoc,
                                       "parsing struct/union/class body");
@@ -3029,6 +3035,8 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
         continue;
       }
 
+if(TagType == DeclSpec::TST_ainterface) //jca
+printf("[%s:%d] BEFOREParseCXXClassMemberDeclaration\n", __FUNCTION__, __LINE__);
       // Parse all the comma separated declarators.
       ParseCXXClassMemberDeclaration(CurAS, AccessAttrs.getList());
     }
@@ -3042,6 +3050,8 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   ParsedAttributes attrs(AttrFactory);
   MaybeParseGNUAttributes(attrs);
 
+if(TagType == DeclSpec::TST_ainterface) //jca
+printf("[%s:%d] BEFOREFINISH\n", __FUNCTION__, __LINE__);
   if (TagDecl)
     Actions.ActOnFinishCXXMemberSpecification(getCurScope(), RecordLoc, TagDecl,
                                               T.getOpenLocation(), 
@@ -3081,6 +3091,8 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   // Leave the class scope.
   ParsingDef.Pop();
   ClassScope.Exit();
+if(TagType == DeclSpec::TST_ainterface) //jca
+printf("[%s:%d] END\n", __FUNCTION__, __LINE__);
 }
 
 void Parser::DiagnoseUnexpectedNamespace(NamedDecl *D) {
