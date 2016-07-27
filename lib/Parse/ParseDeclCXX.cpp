@@ -26,6 +26,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/ADT/SmallString.h"
+#include "clang/Sema/Lookup.h" // LookupResult for adding 'init()'
 using namespace clang;
 
 /// ParseNamespace - We know that the current token is a namespace keyword. This
@@ -3040,6 +3041,71 @@ printf("[%s:%d] BEFOREParseCXXClassMemberDeclaration\n", __FUNCTION__, __LINE__)
       // Parse all the comma separated declarators.
       ParseCXXClassMemberDeclaration(CurAS, AccessAttrs.getList());
     }
+if(TagType == DeclSpec::TST_ainterface) {//jca
+printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
+//void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS, AttributeList *AccessAttrs, const ParsedTemplateInfo &TemplateInfo, ParsingDeclRAIIObject *TemplateDiags) 
+  //LateParsedAttrList CommonLateParsedAttrs;
+  ParsingDeclSpec DS(*this, nullptr);
+  //ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC_class, &CommonLateParsedAttrs);
+const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo();
+  MultiTemplateParamsArg TemplateParams(
+      TemplateInfo.TemplateParams? TemplateInfo.TemplateParams->data() : nullptr,
+      TemplateInfo.TemplateParams? TemplateInfo.TemplateParams->size() : 0);
+  ParsingDeclarator DeclaratorInfo(*this, DS, Declarator::MemberContext);
+  DeclaratorInfo.setFunctionDefinitionKind(FDK_Declaration);
+  Declarator &D = DeclaratorInfo;
+#if 1
+  //NamedDecl *Member = HandleDeclarator(getCurScope(), DeclaratorInfo, TemplateParams);
+//NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D, MultiTemplateParamsArg TemplateParamLists) 
+  //DeclarationNameInfo NameInfo = GetNameForDeclarator(D);
+  //DeclarationName Name = NameInfo.getName();
+  DeclContext *DC = Actions.CurContext;
+  bool AddToScope = true;
+  const char *Dummy;
+  AttributeFactory attrFactory;
+  DeclSpec NDS(attrFactory);
+  unsigned DiagID;
+  (void)NDS.SetTypeSpecType(DeclSpec::TST_bool, D.getLocStart(), Dummy, DiagID, Actions.Context.getPrintingPolicy());
+  Declarator DNew(NDS, D.getContext());
+  SourceLocation loc = DNew.getLocStart();
+  SourceLocation NoLoc;
+  DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction(
+      /*HasProto=*/true, /*IsAmbiguous=*/false, /*LParenLoc=*/NoLoc,
+      /*ArgInfo=*/nullptr, /*NumArgs=*/0,
+      /*EllipsisLoc=*/NoLoc, /*RParenLoc=*/NoLoc, /*TypeQuals=*/0,
+      /*RefQualifierIsLvalueRef=*/true, /*RefQualifierLoc=*/NoLoc,
+      /*ConstQualifierLoc=*/NoLoc, /*VolatileQualifierLoc=*/NoLoc,
+      /*RestrictQualifierLoc=*/NoLoc, /*MutableLoc=*/NoLoc, EST_None,
+      /*ESpecLoc=*/NoLoc,
+      /*Exceptions=*/nullptr, /*ExceptionRanges=*/nullptr,
+      /*NumExceptions=*/0, /*NoexceptExpr=*/nullptr,
+      /*ExceptionSpecTokens=*/nullptr, loc, loc, DNew));
+  DNew.setFunctionDefinitionKind(D.getFunctionDefinitionKind());
+  IdentifierInfo &IDI = Actions.Context.Idents.get("init");
+  DNew.SetIdentifier(&IDI, D.getName().StartLocation);
+  TypeSourceInfo *TInfoNew = Actions.GetTypeForDeclarator(DNew, getCurScope());
+TInfoNew->getType()->dump();
+  DeclarationNameInfo zzNameInfo = Actions.GetNameForDeclarator(DNew);
+  LookupResult Previous(Actions, zzNameInfo, Sema::LookupOrdinaryName, Sema::ForRedeclaration);
+    auto New = Actions.ActOnFunctionDeclarator(getCurScope(), DNew, DC, TInfoNew, Previous,
+                                  TemplateParams,
+                                  AddToScope);
+New->dump();
+  if (New->getDeclName() && AddToScope &&
+       !(D.isRedeclaration() && New->isInvalidDecl())) {
+    bool AddToContext = !D.isRedeclaration() || !New->isLocalExternDecl();
+    //PushOnScopeChains(New, getCurScope(), AddToContext);
+      Actions.CurContext->addHiddenDecl(New);
+  }
+  //New->setAccess(AS);
+  //if (isInstField) {
+    //FieldDecl *FD = cast<FieldDecl>(Member);
+    //FieldCollector->Add(FD);
+  //}
+  //return Member;
+#endif
+    //DeclaratorInfo.complete(ThisDecl);
+}
 
     T.consumeClose();
   } else {
