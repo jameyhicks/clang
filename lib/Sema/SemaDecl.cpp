@@ -12544,12 +12544,12 @@ printf("[%s:%d] SSSSSSSSSSTSInfo %p\n", __FUNCTION__, __LINE__, TSInfoF);
         }
       }
     }
-    CXXMethodDecl *Method = createMethod(Context, cdecl, "init", Context.VoidTy, initParamTypes, TSInfoF);
-    Method->setBody(new (Context) CompoundStmt(Context,
-        new (Context) ReturnStmt(cdecl->getLocation(), nullptr, nullptr),
-        cdecl->getLocation(), cdecl->getLocation()));
-    Method->setLexicalDeclContext(CurContext);
-    Consumer.HandleInlineMethodDefinition(Method);
+    //CXXMethodDecl *Method = createMethod(Context, cdecl, "init", Context.VoidTy, initParamTypes, TSInfoF);
+    //Method->setBody(new (Context) CompoundStmt(Context,
+        //new (Context) ReturnStmt(cdecl->getLocation(), nullptr, nullptr),
+        //cdecl->getLocation(), cdecl->getLocation()));
+    //Method->setLexicalDeclContext(CurContext);
+    //Consumer.HandleInlineMethodDefinition(Method);
     //for (auto item: cdecl->fields()) { item->dump(); }
     //for (auto item: cdecl->ctors()) { //CXXConstructorDecl //}
   }

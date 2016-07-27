@@ -3043,30 +3043,25 @@ printf("[%s:%d] BEFOREParseCXXClassMemberDeclaration\n", __FUNCTION__, __LINE__)
     }
 if(TagType == DeclSpec::TST_ainterface) {//jca
 printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
-//void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS, AttributeList *AccessAttrs, const ParsedTemplateInfo &TemplateInfo, ParsingDeclRAIIObject *TemplateDiags) 
-  //LateParsedAttrList CommonLateParsedAttrs;
   ParsingDeclSpec DS(*this, nullptr);
-  //ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC_class, &CommonLateParsedAttrs);
-const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo();
+  const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo();
   MultiTemplateParamsArg TemplateParams(
       TemplateInfo.TemplateParams? TemplateInfo.TemplateParams->data() : nullptr,
       TemplateInfo.TemplateParams? TemplateInfo.TemplateParams->size() : 0);
   ParsingDeclarator DeclaratorInfo(*this, DS, Declarator::MemberContext);
-  DeclaratorInfo.setFunctionDefinitionKind(FDK_Declaration);
-  Declarator &D = DeclaratorInfo;
+  //DeclaratorInfo.setFunctionDefinitionKind(FDK_Declaration);
+  //Declarator &D = DeclaratorInfo;
 #if 1
-  //NamedDecl *Member = HandleDeclarator(getCurScope(), DeclaratorInfo, TemplateParams);
-//NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D, MultiTemplateParamsArg TemplateParamLists) 
-  //DeclarationNameInfo NameInfo = GetNameForDeclarator(D);
-  //DeclarationName Name = NameInfo.getName();
   DeclContext *DC = Actions.CurContext;
   bool AddToScope = true;
   const char *Dummy;
   AttributeFactory attrFactory;
   DeclSpec NDS(attrFactory);
   unsigned DiagID;
-  (void)NDS.SetTypeSpecType(DeclSpec::TST_bool, D.getLocStart(), Dummy, DiagID, Actions.Context.getPrintingPolicy());
-  Declarator DNew(NDS, D.getContext());
+  (void)NDS.SetTypeSpecType(DeclSpec::TST_void, Tok.getLocation()
+//DeclaratorInfo.getLocStart()
+, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+  Declarator DNew(NDS, Declarator::MemberContext);
   SourceLocation loc = DNew.getLocStart();
   SourceLocation NoLoc;
   DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction(
@@ -3080,9 +3075,9 @@ const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo();
       /*Exceptions=*/nullptr, /*ExceptionRanges=*/nullptr,
       /*NumExceptions=*/0, /*NoexceptExpr=*/nullptr,
       /*ExceptionSpecTokens=*/nullptr, loc, loc, DNew));
-  DNew.setFunctionDefinitionKind(D.getFunctionDefinitionKind());
+  DNew.setFunctionDefinitionKind(FDK_Declaration);
   IdentifierInfo &IDI = Actions.Context.Idents.get("init");
-  DNew.SetIdentifier(&IDI, D.getName().StartLocation);
+  DNew.SetIdentifier(&IDI, DNew.getName().StartLocation);
   TypeSourceInfo *TInfoNew = Actions.GetTypeForDeclarator(DNew, getCurScope());
 TInfoNew->getType()->dump();
   DeclarationNameInfo zzNameInfo = Actions.GetNameForDeclarator(DNew);
@@ -3092,17 +3087,12 @@ TInfoNew->getType()->dump();
                                   AddToScope);
 New->dump();
   if (New->getDeclName() && AddToScope &&
-       !(D.isRedeclaration() && New->isInvalidDecl())) {
-    bool AddToContext = !D.isRedeclaration() || !New->isLocalExternDecl();
+       !(DNew.isRedeclaration() && New->isInvalidDecl())) {
+    bool AddToContext = !DNew.isRedeclaration() || !New->isLocalExternDecl();
     //PushOnScopeChains(New, getCurScope(), AddToContext);
       Actions.CurContext->addHiddenDecl(New);
   }
   //New->setAccess(AS);
-  //if (isInstField) {
-    //FieldDecl *FD = cast<FieldDecl>(Member);
-    //FieldCollector->Add(FD);
-  //}
-  //return Member;
 #endif
     //DeclaratorInfo.complete(ThisDecl);
 }
