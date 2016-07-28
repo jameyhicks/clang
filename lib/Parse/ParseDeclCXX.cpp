@@ -3045,7 +3045,7 @@ printf("[%s:%d] BEFOREParseCXXClassMemberDeclaration\n", __FUNCTION__, __LINE__)
     if(TagType == DeclSpec::TST_ainterface) {//jca
 printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       MultiTemplateParamsArg TemplateParams(nullptr, (size_t)0);
-      const char *Dummy;
+      const char *Dummy = nullptr;
       AttributeFactory attrFactory;
       DeclSpec NDS(attrFactory);
       unsigned DiagID;
@@ -3054,36 +3054,44 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       SourceLocation loc = DNew.getLocStart();
       SourceLocation NoLoc;
     std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
-    //ParamInfo(IdentifierInfo *ident, SourceLocation iloc, Decl *param,
+      DeclSpec NDSunsignedlong(attrFactory);
+      (void)NDSunsignedlong.SetTypeSpecType(DeclSpec::TST_int, NoLoc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      (void)NDSunsignedlong.SetTypeSpecWidth(DeclSpec::TSW_long, NoLoc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      (void)NDSunsignedlong.SetTypeSpecSign(DeclSpec::TSS_unsigned, NoLoc, Dummy, DiagID);
+      Declarator Dunsignedlong(NDSunsignedlong, Declarator::MemberContext);
+      TypeSourceInfo *TInfounsignedlong = Actions.GetTypeForDeclarator(Dunsignedlong, getCurScope());
+      ParmVarDecl *ppunsignedlong = ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfounsignedlong->getType(), TInfounsignedlong, SC_None, nullptr);
+#if 1
+      DeclSpec NDSconstcharp(attrFactory);
+      (void)NDSconstcharp.SetTypeSpecType(DeclSpec::TST_char, NoLoc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      (void)NDSconstcharp.SetTypeQual(DeclSpec::TQ_const, NoLoc, Dummy, DiagID, getLangOpts());
+      Declarator Dconstcharp(NDSconstcharp, Declarator::MemberContext);
+      Dconstcharp.AddTypeInfo(DeclaratorChunk::getPointer(NDSconstcharp.getTypeQualifiers(), NoLoc,
+           NDSconstcharp.getConstSpecLoc(),
+           NDSconstcharp.getVolatileSpecLoc(),
+           NDSconstcharp.getRestrictSpecLoc(),
+           NDSconstcharp.getAtomicSpecLoc()),
+           NDSconstcharp.getAttributes(),
+           NoLoc);
+      TypeSourceInfo *TInfoconstcharp = Actions.GetTypeForDeclarator(Dconstcharp, getCurScope());
+      ParmVarDecl *ppconstcharp = ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfoconstcharp->getType(), TInfoconstcharp, SC_None, nullptr);
+#endif
+    //DeclaratorChunk::ParamInfo bozo(nullptr, NoLoc, ppunsignedlong);
+    DeclaratorChunk::ParamInfo bozo(nullptr, NoLoc, ppconstcharp);
 #if 0
     initParamTypes.push_back(Actions.Context.getPointerType(Actions.Context.getConstType(Actions.Context.CharTy))); //name
     initParamTypes.push_back(Actions.Context.VoidPtrTy); //ap
             initParamTypes.push_back(Actions.Context.UnsignedLongTy); //axxx__RDYp
             initParamTypes.push_back(Actions.Context.UnsignedLongTy); //axxxp
-        ParmVarDecl *type =
-        ParmVarDecl::Create(Context, M,
-                            SourceLocation(), SourceLocation(),
-                            &Context.Idents.get("type"),
-                            Context.getPointerType(ConstCharType),
-                            /*TInfo=*/nullptr,
-                            SC_None, nullptr);
-        Params.push_back(type);
-      SmallVector<ParmVarDecl*, 16> Params;
-      for (const auto &ParamType : OldProto->param_types()) {
-        ParmVarDecl *Param = ParmVarDecl::Create(Context, New, SourceLocation(),
-                                                 SourceLocation(), nullptr,
-                                                 ParamType, /*TInfo=*/nullptr,
-                                                 SC_None, nullptr);
-        Param->setScopeInfo(0, Params.size());
-        Param->setImplicit();
-        Params.push_back(Param);
-      }
 #endif
       DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction(
           /*HasProto=*/true, /*IsAmbiguous=*/false, /*LParenLoc=*/NoLoc,
           /*ArgInfo=*/
 //initParamTypes
-nullptr, /*NumArgs=*/initParamTypes.size(),
+//nullptr
+&bozo
+, /*NumArgs=*/1,
+//initParamTypes.size(),
           /*EllipsisLoc=*/NoLoc, /*RParenLoc=*/NoLoc, /*TypeQuals=*/0,
           /*RefQualifierIsLvalueRef=*/true, /*RefQualifierLoc=*/NoLoc,
           /*ConstQualifierLoc=*/NoLoc, /*VolatileQualifierLoc=*/NoLoc,
