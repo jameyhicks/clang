@@ -3053,7 +3053,6 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       Declarator DNew(NDS, Declarator::MemberContext);
       SourceLocation loc = DNew.getLocStart();
       SourceLocation NoLoc;
-    std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
       ParsedAttributes parsedAttrs(attrFactory);
       DeclSpec NDSunsignedlong(attrFactory);
       (void)NDSunsignedlong.SetTypeSpecType(DeclSpec::TST_int, NoLoc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
@@ -3062,6 +3061,7 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       Declarator Dunsignedlong(NDSunsignedlong, Declarator::MemberContext);
       TypeSourceInfo *TInfounsignedlong = Actions.GetTypeForDeclarator(Dunsignedlong, getCurScope());
       ParmVarDecl *ppunsignedlong = ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfounsignedlong->getType(), TInfounsignedlong, SC_None, nullptr);
+    DeclaratorChunk::ParamInfo piunsignedlong(nullptr, NoLoc, ppunsignedlong);
 #if 1
       DeclSpec NDSconstcharp(attrFactory);
       (void)NDSconstcharp.SetTypeSpecType(DeclSpec::TST_char, NoLoc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
@@ -3070,30 +3070,24 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       Dconstcharp.AddTypeInfo(DeclaratorChunk::getPointer(DeclSpec::TQ_const, NoLoc, NoLoc, NoLoc, NoLoc, NoLoc), parsedAttrs, NoLoc);
       TypeSourceInfo *TInfoconstcharp = Actions.GetTypeForDeclarator(Dconstcharp, getCurScope());
       ParmVarDecl *ppconstcharp = ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfoconstcharp->getType(), TInfoconstcharp, SC_None, nullptr);
+    DeclaratorChunk::ParamInfo piconstcharp(nullptr, NoLoc, ppconstcharp);
       DeclSpec NDSvoidp(attrFactory);
       (void)NDSvoidp.SetTypeSpecType(DeclSpec::TST_void, NoLoc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
       Declarator Dvoidp(NDSvoidp, Declarator::MemberContext);
       Dvoidp.AddTypeInfo(DeclaratorChunk::getPointer(0, NoLoc, NoLoc, NoLoc, NoLoc, NoLoc), parsedAttrs, NoLoc);
       TypeSourceInfo *TInfovoidp = Actions.GetTypeForDeclarator(Dvoidp, getCurScope());
       ParmVarDecl *ppvoidp = ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfovoidp->getType(), TInfovoidp, SC_None, nullptr);
+    DeclaratorChunk::ParamInfo pivoidp(nullptr, NoLoc, ppvoidp);
 #endif
-    //DeclaratorChunk::ParamInfo bozo(nullptr, NoLoc, ppunsignedlong);
-    //DeclaratorChunk::ParamInfo bozo(nullptr, NoLoc, ppconstcharp);
-    DeclaratorChunk::ParamInfo bozo(nullptr, NoLoc, ppvoidp);
-#if 0
-    initParamTypes.push_back(Actions.Context.getPointerType(Actions.Context.getConstType(Actions.Context.CharTy))); //name
-    initParamTypes.push_back(Actions.Context.VoidPtrTy); //ap
-            initParamTypes.push_back(Actions.Context.UnsignedLongTy); //axxx__RDYp
-            initParamTypes.push_back(Actions.Context.UnsignedLongTy); //axxxp
-#endif
+    std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
+    initParamTypes.push_back(piconstcharp);
+    initParamTypes.push_back(pivoidp);
+    initParamTypes.push_back(piunsignedlong);
+    //can't reuse!! initParamTypes.push_back(piunsignedlong);
+    ArrayRef<DeclaratorChunk::ParamInfo> pparam = llvm::makeArrayRef(initParamTypes);
       DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction(
           /*HasProto=*/true, /*IsAmbiguous=*/false, /*LParenLoc=*/NoLoc,
-          /*ArgInfo=*/
-//initParamTypes
-//nullptr
-&bozo
-, /*NumArgs=*/1,
-//initParamTypes.size(),
+          /*ArgInfo=*/(DeclaratorChunk::ParamInfo *)pparam.data(), /*NumArgs=*/pparam.size(),
           /*EllipsisLoc=*/NoLoc, /*RParenLoc=*/NoLoc, /*TypeQuals=*/0,
           /*RefQualifierIsLvalueRef=*/true, /*RefQualifierLoc=*/NoLoc,
           /*ConstQualifierLoc=*/NoLoc, /*VolatileQualifierLoc=*/NoLoc,
@@ -3111,9 +3105,7 @@ TInfoNew->getType()->dump();
       bool AddToScope = true;
       auto New = Actions.ActOnFunctionDeclarator(getCurScope(), DNew, Actions.CurContext, TInfoNew, Previous, TemplateParams, AddToScope);
 New->dump();
-      //PushOnScopeChains(New, getCurScope(), true);
       Actions.CurContext->addHiddenDecl(New);
-      //New->setAccess(AS);
     }
     T.consumeClose();
   } else {
