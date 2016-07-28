@@ -3060,6 +3060,24 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
     initParamTypes.push_back(Actions.Context.VoidPtrTy); //ap
             initParamTypes.push_back(Actions.Context.UnsignedLongTy); //axxx__RDYp
             initParamTypes.push_back(Actions.Context.UnsignedLongTy); //axxxp
+        ParmVarDecl *type =
+        ParmVarDecl::Create(Context, M,
+                            SourceLocation(), SourceLocation(),
+                            &Context.Idents.get("type"),
+                            Context.getPointerType(ConstCharType),
+                            /*TInfo=*/nullptr,
+                            SC_None, nullptr);
+        Params.push_back(type);
+      SmallVector<ParmVarDecl*, 16> Params;
+      for (const auto &ParamType : OldProto->param_types()) {
+        ParmVarDecl *Param = ParmVarDecl::Create(Context, New, SourceLocation(),
+                                                 SourceLocation(), nullptr,
+                                                 ParamType, /*TInfo=*/nullptr,
+                                                 SC_None, nullptr);
+        Param->setScopeInfo(0, Params.size());
+        Param->setImplicit();
+        Params.push_back(Param);
+      }
 #endif
       DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction(
           /*HasProto=*/true, /*IsAmbiguous=*/false, /*LParenLoc=*/NoLoc,
