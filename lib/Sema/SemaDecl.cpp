@@ -12481,29 +12481,22 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
         item->setIsUsed();
         item->addAttr(UsedAttr::CreateImplicit(Context));
         item->setBody(new (Context) CompoundStmt(Context,
-            new (Context) ReturnStmt(cdecl->getLocation(), nullptr, nullptr),
-            cdecl->getLocation(), cdecl->getLocation()));
+            new (Context) ReturnStmt(item->getLocation(), nullptr, nullptr),
+            item->getLocation(), item->getLocation()));
         if (mname == "init")
             continue;
         item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, StringRef("atomicc_method"), 0));
         //std::string readyString = vmethodFlag ? "__READY" : "__RDY";
         //IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
-            //(uint64_t) 1), Context.BoolTy, cdecl->getLocation());
-        //Stmt *Return = new (Context) ReturnStmt(cdecl->getLocation(), IL, nullptr);
-        //Method->setBody(new (Context) CompoundStmt(Context, Return, cdecl->getLocation(), cdecl->getLocation()));
+            //(uint64_t) 1), Context.BoolTy, item->getLocation());
+        //Stmt *Return = new (Context) ReturnStmt(item->getLocation(), IL, nullptr);
+        //Method->setBody(new (Context) CompoundStmt(Context, Return, item->getLocation(), item->getLocation()));
         //Method->setLexicalDeclContext(CurContext);
         //Consumer.HandleInlineMethodDefinition(Method);
-        //NamedDecl *field = createField(Context, cdecl, Method, mname + readyString + "p", TSInfo);
-        //field->setLexicalDeclContext(CurContext);
         NamedDecl *field = createField(Context, cdecl, item, mname + "p", TSInfo);
         field->setLexicalDeclContext(CurContext);
       }
     }
-    //Method->setBody(new (Context) CompoundStmt(Context,
-        //new (Context) ReturnStmt(cdecl->getLocation(), nullptr, nullptr),
-        //cdecl->getLocation(), cdecl->getLocation()));
-    //Method->setLexicalDeclContext(CurContext);
-    //Consumer.HandleInlineMethodDefinition(Method);
     //for (auto item: cdecl->fields()) { item->dump(); }
     //for (auto item: cdecl->ctors()) { //CXXConstructorDecl //}
   }
