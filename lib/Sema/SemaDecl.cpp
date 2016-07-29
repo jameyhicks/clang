@@ -12462,6 +12462,7 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
     pfield->setLexicalDeclContext(CurContext);
     bool vmethodFlag = false;
     for (auto item: cdecl->methods()) {
+      SourceLocation loc = item->getLocation();
       if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
         std::string mname = item->getName();
         if (mname == "VMETHODDECL") {
@@ -12471,9 +12472,28 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
         item->setIsUsed();
         item->addAttr(UsedAttr::CreateImplicit(Context));
         if (mname == "init") {
+printf("[%s:%d] befthis\n", __FUNCTION__, __LINE__);
+            QualType ThisTy = Context.getPointerType(Context.getTypeDeclType(cdecl));
+            Expr *baseExpr = new (Context) CXXThisExpr(loc, ThisTy, /*isImplicit=*/true);
+            int paramIndex = 1; // skip first 'init' parameter
+            for (auto fitem: cdecl->fields()) {
+                MemberExpr *lhs = new (Context) MemberExpr(baseExpr, true, loc, fitem, loc, fitem->getType(), VK_LValue, OK_Ordinary);
+printf("[%s:%d] lhs %p\n", __FUNCTION__, __LINE__, lhs);
+//lhs->dump();
+                MarkMemberReferenced(lhs);
+                ParmVarDecl *Param = item->getParamDecl(paramIndex++);
+ //getNumParams()
+                QualType ParamType = Param->getType().getNonReferenceType();
+                NestedNameSpecifierLoc NNSloc;
+                Expr *rhs = DeclRefExpr::Create(Context, NNSloc, loc, Param, false, loc, ParamType, VK_LValue, nullptr);
+//rhs->dump();
+                Expr *assign = new (Context) BinaryOperator(lhs, rhs, BO_Assign, fitem->getType(), VK_RValue, OK_Ordinary, loc, false);
+//assign->dump();
             item->setBody(new (Context) CompoundStmt(Context,
-                new (Context) ReturnStmt(item->getLocation(), nullptr, nullptr),
-                item->getLocation(), item->getLocation()));
+                assign, //new (Context) ReturnStmt(loc, nullptr, nullptr),
+                loc, loc));
+                break;
+            }
 #if 0
 |-CompoundStmt 0x4d5add8 <col:92, line:113:43>
 | |-BinaryOperator 0x4d5aa90 <line:111:9, col:15> '<dependent type>' '='
@@ -12496,15 +12516,15 @@ item->dump();
         }
         if (!item->hasBody())
             item->setBody(new (Context) CompoundStmt(Context,
-                new (Context) ReturnStmt(item->getLocation(), nullptr, nullptr),
-                item->getLocation(), item->getLocation()));
+                new (Context) ReturnStmt(loc, nullptr, nullptr),
+                loc, loc));
 else item->dump();
-        item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, StringRef("atomicc_method"), 0));
+        item->addAttr(::new (Context) TargetAttr(loc, Context, StringRef("atomicc_method"), 0));
         //std::string readyString = vmethodFlag ? "__READY" : "__RDY";
         //IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
-            //(uint64_t) 1), Context.BoolTy, item->getLocation());
-        //Stmt *Return = new (Context) ReturnStmt(item->getLocation(), IL, nullptr);
-        //Method->setBody(new (Context) CompoundStmt(Context, Return, item->getLocation(), item->getLocation()));
+            //(uint64_t) 1), Context.BoolTy, loc);
+        //Stmt *Return = new (Context) ReturnStmt(loc, IL, nullptr);
+        //Method->setBody(new (Context) CompoundStmt(Context, Return, loc, loc));
         //Method->setLexicalDeclContext(CurContext);
         //Consumer.HandleInlineMethodDefinition(Method);
         NamedDecl *field = createField(Context, cdecl, item, mname + "p", TSInfo);
