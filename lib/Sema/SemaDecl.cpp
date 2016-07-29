@@ -12479,7 +12479,9 @@ printf("[%s:%d] befthis\n", __FUNCTION__, __LINE__);
             for (auto fitem: cdecl->fields()) {
                 MemberExpr *lhs = new (Context) MemberExpr(baseExpr, true, loc, fitem, loc, fitem->getType(), VK_LValue, OK_Ordinary);
 printf("[%s:%d] lhs %p\n", __FUNCTION__, __LINE__, lhs);
-//lhs->dump();
+lhs->dump();
+lhs->getMemberDecl()->dump();
+lhs->getMemberDecl()->getType()->dump();
                 MarkMemberReferenced(lhs);
                 ParmVarDecl *Param = item->getParamDecl(paramIndex++);
  //getNumParams()
@@ -12487,7 +12489,10 @@ printf("[%s:%d] lhs %p\n", __FUNCTION__, __LINE__, lhs);
                 NestedNameSpecifierLoc NNSloc;
                 Expr *rhs = DeclRefExpr::Create(Context, NNSloc, loc, Param, false, loc, ParamType, VK_LValue, nullptr);
 //rhs->dump();
-                Expr *assign = new (Context) BinaryOperator(lhs, rhs, BO_Assign, fitem->getType(), VK_RValue, OK_Ordinary, loc, false);
+                Expr *assign = new (Context) BinaryOperator(lhs, rhs, BO_Assign, 
+Context.DependentTy
+//fitem->getType()
+, VK_RValue, OK_Ordinary, loc, false);
 //assign->dump();
             item->setBody(new (Context) CompoundStmt(Context,
                 assign, //new (Context) ReturnStmt(loc, nullptr, nullptr),

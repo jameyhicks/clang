@@ -11081,6 +11081,9 @@ Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
                             Expr *LHS, Expr *RHS) {
   Expr *Args[2] = { LHS, RHS };
   LHS=RHS=nullptr; // Please use only Args instead of LHS/RHS couple
+printf("[%s:%d] BEGIN\n", __FUNCTION__, __LINE__);
+Args[0]->dump();
+Args[1]->dump();
 
   BinaryOperator::Opcode Opc = static_cast<BinaryOperator::Opcode>(OpcIn);
   OverloadedOperatorKind Op = BinaryOperator::getOverloadedOperator(Opc);
@@ -11283,9 +11286,16 @@ Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
       ExprResult Result = ExprError();
       if (Args[0]->getType()->isRecordType() &&
           Opc >= BO_Assign && Opc <= BO_OrAssign) {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+Args[0]->dump();
+Args[1]->dump();
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+Args[0]->getType()->dump();
+Args[1]->getType()->dump();
         Diag(OpLoc,  diag::err_ovl_no_viable_oper)
              << BinaryOperator::getOpcodeStr(Opc)
              << Args[0]->getSourceRange() << Args[1]->getSourceRange();
+exit(-1);
         if (Args[0]->getType()->isIncompleteType()) {
           Diag(OpLoc, diag::note_assign_lhs_incomplete)
             << Args[0]->getType()
