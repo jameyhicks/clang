@@ -3043,7 +3043,11 @@ printf("[%s:%d] BEFOREParseCXXClassMemberDeclaration\n", __FUNCTION__, __LINE__)
     }
 
     if(TagType == DeclSpec::TST_ainterface) {//jca
-printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
+      int methodCount = 0;
+      for (auto item: Actions.CurContext->decls())
+          if (dyn_cast<CXXMethodDecl>(item))
+              methodCount++;
+printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING %d\n", __FUNCTION__, __LINE__, methodCount);
       MultiTemplateParamsArg TemplateParams(nullptr, (size_t)0);
       const char *Dummy = nullptr;
       AttributeFactory attrFactory;
@@ -3060,9 +3064,6 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       (void)NDSunsignedlong.SetTypeSpecSign(DeclSpec::TSS_unsigned, NoLoc, Dummy, DiagID);
       Declarator Dunsignedlong(NDSunsignedlong, Declarator::MemberContext);
       TypeSourceInfo *TInfounsignedlong = Actions.GetTypeForDeclarator(Dunsignedlong, getCurScope());
-      ParmVarDecl *ppunsignedlong = ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfounsignedlong->getType(), TInfounsignedlong, SC_None, nullptr);
-    DeclaratorChunk::ParamInfo piunsignedlong(nullptr, NoLoc, ppunsignedlong);
-#if 1
       DeclSpec NDSconstcharp(attrFactory);
       (void)NDSconstcharp.SetTypeSpecType(DeclSpec::TST_char, NoLoc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
       (void)NDSconstcharp.SetTypeQual(DeclSpec::TQ_const, NoLoc, Dummy, DiagID, getLangOpts());
@@ -3070,20 +3071,19 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       Dconstcharp.AddTypeInfo(DeclaratorChunk::getPointer(DeclSpec::TQ_const, NoLoc, NoLoc, NoLoc, NoLoc, NoLoc), parsedAttrs, NoLoc);
       TypeSourceInfo *TInfoconstcharp = Actions.GetTypeForDeclarator(Dconstcharp, getCurScope());
       ParmVarDecl *ppconstcharp = ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfoconstcharp->getType(), TInfoconstcharp, SC_None, nullptr);
-    DeclaratorChunk::ParamInfo piconstcharp(nullptr, NoLoc, ppconstcharp);
       DeclSpec NDSvoidp(attrFactory);
       (void)NDSvoidp.SetTypeSpecType(DeclSpec::TST_void, NoLoc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
       Declarator Dvoidp(NDSvoidp, Declarator::MemberContext);
       Dvoidp.AddTypeInfo(DeclaratorChunk::getPointer(0, NoLoc, NoLoc, NoLoc, NoLoc, NoLoc), parsedAttrs, NoLoc);
       TypeSourceInfo *TInfovoidp = Actions.GetTypeForDeclarator(Dvoidp, getCurScope());
       ParmVarDecl *ppvoidp = ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfovoidp->getType(), TInfovoidp, SC_None, nullptr);
-    DeclaratorChunk::ParamInfo pivoidp(nullptr, NoLoc, ppvoidp);
-#endif
     std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
-    initParamTypes.push_back(piconstcharp);
-    initParamTypes.push_back(pivoidp);
-    initParamTypes.push_back(piunsignedlong);
-    //can't reuse!! initParamTypes.push_back(piunsignedlong);
+    initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc, ppconstcharp));
+    initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc, ppvoidp));
+    while (methodCount-- > 0) {
+        initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc, ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfounsignedlong->getType(), TInfounsignedlong, SC_None, nullptr)));
+        initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc, ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfounsignedlong->getType(), TInfounsignedlong, SC_None, nullptr)));
+    }
     ArrayRef<DeclaratorChunk::ParamInfo> pparam = llvm::makeArrayRef(initParamTypes);
       DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction(
           /*HasProto=*/true, /*IsAmbiguous=*/false, /*LParenLoc=*/NoLoc,
