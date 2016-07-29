@@ -12478,14 +12478,14 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
             vmethodFlag = true;
             continue;
         }
-        if (mname == "init")
-            continue;
-        item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, StringRef("atomicc_method"), 0));
         item->setIsUsed();
         item->addAttr(UsedAttr::CreateImplicit(Context));
         item->setBody(new (Context) CompoundStmt(Context,
             new (Context) ReturnStmt(cdecl->getLocation(), nullptr, nullptr),
             cdecl->getLocation(), cdecl->getLocation()));
+        if (mname == "init")
+            continue;
+        item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, StringRef("atomicc_method"), 0));
         //std::string readyString = vmethodFlag ? "__READY" : "__RDY";
         //IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
             //(uint64_t) 1), Context.BoolTy, cdecl->getLocation());
