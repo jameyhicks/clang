@@ -4907,39 +4907,29 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
                                   TemplateParamLists,
                                   AddToScope);
-if (auto CC = dyn_cast<TagDecl>(DC))
-if (CC->getTagKind() == TTK_AInterface) {
+    if (auto CC = dyn_cast<TagDecl>(DC))
+    if (CC->getTagKind() == TTK_AInterface) {
 printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
-  const char *Dummy;
-  AttributeFactory attrFactory;
-  DeclSpec DS(attrFactory);
-  unsigned DiagID;
-  (void)DS.SetTypeSpecType(DeclSpec::TST_bool, D.getLocStart(), Dummy, DiagID, Context.getPrintingPolicy());
-  Declarator DNew(DS, D.getContext());
-  SourceLocation loc = DNew.getLocStart();
-  SourceLocation NoLoc;
-  DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction(
-      /*HasProto=*/true, /*IsAmbiguous=*/false, /*LParenLoc=*/NoLoc,
-      /*ArgInfo=*/nullptr, /*NumArgs=*/0,
-      /*EllipsisLoc=*/NoLoc, /*RParenLoc=*/NoLoc, /*TypeQuals=*/0,
-      /*RefQualifierIsLvalueRef=*/true, /*RefQualifierLoc=*/NoLoc,
-      /*ConstQualifierLoc=*/NoLoc, /*VolatileQualifierLoc=*/NoLoc,
-      /*RestrictQualifierLoc=*/NoLoc, /*MutableLoc=*/NoLoc, EST_None,
-      /*ESpecLoc=*/NoLoc,
-      /*Exceptions=*/nullptr, /*ExceptionRanges=*/nullptr,
-      /*NumExceptions=*/0, /*NoexceptExpr=*/nullptr,
-      /*ExceptionSpecTokens=*/nullptr, loc, loc, DNew));
-  DNew.setFunctionDefinitionKind(D.getFunctionDefinitionKind());
-  IdentifierInfo &IDI = Context.Idents.get(D.getName().Identifier->getName().str() + "__RDY");
-  DNew.SetIdentifier(&IDI, D.getName().StartLocation);
-  TypeSourceInfo *TInfoNew = GetTypeForDeclarator(DNew, S);
-R->dump();
-TInfoNew->getType()->dump();
-    auto NewExtra = ActOnFunctionDeclarator(S, DNew, DC, TInfoNew, Previous,
+      const char *Dummy = nullptr;
+      AttributeFactory attrFactory;
+      DeclSpec DS(attrFactory);
+      unsigned DiagID;
+      (void)DS.SetTypeSpecType(DeclSpec::TST_bool, D.getLocStart(), Dummy, DiagID, Context.getPrintingPolicy());
+      Declarator DNew(DS, D.getContext());
+      SourceLocation loc = DNew.getLocStart();
+      SourceLocation NoLoc;
+      DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction( true, false, NoLoc,
+          nullptr, 0, NoLoc, NoLoc, 0, true, NoLoc, NoLoc, NoLoc,
+          NoLoc, NoLoc, EST_None, NoLoc,
+          nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew));
+      DNew.setFunctionDefinitionKind(D.getFunctionDefinitionKind());
+      IdentifierInfo &IDI = Context.Idents.get(D.getName().Identifier->getName().str() + "__RDY");
+      DNew.SetIdentifier(&IDI, D.getName().StartLocation);
+      auto NewExtra = ActOnFunctionDeclarator(S, DNew, DC, GetTypeForDeclarator(DNew, S), Previous,
                                   TemplateParamLists,
                                   AddToScope);
 NewExtra->dump();
-}
+    }
   } else {
     New = ActOnVariableDeclarator(S, D, DC, TInfo, Previous, TemplateParamLists,
                                   AddToScope);
@@ -12480,11 +12470,35 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
         }
         item->setIsUsed();
         item->addAttr(UsedAttr::CreateImplicit(Context));
-        item->setBody(new (Context) CompoundStmt(Context,
-            new (Context) ReturnStmt(item->getLocation(), nullptr, nullptr),
-            item->getLocation(), item->getLocation()));
-        if (mname == "init")
+        if (mname == "init") {
+            item->setBody(new (Context) CompoundStmt(Context,
+                new (Context) ReturnStmt(item->getLocation(), nullptr, nullptr),
+                item->getLocation(), item->getLocation()));
+#if 0
+|-CompoundStmt 0x4d5add8 <col:92, line:113:43>
+| |-BinaryOperator 0x4d5aa90 <line:111:9, col:15> '<dependent type>' '='
+| | |-MemberExpr 0x4d5aa30 <col:9> 'void *' lvalue ->zzp 0x4d59e78
+| | | `-CXXThisExpr 0x4d5aa18 <col:9> 'PipeIn<T> *' this
+| | `-DeclRefExpr 0x4d5aa68 <col:15> 'void *' lvalue ParmVar AP 'ap' 'void *'
+| |-BinaryOperator 0x4d5ac20 <line:112:9, col:46> '<dependent type>' '='
+| | |-MemberExpr 0x4d5aad0 <col:9> 'GUARDPTR':'_Bool (*)(void *)' lvalue ->zzenq__RDYp 0x4d59ef0
+| | | `-CXXThisExpr 0x4d5aab8 <col:9> 'PipeIn<T> *' this
+| | `-CStyleCastExpr 0x4d5abf8 <col:23, col:46> 'decltype(this->zzenq__RDYp)' <Dependent>
+| |   `-DeclRefExpr 0x4d5ab58 <col:46> 'unsigned long' lvalue ParmVar AENQRDYP 'aenq__RDYp' 'unsigned long'
+| `-BinaryOperator 0x4d5adb0 <line:113:9, col:36> '<dependent type>' '='
+|   |-MemberExpr 0x4d5ac60 <col:9> 'void (*)(void *, const T &)' lvalue ->zzenqp 0x4d5a168
+|   | `-CXXThisExpr 0x4d5ac48 <col:9> 'PipeIn<T> *' this
+|   `-CStyleCastExpr 0x4d5ad88 <col:18, col:36> 'decltype(this->zzenqp)' <Dependent>
+|     `-DeclRefExpr 0x4d5ace8 <col:36> 'unsigned long' lvalue ParmVar AENQP 'aenqp' 'unsigned long'
+#endif
+item->dump();
             continue;
+        }
+        if (!item->hasBody())
+            item->setBody(new (Context) CompoundStmt(Context,
+                new (Context) ReturnStmt(item->getLocation(), nullptr, nullptr),
+                item->getLocation(), item->getLocation()));
+else item->dump();
         item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, StringRef("atomicc_method"), 0));
         //std::string readyString = vmethodFlag ? "__READY" : "__RDY";
         //IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),

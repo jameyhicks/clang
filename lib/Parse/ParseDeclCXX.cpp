@@ -3035,68 +3035,57 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
     }
 
     if(TagType == DeclSpec::TST_ainterface) {//jca
-      int methodCount = 0;
-      for (auto item: Actions.CurContext->decls())
-          if (dyn_cast<CXXMethodDecl>(item))
-              methodCount++;
-printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING %d\n", __FUNCTION__, __LINE__, methodCount);
-      MultiTemplateParamsArg TemplateParams(nullptr, (size_t)0);
+printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       const char *Dummy = nullptr;
       AttributeFactory attrFactory;
-      DeclSpec NDS(attrFactory);
+      ParsedAttributes parsedAttrs(attrFactory);
       unsigned DiagID;
       SourceLocation loc = Tok.getLocation();
-      SourceLocation NoLoc;
+
+      DeclSpec NDSunsignedlong(attrFactory);
+      (void)NDSunsignedlong.SetTypeSpecType(DeclSpec::TST_int, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      (void)NDSunsignedlong.SetTypeSpecWidth(DeclSpec::TSW_long, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      (void)NDSunsignedlong.SetTypeSpecSign(DeclSpec::TSS_unsigned, loc, Dummy, DiagID);
+      Declarator Dunsignedlong(NDSunsignedlong, Declarator::MemberContext);
+      DeclSpec NDSconstcharp(attrFactory);
+      (void)NDSconstcharp.SetTypeSpecType(DeclSpec::TST_char, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      (void)NDSconstcharp.SetTypeQual(DeclSpec::TQ_const, loc, Dummy, DiagID, getLangOpts());
+      Declarator Dconstcharp(NDSconstcharp, Declarator::MemberContext);
+      Dconstcharp.AddTypeInfo(DeclaratorChunk::getPointer(DeclSpec::TQ_const, loc, loc, loc, loc, loc), parsedAttrs, loc);
+      DeclSpec NDSvoidp(attrFactory);
+      (void)NDSvoidp.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      Declarator Dvoidp(NDSvoidp, Declarator::MemberContext);
+      Dvoidp.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
+
+      std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
+#define ADDPARAM(A) { \
+      TypeSourceInfo *tmp = Actions.GetTypeForDeclarator((A), getCurScope()); \
+      initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, loc, \
+          ParmVarDecl::Create(Actions.Context, nullptr, loc, loc, nullptr, tmp->getType(), tmp, SC_None, nullptr))); }
+
+      ADDPARAM(Dconstcharp);
+      ADDPARAM(Dvoidp);
+      for (auto item: Actions.CurContext->decls())
+          if (dyn_cast<CXXMethodDecl>(item)) {
+              ADDPARAM(Dunsignedlong);
+              ADDPARAM(Dunsignedlong);
+          }
+      ArrayRef<DeclaratorChunk::ParamInfo> pparam = llvm::makeArrayRef(initParamTypes);
+      DeclSpec NDS(attrFactory);
       (void)NDS.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
       Declarator DNew(NDS, Declarator::MemberContext);
-      ParsedAttributes parsedAttrs(attrFactory);
-      DeclSpec NDSunsignedlong(attrFactory);
-      (void)NDSunsignedlong.SetTypeSpecType(DeclSpec::TST_int, NoLoc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
-      (void)NDSunsignedlong.SetTypeSpecWidth(DeclSpec::TSW_long, NoLoc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
-      (void)NDSunsignedlong.SetTypeSpecSign(DeclSpec::TSS_unsigned, NoLoc, Dummy, DiagID);
-      Declarator Dunsignedlong(NDSunsignedlong, Declarator::MemberContext);
-      TypeSourceInfo *TInfounsignedlong = Actions.GetTypeForDeclarator(Dunsignedlong, getCurScope());
-      DeclSpec NDSconstcharp(attrFactory);
-      (void)NDSconstcharp.SetTypeSpecType(DeclSpec::TST_char, NoLoc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
-      (void)NDSconstcharp.SetTypeQual(DeclSpec::TQ_const, NoLoc, Dummy, DiagID, getLangOpts());
-      Declarator Dconstcharp(NDSconstcharp, Declarator::MemberContext);
-      Dconstcharp.AddTypeInfo(DeclaratorChunk::getPointer(DeclSpec::TQ_const, NoLoc, NoLoc, NoLoc, NoLoc, NoLoc), parsedAttrs, NoLoc);
-      TypeSourceInfo *TInfoconstcharp = Actions.GetTypeForDeclarator(Dconstcharp, getCurScope());
-      DeclSpec NDSvoidp(attrFactory);
-      (void)NDSvoidp.SetTypeSpecType(DeclSpec::TST_void, NoLoc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
-      Declarator Dvoidp(NDSvoidp, Declarator::MemberContext);
-      Dvoidp.AddTypeInfo(DeclaratorChunk::getPointer(0, NoLoc, NoLoc, NoLoc, NoLoc, NoLoc), parsedAttrs, NoLoc);
-      TypeSourceInfo *TInfovoidp = Actions.GetTypeForDeclarator(Dvoidp, getCurScope());
-      std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
-      initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc,
-          ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfoconstcharp->getType(), TInfoconstcharp, SC_None, nullptr)));
-      initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc,
-          ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfovoidp->getType(), TInfovoidp, SC_None, nullptr)));
-      while (methodCount-- > 0) {
-          initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc,
-              ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfounsignedlong->getType(), TInfounsignedlong, SC_None, nullptr)));
-          initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc,
-              ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfounsignedlong->getType(), TInfounsignedlong, SC_None, nullptr)));
-      }
-      ArrayRef<DeclaratorChunk::ParamInfo> pparam = llvm::makeArrayRef(initParamTypes);
-      DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction(
-          /*HasProto=*/true, /*IsAmbiguous=*/false, /*LParenLoc=*/NoLoc,
-          /*ArgInfo=*/(DeclaratorChunk::ParamInfo *)pparam.data(), /*NumArgs=*/pparam.size(),
-          /*EllipsisLoc=*/NoLoc, /*RParenLoc=*/NoLoc, /*TypeQuals=*/0,
-          /*RefQualifierIsLvalueRef=*/true, /*RefQualifierLoc=*/NoLoc,
-          /*ConstQualifierLoc=*/NoLoc, /*VolatileQualifierLoc=*/NoLoc,
-          /*RestrictQualifierLoc=*/NoLoc, /*MutableLoc=*/NoLoc, EST_None,
-          /*ESpecLoc=*/NoLoc,
-          /*Exceptions=*/nullptr, /*ExceptionRanges=*/nullptr,
-          /*NumExceptions=*/0, /*NoexceptExpr=*/nullptr,
-          /*ExceptionSpecTokens=*/nullptr, loc, loc, DNew));
+      DNew.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
+          (DeclaratorChunk::ParamInfo *)pparam.data(), pparam.size(),
+          loc, loc, 0, true, loc, loc, loc, loc, loc, EST_None, loc,
+          nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew), parsedAttrs, loc);
       DNew.setFunctionDefinitionKind(FDK_Declaration);
       IdentifierInfo &IDI = Actions.Context.Idents.get("init");
-      DNew.SetIdentifier(&IDI, DNew.getName().StartLocation);
+      DNew.SetIdentifier(&IDI, loc);
       LookupResult Previous(Actions, Actions.GetNameForDeclarator(DNew), Sema::LookupOrdinaryName, Sema::ForRedeclaration);
       bool AddToScope = true;
-      auto New = Actions.ActOnFunctionDeclarator(getCurScope(), DNew, Actions.CurContext, Actions.GetTypeForDeclarator(DNew, getCurScope()), Previous, TemplateParams, AddToScope);
-//New->dump();
+      MultiTemplateParamsArg TemplateParams(nullptr, (size_t)0);
+      auto New = Actions.ActOnFunctionDeclarator(getCurScope(), DNew,
+          Actions.CurContext, Actions.GetTypeForDeclarator(DNew, getCurScope()), Previous, TemplateParams, AddToScope);
       Actions.CurContext->addDecl(New);
     }
     T.consumeClose();
