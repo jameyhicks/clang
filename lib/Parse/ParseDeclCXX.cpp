@@ -3045,10 +3045,10 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING %d\n", __FUNCTION__, __LINE__, met
       AttributeFactory attrFactory;
       DeclSpec NDS(attrFactory);
       unsigned DiagID;
-      (void)NDS.SetTypeSpecType(DeclSpec::TST_void, Tok.getLocation(), Dummy, DiagID, Actions.Context.getPrintingPolicy());
-      Declarator DNew(NDS, Declarator::MemberContext);
-      SourceLocation loc = DNew.getLocStart();
+      SourceLocation loc = Tok.getLocation();
       SourceLocation NoLoc;
+      (void)NDS.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      Declarator DNew(NDS, Declarator::MemberContext);
       ParsedAttributes parsedAttrs(attrFactory);
       DeclSpec NDSunsignedlong(attrFactory);
       (void)NDSunsignedlong.SetTypeSpecType(DeclSpec::TST_int, NoLoc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
@@ -3062,21 +3062,23 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING %d\n", __FUNCTION__, __LINE__, met
       Declarator Dconstcharp(NDSconstcharp, Declarator::MemberContext);
       Dconstcharp.AddTypeInfo(DeclaratorChunk::getPointer(DeclSpec::TQ_const, NoLoc, NoLoc, NoLoc, NoLoc, NoLoc), parsedAttrs, NoLoc);
       TypeSourceInfo *TInfoconstcharp = Actions.GetTypeForDeclarator(Dconstcharp, getCurScope());
-      ParmVarDecl *ppconstcharp = ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfoconstcharp->getType(), TInfoconstcharp, SC_None, nullptr);
       DeclSpec NDSvoidp(attrFactory);
       (void)NDSvoidp.SetTypeSpecType(DeclSpec::TST_void, NoLoc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
       Declarator Dvoidp(NDSvoidp, Declarator::MemberContext);
       Dvoidp.AddTypeInfo(DeclaratorChunk::getPointer(0, NoLoc, NoLoc, NoLoc, NoLoc, NoLoc), parsedAttrs, NoLoc);
       TypeSourceInfo *TInfovoidp = Actions.GetTypeForDeclarator(Dvoidp, getCurScope());
-      ParmVarDecl *ppvoidp = ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfovoidp->getType(), TInfovoidp, SC_None, nullptr);
-    std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
-    initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc, ppconstcharp));
-    initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc, ppvoidp));
-    while (methodCount-- > 0) {
-        initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc, ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfounsignedlong->getType(), TInfounsignedlong, SC_None, nullptr)));
-        initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc, ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfounsignedlong->getType(), TInfounsignedlong, SC_None, nullptr)));
-    }
-    ArrayRef<DeclaratorChunk::ParamInfo> pparam = llvm::makeArrayRef(initParamTypes);
+      std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
+      initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc,
+          ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfoconstcharp->getType(), TInfoconstcharp, SC_None, nullptr)));
+      initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc,
+          ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfovoidp->getType(), TInfovoidp, SC_None, nullptr)));
+      while (methodCount-- > 0) {
+          initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc,
+              ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfounsignedlong->getType(), TInfounsignedlong, SC_None, nullptr)));
+          initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, NoLoc,
+              ParmVarDecl::Create(Actions.Context, nullptr, NoLoc, NoLoc, nullptr, TInfounsignedlong->getType(), TInfounsignedlong, SC_None, nullptr)));
+      }
+      ArrayRef<DeclaratorChunk::ParamInfo> pparam = llvm::makeArrayRef(initParamTypes);
       DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction(
           /*HasProto=*/true, /*IsAmbiguous=*/false, /*LParenLoc=*/NoLoc,
           /*ArgInfo=*/(DeclaratorChunk::ParamInfo *)pparam.data(), /*NumArgs=*/pparam.size(),
@@ -3091,13 +3093,11 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING %d\n", __FUNCTION__, __LINE__, met
       DNew.setFunctionDefinitionKind(FDK_Declaration);
       IdentifierInfo &IDI = Actions.Context.Idents.get("init");
       DNew.SetIdentifier(&IDI, DNew.getName().StartLocation);
-      TypeSourceInfo *TInfoNew = Actions.GetTypeForDeclarator(DNew, getCurScope());
-//TInfoNew->getType()->dump();
       LookupResult Previous(Actions, Actions.GetNameForDeclarator(DNew), Sema::LookupOrdinaryName, Sema::ForRedeclaration);
       bool AddToScope = true;
-      auto New = Actions.ActOnFunctionDeclarator(getCurScope(), DNew, Actions.CurContext, TInfoNew, Previous, TemplateParams, AddToScope);
+      auto New = Actions.ActOnFunctionDeclarator(getCurScope(), DNew, Actions.CurContext, Actions.GetTypeForDeclarator(DNew, getCurScope()), Previous, TemplateParams, AddToScope);
 //New->dump();
-      Actions.CurContext->addHiddenDecl(New);
+      Actions.CurContext->addDecl(New);
     }
     T.consumeClose();
   } else {
