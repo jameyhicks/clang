@@ -12457,30 +12457,6 @@ printf("[%s:%d] new field\n", __FUNCTION__, __LINE__);
 newField->dump();
     return newField;
 }
-CXXMethodDecl *createMethod(ASTContext &Context, CXXRecordDecl *cdecl, std::string mname, QualType retType, std::vector<QualType> paramTypes, TypeSourceInfo *TSInfo)
-{
-    const IdentifierInfo &IDI = Context.Idents.get(mname);
-    FunctionProtoType::ExtProtoInfo EPI;
-    CXXMethodDecl *Method = CXXMethodDecl::Create(Context, cdecl, cdecl->getLocation(),
-       DeclarationNameInfo(Context.DeclarationNames.getIdentifier(&IDI), cdecl->getLocation()),
-       Context.getFunctionType(retType, paramTypes, EPI),
-       TSInfo, SC_None, /*isInline=*/false, /*isConstExpr=*/false, cdecl->getLocation());
-    Method->setAccess(AS_public);
-    std::vector<ParmVarDecl*> nParams;
-    for (unsigned i = 0, e = paramTypes.size(); i != e; ++i) {
-      ParmVarDecl *parm = ParmVarDecl::Create(Context, Method, cdecl->getLocation(), cdecl->getLocation(),
-         nullptr, paramTypes[i], TSInfo, SC_None, nullptr);
-      parm->setScopeInfo(0, i);
-      nParams.push_back(parm);
-    }
-    Method->setParams(nParams);
-    Method->addAttr(::new (Context) TargetAttr(Method->getLocation(), Context, StringRef("NEWNEW"), 0));
-    cdecl->addDecl(Method);
-    //MarkFunctionReferenced(Field->getLocation(), Destructor);
-printf("[%s:%d] new method\n", __FUNCTION__, __LINE__);
-Method->dump();
-    return Method;
-}
 
 void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
                                     SourceLocation RBraceLoc) {
@@ -12490,60 +12466,39 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
   if (Tag->getTagKind() == TTK_AInterface)
   if (CXXRecordDecl *cdecl = dyn_cast<CXXRecordDecl>(Tag)) {
     TypeSourceInfo *TSInfo = NULL;
-    TypeSourceInfo *TSInfoF = NULL;
     for (auto bitem: cdecl->bases())
         TSInfo = bitem.getTypeSourceInfo();
-printf("[%s:%d] TSInfo %p\n", __FUNCTION__, __LINE__, TSInfo);
     NamedDecl *pfield = createField(Context, cdecl, NULL, "p", TSInfo);
     pfield->setLexicalDeclContext(CurContext);
-    std::vector<QualType> initParamTypes;
-    initParamTypes.push_back(Context.getPointerType(Context.getConstType(Context.CharTy))); //name
-    initParamTypes.push_back(Context.VoidPtrTy); //ap
     bool vmethodFlag = false;
     for (auto item: cdecl->methods()) {
-      printf("[%s:%d] method\n", __FUNCTION__, __LINE__);
       if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
-        bool isNewMeth = false;
         std::string mname = item->getName();
         if (mname == "VMETHODDECL") {
             vmethodFlag = true;
             continue;
         }
+        if (mname == "init")
+            continue;
         item->addAttr(::new (Context) TargetAttr(item->getLocation(), Context, StringRef("atomicc_method"), 0));
         item->setIsUsed();
         item->addAttr(UsedAttr::CreateImplicit(Context));
-        if (const auto *TD = item->getAttr<TargetAttr>()) {
-            StringRef FeaturesStr = TD->getFeatures();
-printf("[%s:%d] FFFFFFF %s\n", __FUNCTION__, __LINE__, FeaturesStr.str().c_str());
-            if (FeaturesStr == "NEWNEW")
-                isNewMeth = true;
-        }
-        if (!isNewMeth && mname != "init") {
-            TSInfoF = item->getTypeSourceInfo();
-printf("[%s:%d] SSSSSSSSSSTSInfo %p\n", __FUNCTION__, __LINE__, TSInfoF);
-            item->setBody(new (Context) CompoundStmt(Context,
-                new (Context) ReturnStmt(cdecl->getLocation(), nullptr, nullptr),
-                cdecl->getLocation(), cdecl->getLocation()));
-//printf("[%s:%d] before new method\n", __FUNCTION__, __LINE__);
-            //std::vector<QualType> paramTypes;
-            //std::string readyString = vmethodFlag ? "__READY" : "__RDY";
-            //CXXMethodDecl *Method = createMethod(Context, cdecl, mname + readyString, Context.BoolTy, paramTypes, TSInfoF);
-            //IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
-                //(uint64_t) 1), Context.BoolTy, cdecl->getLocation());
-            //Stmt *Return = new (Context) ReturnStmt(cdecl->getLocation(), IL, nullptr);
-            //Method->setBody(new (Context) CompoundStmt(Context, Return, cdecl->getLocation(), cdecl->getLocation()));
-            //Method->setLexicalDeclContext(CurContext);
-            //Consumer.HandleInlineMethodDefinition(Method);
-            //NamedDecl *field = createField(Context, cdecl, Method, mname + readyString + "p", TSInfo);
-            //field->setLexicalDeclContext(CurContext);
-            NamedDecl *field = createField(Context, cdecl, item, mname + "p", TSInfo);
-            field->setLexicalDeclContext(CurContext);
-            initParamTypes.push_back(Context.UnsignedLongTy); //axxx__RDYp
-            initParamTypes.push_back(Context.UnsignedLongTy); //axxxp
-        }
+        item->setBody(new (Context) CompoundStmt(Context,
+            new (Context) ReturnStmt(cdecl->getLocation(), nullptr, nullptr),
+            cdecl->getLocation(), cdecl->getLocation()));
+        //std::string readyString = vmethodFlag ? "__READY" : "__RDY";
+        //IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
+            //(uint64_t) 1), Context.BoolTy, cdecl->getLocation());
+        //Stmt *Return = new (Context) ReturnStmt(cdecl->getLocation(), IL, nullptr);
+        //Method->setBody(new (Context) CompoundStmt(Context, Return, cdecl->getLocation(), cdecl->getLocation()));
+        //Method->setLexicalDeclContext(CurContext);
+        //Consumer.HandleInlineMethodDefinition(Method);
+        //NamedDecl *field = createField(Context, cdecl, Method, mname + readyString + "p", TSInfo);
+        //field->setLexicalDeclContext(CurContext);
+        NamedDecl *field = createField(Context, cdecl, item, mname + "p", TSInfo);
+        field->setLexicalDeclContext(CurContext);
       }
     }
-    //CXXMethodDecl *Method = createMethod(Context, cdecl, "init", Context.VoidTy, initParamTypes, TSInfoF);
     //Method->setBody(new (Context) CompoundStmt(Context,
         //new (Context) ReturnStmt(cdecl->getLocation(), nullptr, nullptr),
         //cdecl->getLocation(), cdecl->getLocation()));
