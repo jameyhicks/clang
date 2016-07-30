@@ -12462,6 +12462,7 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
     //pfield->setLexicalDeclContext(CurContext);
     bool vmethodFlag = false;
     for (auto item: cdecl->methods()) {
+printf("[%s:%d] method %p\n", __FUNCTION__, __LINE__, item);
       SourceLocation loc = item->getLocation();
       if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
         std::string mname = item->getName();
@@ -12477,11 +12478,14 @@ printf("[%s:%d] befthis\n", __FUNCTION__, __LINE__);
             Expr *baseExpr = new (Context) CXXThisExpr(loc, ThisTy, /*isImplicit=*/true);
             int paramIndex = 1; // skip first 'init' parameter
             for (auto fitem: cdecl->fields()) {
+printf("[%s:%d]MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM %p \n", __FUNCTION__, __LINE__, fitem);
+fitem->dump();
+            }
+            for (auto fitem: cdecl->fields()) {
                 MemberExpr *lhs = new (Context) MemberExpr(baseExpr, true, loc, fitem, loc, fitem->getType(), VK_LValue, OK_Ordinary);
                 MarkMemberReferenced(lhs);
-                ParmVarDecl *Param = item->getParamDecl(
-paramIndex++
-);
+                ParmVarDecl *Param = item->getParamDecl(paramIndex++);
+                Param->setIsUsed();
                 QualType ParamType = Param->getType().getNonReferenceType();
                 NestedNameSpecifierLoc NNSloc;
                 Expr *rhs = DeclRefExpr::Create(Context, NNSloc, loc, Param, false, loc, ParamType, VK_LValue, nullptr);

@@ -3087,19 +3087,20 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       auto New = Actions.ActOnFunctionDeclarator(getCurScope(), DNew,
           Actions.CurContext, Actions.GetTypeForDeclarator(DNew, getCurScope()), Previous, TemplateParams, AddToScope);
       Actions.CurContext->addDecl(New);
-#if 1
       DeclSpec NDSf(attrFactory);
       (void)NDSf.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
       Declarator DNewf(NDSf, Declarator::MemberContext);
       DNewf.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
       IdentifierInfo &IDIf = Actions.Context.Idents.get("p");
       DNewf.SetIdentifier(&IDIf, loc);
-      LookupResult Previousf(Actions, Actions.GetNameForDeclarator(DNewf), Sema::LookupOrdinaryName, Sema::ForRedeclaration);
       TypeSourceInfo *TInfof = Actions.GetTypeForDeclarator(DNewf, getCurScope());
-      auto Newf = Actions.ActOnVariableDeclarator(getCurScope(), DNewf, Actions.CurContext, TInfof, Previousf, TemplateParams, AddToScope);
+      auto Newf = FieldDecl::Create(Actions.Context, Actions.CurContext, loc, loc, &IDIf, TInfof->getType(), TInfof, nullptr, true, ICIS_NoInit);
+      Newf->setIsUsed();
+      Newf->setAccess(AS_public);
+printf("[%s:%d]ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ\n", __FUNCTION__, __LINE__);
+TInfof->getType()->dump();
 Newf->dump();
       Actions.CurContext->addDecl(Newf);
-#endif
     }
     T.consumeClose();
   } else {

@@ -1483,6 +1483,7 @@ static const char *GetCompletionTypeString(QualType T,
         if (!Tag->hasNameForLinkage()) {
           switch (Tag->getTagKind()) {
           case TTK_Struct: return "struct <anonymous>";
+          case TTK_AInterface: return "ainterface <anonymous>";
           case TTK_Interface: return "__interface <anonymous>";
           case TTK_Class:  return "class <anonymous>";
           case TTK_Union:  return "union <anonymous>";
@@ -3074,6 +3075,7 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
         switch (TD->getTagKind()) {
           case TTK_Interface:  // fall through
           case TTK_Struct: return CXCursor_StructDecl;
+          case TTK_AInterface: return CXCursor_StructDecl;
           case TTK_Class:  return CXCursor_ClassDecl;
           case TTK_Union:  return CXCursor_UnionDecl;
           case TTK_Enum:   return CXCursor_EnumDecl;
