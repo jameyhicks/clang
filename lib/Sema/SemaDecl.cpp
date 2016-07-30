@@ -4904,12 +4904,10 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
 
     New = ActOnTypedefDeclarator(S, D, DC, TInfo, Previous);
   } else if (R->isFunctionType()) {
-    New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
-                                  TemplateParamLists,
-                                  AddToScope);
     if (auto CC = dyn_cast<TagDecl>(DC))
     if (CC->getTagKind() == TTK_AInterface) {
 printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
+      std::string mname = D.getName().Identifier->getName();
       const char *Dummy = nullptr;
       AttributeFactory attrFactory;
       DeclSpec DS(attrFactory);
@@ -4923,13 +4921,41 @@ printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
           NoLoc, NoLoc, EST_None, NoLoc,
           nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew));
       DNew.setFunctionDefinitionKind(D.getFunctionDefinitionKind());
-      IdentifierInfo &IDI = Context.Idents.get(D.getName().Identifier->getName().str() + "__RDY");
+      IdentifierInfo &IDI = Context.Idents.get(mname + "__RDY");
       DNew.SetIdentifier(&IDI, D.getName().StartLocation);
       auto NewExtra = ActOnFunctionDeclarator(S, DNew, DC, GetTypeForDeclarator(DNew, S), Previous,
                                   TemplateParamLists,
                                   AddToScope);
 NewExtra->dump();
+#if 0
+      DeclSpec NDSf(attrFactory);
+      (void)NDSf.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      Declarator DNewf(NDSf, Declarator::MemberContext);
+#if 0
+        const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
+        ArrayRef<QualType> paramTypes = FDTy->getParamTypes();
+        QualType *A = ::new (Context) QualType[paramTypes.size() + 1];
+        A[0] = Context.VoidPtrTy;
+        if (!paramTypes.empty())
+            std::copy(paramTypes.begin(), paramTypes.end(), A+1);
+        ArrayRef<QualType> newParam = llvm::makeArrayRef(A, paramTypes.size() + 1);
+        FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
+        EPI.TypeQuals = 0;
+        fType = Context.getPointerType(Context.getFunctionType(FDTy->getReturnType(), newParam, EPI));
+#endif
+      DNewf.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
+      IdentifierInfo &IDIf = Actions.Context.Idents.get(mname + "__RDY" + "p");
+      DNewf.SetIdentifier(&IDIf, loc);
+      TypeSourceInfo *TInfof = Actions.GetTypeForDeclarator(DNewf, getCurScope());
+      auto Newf = FieldDecl::Create(Actions.Context, Actions.CurContext, loc, loc, &IDIf, TInfof->getType(), TInfof, nullptr, true, ICIS_NoInit);
+      Newf->setIsUsed();
+      Newf->setAccess(AS_public);
+      Actions.CurContext->addDecl(Newf);
+#endif
     }
+    New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
+                                  TemplateParamLists,
+                                  AddToScope);
   } else {
     New = ActOnVariableDeclarator(S, D, DC, TInfo, Previous, TemplateParamLists,
                                   AddToScope);

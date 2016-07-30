@@ -3098,7 +3098,6 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       Newf->setIsUsed();
       Newf->setAccess(AS_public);
 printf("[%s:%d]ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ\n", __FUNCTION__, __LINE__);
-TInfof->getType()->dump();
 Newf->dump();
       Actions.CurContext->addDecl(Newf);
     }
