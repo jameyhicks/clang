@@ -11081,9 +11081,6 @@ Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
                             Expr *LHS, Expr *RHS) {
   Expr *Args[2] = { LHS, RHS };
   LHS=RHS=nullptr; // Please use only Args instead of LHS/RHS couple
-printf("[%s:%d] BEGIN\n", __FUNCTION__, __LINE__);
-Args[0]->dump();
-Args[1]->dump();
 
   BinaryOperator::Opcode Opc = static_cast<BinaryOperator::Opcode>(OpcIn);
   OverloadedOperatorKind Op = BinaryOperator::getOverloadedOperator(Opc);
