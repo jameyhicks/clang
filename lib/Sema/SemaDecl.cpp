@@ -4910,6 +4910,7 @@ printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
       std::string mname = D.getName().Identifier->getName();
       const char *Dummy = nullptr;
       AttributeFactory attrFactory;
+      ParsedAttributes parsedAttrs(attrFactory);
       DeclSpec DS(attrFactory);
       unsigned DiagID;
       (void)DS.SetTypeSpecType(DeclSpec::TST_bool, D.getLocStart(), Dummy, DiagID, Context.getPrintingPolicy());
@@ -4927,9 +4928,9 @@ printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
                                   TemplateParamLists,
                                   AddToScope);
 NewExtra->dump();
-#if 0
+#if 1
       DeclSpec NDSf(attrFactory);
-      (void)NDSf.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      (void)NDSf.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, Context.getPrintingPolicy());
       Declarator DNewf(NDSf, Declarator::MemberContext);
 #if 0
         const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
@@ -4944,13 +4945,15 @@ NewExtra->dump();
         fType = Context.getPointerType(Context.getFunctionType(FDTy->getReturnType(), newParam, EPI));
 #endif
       DNewf.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
-      IdentifierInfo &IDIf = Actions.Context.Idents.get(mname + "__RDY" + "p");
+      IdentifierInfo &IDIf = Context.Idents.get(mname + "__RDY" + "jjp");
       DNewf.SetIdentifier(&IDIf, loc);
-      TypeSourceInfo *TInfof = Actions.GetTypeForDeclarator(DNewf, getCurScope());
-      auto Newf = FieldDecl::Create(Actions.Context, Actions.CurContext, loc, loc, &IDIf, TInfof->getType(), TInfof, nullptr, true, ICIS_NoInit);
+      TypeSourceInfo *TInfof = GetTypeForDeclarator(DNewf, getCurScope());
+      auto Newf = FieldDecl::Create(Context, CurContext, loc, loc, &IDIf, TInfof->getType(), TInfof, nullptr, true, ICIS_NoInit);
       Newf->setIsUsed();
       Newf->setAccess(AS_public);
-      Actions.CurContext->addDecl(Newf);
+      CurContext->addDecl(Newf);
+printf("[%s:%d]JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n", __FUNCTION__, __LINE__);
+Newf->dump();
 #endif
     }
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
