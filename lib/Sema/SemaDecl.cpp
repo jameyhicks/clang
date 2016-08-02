@@ -4715,38 +4715,6 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
   return false;
 }
 
-extern "C" void jca(void){}
-static void dumpDeclar(const Declarator *DNewf)
-{
-if (DNewf->getNumTypeObjects() != 3) return;
-printf("[%s:%d] Decl %p context %x\n", __FUNCTION__, __LINE__, DNewf, DNewf->getContext());
-for (unsigned i = 0; i < DNewf->getNumTypeObjects(); i++) {
-const DeclaratorChunk &cptr = DNewf->getTypeObject(i);
-printf("[%s:%d][%d] KIND %d\n", __FUNCTION__, __LINE__, i, cptr.Kind);
-switch (cptr.Kind) {
-      case DeclaratorChunk::Function:
-printf("[%s:%d] func hasPrototype %x isVariadic %x isAmbiguous %x RefQualifierIsLValueRef %x TypeQuals %x ExceptionSpecType %x DeleteParams %x HasTrailingReturnType %x NumParams %x NumExceptions %x\n", __FUNCTION__, __LINE__,
-    cptr.Fun.hasPrototype, cptr.Fun.isVariadic, cptr.Fun.isAmbiguous,
-    cptr.Fun.RefQualifierIsLValueRef, cptr.Fun.TypeQuals, cptr.Fun.ExceptionSpecType,
-    cptr.Fun.DeleteParams, cptr.Fun.HasTrailingReturnType, cptr.Fun.NumParams, cptr.Fun.NumExceptions);
-        break;
-      case DeclaratorChunk::Paren:
-printf("[%s:%d] paren\n", __FUNCTION__, __LINE__);
-        break;
-      case DeclaratorChunk::Pointer:
-printf("[%s:%d] ptr quals %x\n", __FUNCTION__, __LINE__, cptr.Ptr.TypeQuals);
-        break;
-      case DeclaratorChunk::Reference:
-      case DeclaratorChunk::Array:
-      case DeclaratorChunk::BlockPointer:
-      case DeclaratorChunk::MemberPointer:
-printf("[%s:%d]other\n", __FUNCTION__, __LINE__);
-        break;
-      }
-}
-jca();
-}
-
 NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
                                   MultiTemplateParamsArg TemplateParamLists) {
   // TODO: consider using NameInfo for diagnostic.
@@ -4951,7 +4919,7 @@ printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
       (void)DS.SetTypeSpecType(DeclSpec::TST_bool, D.getLocStart(), Dummy, DiagID, Context.getPrintingPolicy());
       Declarator DNew(DS, D.getContext());
       DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction( true, false, NoLoc,
-          nullptr, 0, NoLoc, NoLoc, 0, true, NoLoc, NoLoc, NoLoc,
+          nullptr, 0, NoLoc, NoLoc, 0, false, NoLoc, NoLoc, NoLoc,
           NoLoc, NoLoc, EST_None, NoLoc,
           nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew));
       DNew.setFunctionDefinitionKind(D.getFunctionDefinitionKind());
@@ -4987,19 +4955,16 @@ printf("[%s:%d]JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n", __FUNCTION__, __LIN
       DNewf.AddTypeInfo(DeclaratorChunk::getParen(loc, loc), parsedAttrs, loc);
       DNewf.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
           (DeclaratorChunk::ParamInfo *)pparam.data(), pparam.size(),
-          NoLoc, loc, 0, true, loc, loc, loc, loc, loc, EST_None, loc,
+          NoLoc, loc, 0, false, NoLoc, loc, loc, loc, loc, EST_None, loc,
           nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew), parsedAttrs, loc);
       IdentifierInfo &IDIf = Context.Idents.get(mname + "__RDY" + "jjp");
       DNewf.SetIdentifier(&IDIf, loc);
       TypeSourceInfo *TInfof = GetTypeForDeclarator(DNewf, getCurScope());
-dumpDeclar(&DNewf);
-TInfof->getType()->dump();
       auto Newf = FieldDecl::Create(Context, CurContext, loc, loc, &IDIf, TInfof->getType(), TInfof, nullptr, true, ICIS_NoInit);
       Newf->setIsUsed();
       Newf->setAccess(AS_public);
       CurContext->addDecl(Newf);
 Newf->dump();
-exit(-1);
 #endif
     }
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
@@ -12977,12 +12942,6 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   if (InitStyle != ICIS_NoInit)
     checkDuplicateDefaultInit(*this, cast<CXXRecordDecl>(Record), Loc);
 
-static int jcac = 0;
-if (jcac++ < 10) {
-printf("[%s:%d] before FieldDecl::Create\n", __FUNCTION__, __LINE__);
-dumpDeclar(D);
-TInfo->getType()->dump();
-}
   FieldDecl *NewFD = FieldDecl::Create(Context, Record, TSSL, Loc, II, T, TInfo,
                                        BitWidth, Mutable, InitStyle);
   if (InvalidDecl)
