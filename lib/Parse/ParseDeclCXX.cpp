@@ -3041,6 +3041,7 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       ParsedAttributes parsedAttrs(attrFactory);
       unsigned DiagID;
       SourceLocation loc = Tok.getLocation();
+      SourceLocation NoLoc;
 
       DeclSpec NDSunsignedlong(attrFactory);
       (void)NDSunsignedlong.SetTypeSpecType(DeclSpec::TST_int, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
@@ -3076,7 +3077,7 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       Declarator DNew(NDS, Declarator::MemberContext);
       DNew.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
           (DeclaratorChunk::ParamInfo *)pparam.data(), pparam.size(),
-          loc, loc, 0, true, loc, loc, loc, loc, loc, EST_None, loc,
+          NoLoc, loc, 0, true, loc, loc, loc, loc, loc, EST_None, loc,
           nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew), parsedAttrs, loc);
       DNew.setFunctionDefinitionKind(FDK_Declaration);
       IdentifierInfo &IDI = Actions.Context.Idents.get("init");
