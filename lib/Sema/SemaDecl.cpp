@@ -4962,20 +4962,28 @@ NewExtra->dump();
 Newf->dump();
 #endif
 #if 1
-      initParamTypes.clear();
-      ADDPARAM(Dvoidp);
+      std::vector<DeclaratorChunk::ParamInfo> ptype2;
+      TypeSourceInfo *ptmp = GetTypeForDeclarator(Dvoidp, getCurScope());
+      ptype2.push_back(DeclaratorChunk::ParamInfo(nullptr, loc,
+          ParmVarDecl::Create(Context, nullptr, loc, loc, nullptr, ptmp->getType(), ptmp, SC_None, nullptr)));
       for (unsigned i = 0; i < D.getNumTypeObjects(); i++) {
           const DeclaratorChunk &cptr = D.getTypeObject(i);
-if (0)
           if (cptr.Kind == DeclaratorChunk::Function)
               for (unsigned pindex = 0; pindex < cptr.Fun.NumParams; pindex++) {
                    DeclaratorChunk::ParamInfo &ptr = cptr.Fun.Params[pindex];
-                   initParamTypes.push_back(DeclaratorChunk::ParamInfo(ptr.Ident, ptr.IdentLoc,
-                       ptr.Param, ptr.DefaultArgTokens));
+                   ParmVarDecl *pv = dyn_cast<ParmVarDecl>(ptr.Param);
+printf("[%s:%d] pv %p\n", __FUNCTION__, __LINE__, pv);
+if (0)
+                   ptype2.push_back(DeclaratorChunk::ParamInfo(ptr.Ident, ptr.IdentLoc,
+                       ParmVarDecl::Create(Context, nullptr, loc, loc, nullptr, 
+                           pv->getType(), pv->getTypeSourceInfo(),
+                           SC_None, nullptr),
+                       //ptr.Param, 
+                       ptr.DefaultArgTokens));
               }
       }
 
-      pparam = llvm::makeArrayRef(initParamTypes);
+      ArrayRef<DeclaratorChunk::ParamInfo> pparam2 = llvm::makeArrayRef(ptype2);
 
 printf("[%s:%d]JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n", __FUNCTION__, __LINE__);
       DeclSpec NDSf2(attrFactory);
@@ -4984,7 +4992,7 @@ printf("[%s:%d]JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n", __FUNCTION__, __LIN
       DNewf2.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
       DNewf2.AddTypeInfo(DeclaratorChunk::getParen(loc, loc), parsedAttrs, loc);
       DNewf2.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
-          (DeclaratorChunk::ParamInfo *)pparam.data(), pparam.size(),
+          (DeclaratorChunk::ParamInfo *)pparam2.data(), pparam2.size(),
           NoLoc, loc, 0, false, NoLoc, loc, loc, loc, loc, EST_None, loc,
           nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNewf2), parsedAttrs, loc);
       IdentifierInfo &IDIf2 = Context.Idents.get(mname + "p");
