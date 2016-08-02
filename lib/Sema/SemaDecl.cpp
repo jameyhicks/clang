@@ -12493,31 +12493,6 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
          "Broken injected-class-name");
 }
 
-static NamedDecl *zzcreateField(ASTContext &Context, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname, TypeSourceInfo *TSInfo)
-{
-    QualType fType = Context.VoidPtrTy;
-    if (item) {
-        const FunctionProtoType *FDTy = item->getType().getTypePtr()->getAs<FunctionProtoType>();
-        ArrayRef<QualType> paramTypes = FDTy->getParamTypes();
-        QualType *A = ::new (Context) QualType[paramTypes.size() + 1];
-        A[0] = Context.VoidPtrTy;
-        if (!paramTypes.empty())
-            std::copy(paramTypes.begin(), paramTypes.end(), A+1);
-        ArrayRef<QualType> newParam = llvm::makeArrayRef(A, paramTypes.size() + 1);
-        FunctionProtoType::ExtProtoInfo EPI = FDTy->getExtProtoInfo();
-        EPI.TypeQuals = 0;
-        fType = Context.getPointerType(Context.getFunctionType(FDTy->getReturnType(), newParam, EPI));
-    }
-    NamedDecl *newField = FieldDecl::Create(Context, cdecl, cdecl->getLocation(), cdecl->getLocation(),
-        &Context.Idents.get(mname), fType, TSInfo, nullptr, false, ICIS_NoInit);
-    newField->setIsUsed();
-    newField->setAccess(AS_public);
-    cdecl->addDecl(newField);
-printf("[%s:%d] new field\n", __FUNCTION__, __LINE__);
-newField->dump();
-    return newField;
-}
-
 void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
                                     SourceLocation RBraceLoc) {
   AdjustDeclIfTemplate(TagD);
@@ -12528,8 +12503,6 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
     TypeSourceInfo *TSInfo = NULL;
     for (auto bitem: cdecl->bases())
         TSInfo = bitem.getTypeSourceInfo();
-    //NamedDecl *pfield = createField(Context, cdecl, NULL, "p", NULL);//TSInfo);
-    //pfield->setLexicalDeclContext(CurContext);
     bool vmethodFlag = false;
     for (auto item: cdecl->methods()) {
 printf("[%s:%d] method %p\n", __FUNCTION__, __LINE__, item);
@@ -12553,21 +12526,17 @@ printf("[%s:%d]MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 fitem->dump();
                  flast = fitem;
             }
-flast->dump();
-            //for (auto fitem: cdecl->fields()) {
-                MemberExpr *lhs = new (Context) MemberExpr(baseExpr, true, loc, flast, loc, flast->getType(), VK_LValue, OK_Ordinary);
-                MarkMemberReferenced(lhs);
-                ParmVarDecl *Param = item->getParamDecl(paramIndex++);
-                Param->setIsUsed();
-                QualType ParamType = Param->getType().getNonReferenceType();
-                NestedNameSpecifierLoc NNSloc;
-                Expr *rhs = DeclRefExpr::Create(Context, NNSloc, loc, Param, false, loc, ParamType, VK_LValue, nullptr);
-                Expr *assign = new (Context) BinaryOperator(lhs, rhs, BO_Assign, Context.DependentTy, VK_RValue, OK_Ordinary, loc, false);
+            MemberExpr *lhs = new (Context) MemberExpr(baseExpr, true, loc, flast, loc, flast->getType(), VK_LValue, OK_Ordinary);
+            MarkMemberReferenced(lhs);
+            ParmVarDecl *Param = item->getParamDecl(paramIndex++);
+            Param->setIsUsed();
+            QualType ParamType = Param->getType().getNonReferenceType();
+            NestedNameSpecifierLoc NNSloc;
+            Expr *rhs = DeclRefExpr::Create(Context, NNSloc, loc, Param, false, loc, ParamType, VK_LValue, nullptr);
+            Expr *assign = new (Context) BinaryOperator(lhs, rhs, BO_Assign, Context.DependentTy, VK_RValue, OK_Ordinary, loc, false);
             item->setBody(new (Context) CompoundStmt(Context,
                 assign, //new (Context) ReturnStmt(loc, nullptr, nullptr),
                 loc, loc));
-                //break;
-            //}
 #if 0
 |-CompoundStmt 0x4d5add8 <col:92, line:113:43>
 | |-BinaryOperator 0x4d5aa90 <line:111:9, col:15> '<dependent type>' '='
@@ -12601,8 +12570,6 @@ else item->dump();
         //Method->setBody(new (Context) CompoundStmt(Context, Return, loc, loc));
         //Method->setLexicalDeclContext(CurContext);
         //Consumer.HandleInlineMethodDefinition(Method);
-        //NamedDecl *field = createField(Context, cdecl, item, mname + "p", TSInfo);
-        //field->setLexicalDeclContext(CurContext);
       }
     }
     //for (auto item: cdecl->fields()) { item->dump(); }
