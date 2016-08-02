@@ -4929,25 +4929,20 @@ printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
                                   TemplateParamLists,
                                   AddToScope);
 NewExtra->dump();
-#if 1
       DeclSpec NDSvoidp(attrFactory);
       (void)NDSvoidp.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, Context.getPrintingPolicy());
       Declarator Dvoidp(NDSvoidp, Declarator::MemberContext);
       Dvoidp.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
-
       std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
 #define ADDPARAM(A) { \
       TypeSourceInfo *tmp = GetTypeForDeclarator((A), getCurScope()); \
       initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, loc, \
           ParmVarDecl::Create(Context, nullptr, loc, loc, nullptr, tmp->getType(), tmp, SC_None, nullptr))); }
 
+#if 1
       ADDPARAM(Dvoidp);
-      //for (auto item: CurContext->decls())
-          //if (dyn_cast<CXXMethodDecl>(item)) {
-          //}
       ArrayRef<DeclaratorChunk::ParamInfo> pparam = llvm::makeArrayRef(initParamTypes);
 
-printf("[%s:%d]JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n", __FUNCTION__, __LINE__);
       DeclSpec NDSf(attrFactory);
       (void)NDSf.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, Context.getPrintingPolicy());
       Declarator DNewf(NDSf, Declarator::MemberContext);
@@ -4956,8 +4951,8 @@ printf("[%s:%d]JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n", __FUNCTION__, __LIN
       DNewf.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
           (DeclaratorChunk::ParamInfo *)pparam.data(), pparam.size(),
           NoLoc, loc, 0, false, NoLoc, loc, loc, loc, loc, EST_None, loc,
-          nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew), parsedAttrs, loc);
-      IdentifierInfo &IDIf = Context.Idents.get(mname + "__RDY" + "jjp");
+          nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNewf), parsedAttrs, loc);
+      IdentifierInfo &IDIf = Context.Idents.get(mname + "__RDY" + "p");
       DNewf.SetIdentifier(&IDIf, loc);
       TypeSourceInfo *TInfof = GetTypeForDeclarator(DNewf, getCurScope());
       auto Newf = FieldDecl::Create(Context, CurContext, loc, loc, &IDIf, TInfof->getType(), TInfof, nullptr, true, ICIS_NoInit);
@@ -4965,6 +4960,41 @@ printf("[%s:%d]JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n", __FUNCTION__, __LIN
       Newf->setAccess(AS_public);
       CurContext->addDecl(Newf);
 Newf->dump();
+#endif
+#if 1
+      initParamTypes.clear();
+      ADDPARAM(Dvoidp);
+      for (unsigned i = 0; i < D.getNumTypeObjects(); i++) {
+          const DeclaratorChunk &cptr = D.getTypeObject(i);
+if (0)
+          if (cptr.Kind == DeclaratorChunk::Function)
+              for (unsigned pindex = 0; pindex < cptr.Fun.NumParams; pindex++) {
+                   DeclaratorChunk::ParamInfo &ptr = cptr.Fun.Params[pindex];
+                   initParamTypes.push_back(DeclaratorChunk::ParamInfo(ptr.Ident, ptr.IdentLoc,
+                       ptr.Param, ptr.DefaultArgTokens));
+              }
+      }
+
+      pparam = llvm::makeArrayRef(initParamTypes);
+
+printf("[%s:%d]JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n", __FUNCTION__, __LINE__);
+      DeclSpec NDSf2(attrFactory);
+      (void)NDSf2.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, Context.getPrintingPolicy());
+      Declarator DNewf2(NDSf2, Declarator::MemberContext);
+      DNewf2.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
+      DNewf2.AddTypeInfo(DeclaratorChunk::getParen(loc, loc), parsedAttrs, loc);
+      DNewf2.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
+          (DeclaratorChunk::ParamInfo *)pparam.data(), pparam.size(),
+          NoLoc, loc, 0, false, NoLoc, loc, loc, loc, loc, EST_None, loc,
+          nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNewf2), parsedAttrs, loc);
+      IdentifierInfo &IDIf2 = Context.Idents.get(mname + "p");
+      DNewf.SetIdentifier(&IDIf2, loc);
+      TypeSourceInfo *TInfof2 = GetTypeForDeclarator(DNewf2, getCurScope());
+      auto Newf2 = FieldDecl::Create(Context, CurContext, loc, loc, &IDIf2, TInfof2->getType(), TInfof2, nullptr, true, ICIS_NoInit);
+      Newf2->setIsUsed();
+      Newf2->setAccess(AS_public);
+      CurContext->addDecl(Newf2);
+Newf2->dump();
 #endif
     }
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
@@ -12463,7 +12493,7 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
          "Broken injected-class-name");
 }
 
-static NamedDecl *createField(ASTContext &Context, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname, TypeSourceInfo *TSInfo)
+static NamedDecl *zzcreateField(ASTContext &Context, CXXRecordDecl *cdecl, CXXMethodDecl *item, std::string mname, TypeSourceInfo *TSInfo)
 {
     QualType fType = Context.VoidPtrTy;
     if (item) {
@@ -12517,12 +12547,15 @@ printf("[%s:%d] befthis\n", __FUNCTION__, __LINE__);
             QualType ThisTy = Context.getPointerType(Context.getTypeDeclType(cdecl));
             Expr *baseExpr = new (Context) CXXThisExpr(loc, ThisTy, /*isImplicit=*/true);
             int paramIndex = 1; // skip first 'init' parameter
+            FieldDecl *flast = NULL;
             for (auto fitem: cdecl->fields()) {
 printf("[%s:%d]MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM %p \n", __FUNCTION__, __LINE__, fitem);
 fitem->dump();
+                 flast = fitem;
             }
-            for (auto fitem: cdecl->fields()) {
-                MemberExpr *lhs = new (Context) MemberExpr(baseExpr, true, loc, fitem, loc, fitem->getType(), VK_LValue, OK_Ordinary);
+flast->dump();
+            //for (auto fitem: cdecl->fields()) {
+                MemberExpr *lhs = new (Context) MemberExpr(baseExpr, true, loc, flast, loc, flast->getType(), VK_LValue, OK_Ordinary);
                 MarkMemberReferenced(lhs);
                 ParmVarDecl *Param = item->getParamDecl(paramIndex++);
                 Param->setIsUsed();
@@ -12533,8 +12566,8 @@ fitem->dump();
             item->setBody(new (Context) CompoundStmt(Context,
                 assign, //new (Context) ReturnStmt(loc, nullptr, nullptr),
                 loc, loc));
-                break;
-            }
+                //break;
+            //}
 #if 0
 |-CompoundStmt 0x4d5add8 <col:92, line:113:43>
 | |-BinaryOperator 0x4d5aa90 <line:111:9, col:15> '<dependent type>' '='
@@ -12568,8 +12601,8 @@ else item->dump();
         //Method->setBody(new (Context) CompoundStmt(Context, Return, loc, loc));
         //Method->setLexicalDeclContext(CurContext);
         //Consumer.HandleInlineMethodDefinition(Method);
-        NamedDecl *field = createField(Context, cdecl, item, mname + "p", TSInfo);
-        field->setLexicalDeclContext(CurContext);
+        //NamedDecl *field = createField(Context, cdecl, item, mname + "p", TSInfo);
+        //field->setLexicalDeclContext(CurContext);
       }
     }
     //for (auto item: cdecl->fields()) { item->dump(); }
