@@ -4972,11 +4972,16 @@ Newf->dump();
               for (unsigned pindex = 0; pindex < cptr.Fun.NumParams; pindex++) {
                    DeclaratorChunk::ParamInfo &ptr = cptr.Fun.Params[pindex];
                    ParmVarDecl *pv = dyn_cast<ParmVarDecl>(ptr.Param);
-printf("[%s:%d] pv %p\n", __FUNCTION__, __LINE__, pv);
-if (0)
+printf("[%s:%d] mname %s pv %p\n", __FUNCTION__, __LINE__, mname.c_str(), pv);
+QualType qt = pv->getType();
+TypeSourceInfo *tsp = pv->getTypeSourceInfo();
+printf("[%s:%d] qt %p tsp %p\n", __FUNCTION__, __LINE__, qt, tsp);
+qt->dump();
+tsp->getType()->dump();
+//if (0)
                    ptype2.push_back(DeclaratorChunk::ParamInfo(ptr.Ident, ptr.IdentLoc,
                        ParmVarDecl::Create(Context, nullptr, loc, loc, nullptr, 
-                           pv->getType(), pv->getTypeSourceInfo(),
+                           qt, tsp, //pv->getType(), pv->getTypeSourceInfo(),
                            SC_None, nullptr),
                        //ptr.Param, 
                        ptr.DefaultArgTokens));
@@ -4985,7 +4990,7 @@ if (0)
 
       ArrayRef<DeclaratorChunk::ParamInfo> pparam2 = llvm::makeArrayRef(ptype2);
 
-printf("[%s:%d]JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n", __FUNCTION__, __LINE__);
+printf("[%s:%d]JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ mname %s size %d\n", __FUNCTION__, __LINE__, mname.c_str(), (int)pparam2.size());
       DeclSpec NDSf2(attrFactory);
       (void)NDSf2.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, Context.getPrintingPolicy());
       Declarator DNewf2(NDSf2, Declarator::MemberContext);
