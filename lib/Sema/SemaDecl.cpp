@@ -4968,17 +4968,20 @@ Newf->dump();
           ParmVarDecl::Create(Context, nullptr, loc, loc, nullptr, ptmp->getType(), ptmp, SC_None, nullptr)));
       for (unsigned i = 0; i < D.getNumTypeObjects(); i++) {
           const DeclaratorChunk &cptr = D.getTypeObject(i);
-          if (cptr.Kind == DeclaratorChunk::Function)
+          if (cptr.Kind == DeclaratorChunk::Function) {
+printf("[%s:%d] mname %s num %d JJJJJJJJJJJJJJJJJJ\n", __FUNCTION__, __LINE__, mname.c_str(), cptr.Fun.NumParams);
               for (unsigned pindex = 0; pindex < cptr.Fun.NumParams; pindex++) {
                    DeclaratorChunk::ParamInfo &ptr = cptr.Fun.Params[pindex];
                    ParmVarDecl *pv = dyn_cast<ParmVarDecl>(ptr.Param);
-printf("[%s:%d] mname %s pv %p\n", __FUNCTION__, __LINE__, mname.c_str(), pv);
+                   if (!pv) continue;
+printf("[%s:%d] mname %s pv %p num %d\n", __FUNCTION__, __LINE__, mname.c_str(), pv, cptr.Fun.NumParams);
 QualType qt = pv->getType();
+                   if (qt->isVoidType()) continue;
 TypeSourceInfo *tsp = pv->getTypeSourceInfo();
-printf("[%s:%d] qt %p tsp %p\n", __FUNCTION__, __LINE__, qt, tsp);
+printf("[%s:%d] qt %p qtvoid %d tsp %p\n", __FUNCTION__, __LINE__, qt, qt->isVoidType(), tsp);
 qt->dump();
+if (tsp)
 tsp->getType()->dump();
-//if (0)
                    ptype2.push_back(DeclaratorChunk::ParamInfo(ptr.Ident, ptr.IdentLoc,
                        ParmVarDecl::Create(Context, nullptr, loc, loc, nullptr, 
                            qt, tsp, //pv->getType(), pv->getTypeSourceInfo(),
@@ -4986,6 +4989,7 @@ tsp->getType()->dump();
                        //ptr.Param, 
                        ptr.DefaultArgTokens));
               }
+          }
       }
 
       ArrayRef<DeclaratorChunk::ParamInfo> pparam2 = llvm::makeArrayRef(ptype2);
