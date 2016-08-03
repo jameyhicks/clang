@@ -4937,7 +4937,7 @@ NewExtra->dump();
 #define ADDPARAM(A) { \
       TypeSourceInfo *tmp = GetTypeForDeclarator((A), getCurScope()); \
       initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, loc, \
-          ParmVarDecl::Create(Context, nullptr, loc, loc, nullptr, tmp->getType(), tmp, SC_None, nullptr))); }
+          ParmVarDecl::Create(Context, CurContext, loc, loc, nullptr, tmp->getType(), tmp, SC_None, nullptr))); }
 
 #if 1
       ADDPARAM(Dvoidp);
@@ -4965,29 +4965,20 @@ Newf->dump();
       std::vector<DeclaratorChunk::ParamInfo> ptype2;
       TypeSourceInfo *ptmp = GetTypeForDeclarator(Dvoidp, getCurScope());
       ptype2.push_back(DeclaratorChunk::ParamInfo(nullptr, loc,
-          ParmVarDecl::Create(Context, nullptr, loc, loc, nullptr, ptmp->getType(), ptmp, SC_None, nullptr)));
+          ParmVarDecl::Create(Context, CurContext, loc, loc, nullptr, ptmp->getType(), ptmp, SC_None, nullptr)));
       for (unsigned i = 0; i < D.getNumTypeObjects(); i++) {
           const DeclaratorChunk &cptr = D.getTypeObject(i);
           if (cptr.Kind == DeclaratorChunk::Function) {
-printf("[%s:%d] mname %s num %d JJJJJJJJJJJJJJJJJJ\n", __FUNCTION__, __LINE__, mname.c_str(), cptr.Fun.NumParams);
               for (unsigned pindex = 0; pindex < cptr.Fun.NumParams; pindex++) {
                    DeclaratorChunk::ParamInfo &ptr = cptr.Fun.Params[pindex];
                    ParmVarDecl *pv = dyn_cast<ParmVarDecl>(ptr.Param);
                    if (!pv) continue;
-printf("[%s:%d] mname %s pv %p num %d\n", __FUNCTION__, __LINE__, mname.c_str(), pv, cptr.Fun.NumParams);
-QualType qt = pv->getType();
+                   QualType qt = pv->getType();
+                   TypeSourceInfo *tsp = pv->getTypeSourceInfo();
                    if (qt->isVoidType()) continue;
-TypeSourceInfo *tsp = pv->getTypeSourceInfo();
-printf("[%s:%d] qt %p qtvoid %d tsp %p\n", __FUNCTION__, __LINE__, qt, qt->isVoidType(), tsp);
-qt->dump();
-if (tsp)
-tsp->getType()->dump();
-                   ptype2.push_back(DeclaratorChunk::ParamInfo(ptr.Ident, ptr.IdentLoc,
-                       ParmVarDecl::Create(Context, nullptr, loc, loc, nullptr, 
-                           qt, tsp, //pv->getType(), pv->getTypeSourceInfo(),
-                           SC_None, nullptr),
-                       //ptr.Param, 
-                       ptr.DefaultArgTokens));
+                   ParmVarDecl *pvd = ParmVarDecl::Create(Context, CurContext, loc, loc, nullptr, qt, tsp, SC_None, nullptr);
+                   pvd->setScopeInfo(0, pindex + 1);
+                   ptype2.push_back(DeclaratorChunk::ParamInfo(ptr.Ident, ptr.IdentLoc, pvd, ptr.DefaultArgTokens));
               }
           }
       }
