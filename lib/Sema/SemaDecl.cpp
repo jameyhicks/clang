@@ -4963,7 +4963,6 @@ printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
       std::string mname = D.getName().Identifier->getName();
       const char *Dummy = nullptr;
       AttributeFactory attrFactory;
-      ParsedAttributes parsedAttrs(attrFactory);
       unsigned DiagID;
       SourceLocation loc = D.getLocStart();
       SourceLocation NoLoc;
@@ -4982,12 +4981,6 @@ printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
                                   TemplateParamLists,
                                   AddToScope);
 NewExtra->dump();
-      DeclSpec NDSvoidp(attrFactory);
-      (void)NDSvoidp.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, Context.getPrintingPolicy());
-      Declarator Dvoidp(NDSvoidp, Declarator::MemberContext);
-      Dvoidp.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
-      std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
-
       buildFunction(this, &D, mname + "__RDY" + "p", DeclSpec::TST_bool);
       buildFunction(this, &D, mname + "p", DeclSpec::TST_void);
     }
@@ -12509,6 +12502,7 @@ printf("[%s:%d] method %p\n", __FUNCTION__, __LINE__, item);
         }
         item->setIsUsed();
         item->addAttr(UsedAttr::CreateImplicit(Context));
+        NestedNameSpecifierLoc NNSloc;
         if (mname == "init") {
 printf("[%s:%d] befthis\n", __FUNCTION__, __LINE__);
             QualType ThisTy = Context.getPointerType(Context.getTypeDeclType(cdecl));
@@ -12520,17 +12514,17 @@ printf("[%s:%d]MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 fitem->dump();
                  flast = fitem;
             }
+            std::vector<Stmt *> assignVector;
             MemberExpr *lhs = new (Context) MemberExpr(baseExpr, true, loc, flast, loc, flast->getType(), VK_LValue, OK_Ordinary);
             MarkMemberReferenced(lhs);
             ParmVarDecl *Param = item->getParamDecl(paramIndex++);
+printf("[%s:%d] paramct %d/%d\n", __FUNCTION__, __LINE__, paramIndex, item->getNumParams());
             Param->setIsUsed();
-            QualType ParamType = Param->getType().getNonReferenceType();
-            NestedNameSpecifierLoc NNSloc;
-            Expr *rhs = DeclRefExpr::Create(Context, NNSloc, loc, Param, false, loc, ParamType, VK_LValue, nullptr);
+            Expr *rhs = DeclRefExpr::Create(Context, NNSloc, loc, Param, false, loc, Param->getType().getNonReferenceType(), VK_LValue, nullptr);
             Expr *assign = new (Context) BinaryOperator(lhs, rhs, BO_Assign, Context.DependentTy, VK_RValue, OK_Ordinary, loc, false);
-            item->setBody(new (Context) CompoundStmt(Context,
-                assign, //new (Context) ReturnStmt(loc, nullptr, nullptr),
-                loc, loc));
+            assignVector.push_back(assign);
+            item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(assignVector), loc, loc));
+//new (Context) ReturnStmt(loc, nullptr, nullptr),
 #if 0
 |-CompoundStmt 0x4d5add8 <col:92, line:113:43>
 | |-BinaryOperator 0x4d5aa90 <line:111:9, col:15> '<dependent type>' '='
