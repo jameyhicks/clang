@@ -2941,6 +2941,27 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   ParsedAttributes AccessAttrs(AttrFactory);
 
   if (TagDecl) {
+    if(TagType == DeclSpec::TST_ainterface) {
+      const char *Dummy = nullptr;
+      AttributeFactory attrFactory;
+      ParsedAttributes parsedAttrs(attrFactory);
+      unsigned DiagID;
+      SourceLocation loc = Tok.getLocation();
+
+      DeclSpec NDSf(attrFactory);
+      (void)NDSf.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      Declarator DNewf(NDSf, Declarator::MemberContext);
+      DNewf.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
+      IdentifierInfo &IDIf = Actions.Context.Idents.get("p");
+      DNewf.SetIdentifier(&IDIf, loc);
+      TypeSourceInfo *TInfof = Actions.GetTypeForDeclarator(DNewf, getCurScope());
+      auto Newf = FieldDecl::Create(Actions.Context, Actions.CurContext, loc, loc, &IDIf, TInfof->getType(), TInfof, nullptr, true, ICIS_NoInit);
+      Newf->setIsUsed();
+      Newf->setAccess(AS_public);
+      Actions.CurContext->addDecl(Newf);
+printf("[%s:%d] BEFORESTARTMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
+Newf->dump();
+    }
     // While we still have something to read, read the member-declarations.
     while (Tok.isNot(tok::r_brace) && !isEofOrEom()) {
       // Each iteration of this loop reads one member-declaration.
@@ -3034,7 +3055,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
       ParseCXXClassMemberDeclaration(CurAS, AccessAttrs.getList());
     }
 
-    if(TagType == DeclSpec::TST_ainterface) {//jca
+    if(TagType == DeclSpec::TST_ainterface) {
 printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       const char *Dummy = nullptr;
       AttributeFactory attrFactory;
@@ -3088,19 +3109,6 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       auto New = Actions.ActOnFunctionDeclarator(getCurScope(), DNew,
           Actions.CurContext, Actions.GetTypeForDeclarator(DNew, getCurScope()), Previous, TemplateParams, AddToScope);
       Actions.CurContext->addDecl(New);
-      DeclSpec NDSf(attrFactory);
-      (void)NDSf.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
-      Declarator DNewf(NDSf, Declarator::MemberContext);
-      DNewf.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
-      IdentifierInfo &IDIf = Actions.Context.Idents.get("p");
-      DNewf.SetIdentifier(&IDIf, loc);
-      TypeSourceInfo *TInfof = Actions.GetTypeForDeclarator(DNewf, getCurScope());
-      auto Newf = FieldDecl::Create(Actions.Context, Actions.CurContext, loc, loc, &IDIf, TInfof->getType(), TInfof, nullptr, true, ICIS_NoInit);
-      Newf->setIsUsed();
-      Newf->setAccess(AS_public);
-printf("[%s:%d]ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ\n", __FUNCTION__, __LINE__);
-Newf->dump();
-      Actions.CurContext->addDecl(Newf);
     }
     T.consumeClose();
   } else {

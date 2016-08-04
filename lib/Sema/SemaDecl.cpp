@@ -12513,6 +12513,7 @@ printf("[%s:%d] befthis\n", __FUNCTION__, __LINE__);
 printf("[%s:%d]MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM %p \n", __FUNCTION__, __LINE__, fitem);
 fitem->dump();
                  flast = fitem;
+break;
             }
             std::vector<Stmt *> assignVector;
             MemberExpr *lhs = new (Context) MemberExpr(baseExpr, true, loc, flast, loc, flast->getType(), VK_LValue, OK_Ordinary);
