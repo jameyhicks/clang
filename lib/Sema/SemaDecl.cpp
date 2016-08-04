@@ -4715,7 +4715,7 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
   return false;
 }
 
-static void buildFunction(Sema *sema, Declarator *D, std::string mname)
+static void buildFunction(Sema *sema, Declarator *D, std::string mname, const DeclSpec::TST retType)
 {
   const char *Dummy = nullptr;
   AttributeFactory attrFactory;
@@ -4727,15 +4727,12 @@ static void buildFunction(Sema *sema, Declarator *D, std::string mname)
   (void)NDSvoidp.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, sema->Context.getPrintingPolicy());
   Declarator Dvoidp(NDSvoidp, Declarator::MemberContext);
   Dvoidp.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
-    //return getTypeSpecType() != DeclSpec::TST_unspecified ||
-           //getTypeSpecWidth() != DeclSpec::TSW_unspecified ||
-           //getTypeSpecComplex() != DeclSpec::TSC_unspecified ||
-           //getTypeSpecSign() != DeclSpec::TSS_unspecified;
 
   std::vector<DeclaratorChunk::ParamInfo> ptype2;
   TypeSourceInfo *ptmp = sema->GetTypeForDeclarator(Dvoidp, sema->getCurScope());
   ptype2.push_back(DeclaratorChunk::ParamInfo(nullptr, loc,
       ParmVarDecl::Create(sema->Context, sema->CurContext, loc, loc, nullptr, ptmp->getType(), ptmp, SC_None, nullptr)));
+  if (retType == DeclSpec::TST_void)
   for (unsigned i = 0; i < D->getNumTypeObjects(); i++) {
       const DeclaratorChunk &cptr = D->getTypeObject(i);
       if (cptr.Kind == DeclaratorChunk::Function)
@@ -4753,7 +4750,7 @@ static void buildFunction(Sema *sema, Declarator *D, std::string mname)
   }
   ArrayRef<DeclaratorChunk::ParamInfo> pparam2 = llvm::makeArrayRef(ptype2);
   DeclSpec NDSf2(attrFactory);
-  (void)NDSf2.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, sema->Context.getPrintingPolicy());
+  (void)NDSf2.SetTypeSpecType(retType, loc, Dummy, DiagID, sema->Context.getPrintingPolicy());
   Declarator DNewf2(NDSf2, Declarator::MemberContext);
   DNewf2.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
   DNewf2.AddTypeInfo(DeclaratorChunk::getParen(loc, loc), parsedAttrs, loc);
@@ -4761,7 +4758,7 @@ static void buildFunction(Sema *sema, Declarator *D, std::string mname)
       (DeclaratorChunk::ParamInfo *)pparam2.data(), pparam2.size(),
       NoLoc, loc, 0, false, NoLoc, loc, loc, loc, loc, EST_None, loc,
       nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNewf2), parsedAttrs, loc);
-  IdentifierInfo &IDIf2 = sema->Context.Idents.get(mname + "p");
+  IdentifierInfo &IDIf2 = sema->Context.Idents.get(mname);
   DNewf2.SetIdentifier(&IDIf2, loc);
   TypeSourceInfo *TInfof2 = sema->GetTypeForDeclarator(DNewf2, sema->getCurScope());
   auto Newf2 = FieldDecl::Create(sema->Context, sema->CurContext, loc, loc, &IDIf2, TInfof2->getType(), TInfof2, nullptr, true, ICIS_NoInit);
@@ -4769,7 +4766,6 @@ static void buildFunction(Sema *sema, Declarator *D, std::string mname)
   Newf2->setAccess(AS_public);
   sema->CurContext->addDecl(Newf2);
 Newf2->dump();
-  //return Newf2;
 }
 
 NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
@@ -4992,31 +4988,8 @@ NewExtra->dump();
       Dvoidp.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
       std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
 
-#if 1
-      TypeSourceInfo *tmp = GetTypeForDeclarator(Dvoidp, getCurScope());
-      initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, loc,
-          ParmVarDecl::Create(Context, CurContext, loc, loc, nullptr, tmp->getType(), tmp, SC_None, nullptr)));
-      ArrayRef<DeclaratorChunk::ParamInfo> pparam = llvm::makeArrayRef(initParamTypes);
-
-      DeclSpec NDSf(attrFactory);
-      (void)NDSf.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, Context.getPrintingPolicy());
-      Declarator DNewf(NDSf, Declarator::MemberContext);
-      DNewf.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
-      DNewf.AddTypeInfo(DeclaratorChunk::getParen(loc, loc), parsedAttrs, loc);
-      DNewf.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
-          (DeclaratorChunk::ParamInfo *)pparam.data(), pparam.size(),
-          NoLoc, loc, 0, false, NoLoc, loc, loc, loc, loc, EST_None, loc,
-          nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNewf), parsedAttrs, loc);
-      IdentifierInfo &IDIf = Context.Idents.get(mname + "__RDY" + "p");
-      DNewf.SetIdentifier(&IDIf, loc);
-      TypeSourceInfo *TInfof = GetTypeForDeclarator(DNewf, getCurScope());
-      auto Newf = FieldDecl::Create(Context, CurContext, loc, loc, &IDIf, TInfof->getType(), TInfof, nullptr, true, ICIS_NoInit);
-      Newf->setIsUsed();
-      Newf->setAccess(AS_public);
-      CurContext->addDecl(Newf);
-Newf->dump();
-#endif
-      buildFunction(this, &D, mname);
+      buildFunction(this, &D, mname + "__RDY" + "p", DeclSpec::TST_bool);
+      buildFunction(this, &D, mname + "p", DeclSpec::TST_void);
     }
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
                                   TemplateParamLists,
