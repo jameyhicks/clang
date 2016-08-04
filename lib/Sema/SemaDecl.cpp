@@ -4934,13 +4934,11 @@ NewExtra->dump();
       Declarator Dvoidp(NDSvoidp, Declarator::MemberContext);
       Dvoidp.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
       std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
-#define ADDPARAM(A) { \
-      TypeSourceInfo *tmp = GetTypeForDeclarator((A), getCurScope()); \
-      initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, loc, \
-          ParmVarDecl::Create(Context, CurContext, loc, loc, nullptr, tmp->getType(), tmp, SC_None, nullptr))); }
 
 #if 1
-      ADDPARAM(Dvoidp);
+      TypeSourceInfo *tmp = GetTypeForDeclarator(Dvoidp, getCurScope());
+      initParamTypes.push_back(DeclaratorChunk::ParamInfo(nullptr, loc,
+          ParmVarDecl::Create(Context, CurContext, loc, loc, nullptr, tmp->getType(), tmp, SC_None, nullptr)));
       ArrayRef<DeclaratorChunk::ParamInfo> pparam = llvm::makeArrayRef(initParamTypes);
 
       DeclSpec NDSf(attrFactory);
@@ -4968,7 +4966,7 @@ Newf->dump();
           ParmVarDecl::Create(Context, CurContext, loc, loc, nullptr, ptmp->getType(), ptmp, SC_None, nullptr)));
       for (unsigned i = 0; i < D.getNumTypeObjects(); i++) {
           const DeclaratorChunk &cptr = D.getTypeObject(i);
-          if (cptr.Kind == DeclaratorChunk::Function) {
+          if (cptr.Kind == DeclaratorChunk::Function)
               for (unsigned pindex = 0; pindex < cptr.Fun.NumParams; pindex++) {
                    DeclaratorChunk::ParamInfo &ptr = cptr.Fun.Params[pindex];
                    ParmVarDecl *pv = dyn_cast<ParmVarDecl>(ptr.Param);
@@ -4980,12 +4978,8 @@ Newf->dump();
                    pvd->setScopeInfo(0, pindex + 1);
                    ptype2.push_back(DeclaratorChunk::ParamInfo(ptr.Ident, ptr.IdentLoc, pvd, ptr.DefaultArgTokens));
               }
-          }
       }
-
       ArrayRef<DeclaratorChunk::ParamInfo> pparam2 = llvm::makeArrayRef(ptype2);
-
-printf("[%s:%d]JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ mname %s size %d\n", __FUNCTION__, __LINE__, mname.c_str(), (int)pparam2.size());
       DeclSpec NDSf2(attrFactory);
       (void)NDSf2.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, Context.getPrintingPolicy());
       Declarator DNewf2(NDSf2, Declarator::MemberContext);
