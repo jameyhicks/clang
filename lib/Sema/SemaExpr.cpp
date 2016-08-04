@@ -9310,6 +9310,7 @@ static bool CheckForModifiableLvalue(Expr *E, SourceLocation Loc, Sema &S) {
     llvm_unreachable("readonly properties should be processed differently");
   case Expr::MLV_InvalidMessageExpression:
     DiagID = diag::error_readonly_message_assignment;
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     break;
   case Expr::MLV_SubObjCPropertySetting:
     DiagID = diag::error_no_subobject_property_setting;
@@ -11750,6 +11751,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
         IFace = IFaceT->getDecl();
     }
     DiagKind = diag::warn_incompatible_qualified_id;
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     break;
   }
   case IncompatibleVectors:
@@ -11760,6 +11762,10 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     break;
   case Incompatible:
     DiagKind = diag::err_typecheck_convert_incompatible;
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+SrcExpr->dump();
+SrcType->dump();
+DstType->dump();
     ConvHints.tryToFixConversion(SrcExpr, SrcType, DstType, *this);
     MayHaveConvFixit = true;
     isInvalid = true;

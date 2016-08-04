@@ -12508,22 +12508,26 @@ printf("[%s:%d] befthis\n", __FUNCTION__, __LINE__);
             QualType ThisTy = Context.getPointerType(Context.getTypeDeclType(cdecl));
             Expr *baseExpr = new (Context) CXXThisExpr(loc, ThisTy, /*isImplicit=*/true);
             int paramIndex = 1; // skip first 'init' parameter
-            FieldDecl *flast = NULL;
+            std::vector<Stmt *> assignVector;
             for (auto fitem: cdecl->fields()) {
 printf("[%s:%d]MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM %p \n", __FUNCTION__, __LINE__, fitem);
 fitem->dump();
-                 flast = fitem;
-break;
-            }
-            std::vector<Stmt *> assignVector;
-            MemberExpr *lhs = new (Context) MemberExpr(baseExpr, true, loc, flast, loc, flast->getType(), VK_LValue, OK_Ordinary);
+            MemberExpr *lhs = new (Context) MemberExpr(baseExpr, true, loc, fitem, loc, fitem->getType(), VK_LValue, OK_Ordinary);
             MarkMemberReferenced(lhs);
-            ParmVarDecl *Param = item->getParamDecl(paramIndex++);
+            ParmVarDecl *Param = item->getParamDecl(paramIndex);
 printf("[%s:%d] paramct %d/%d\n", __FUNCTION__, __LINE__, paramIndex, item->getNumParams());
             Param->setIsUsed();
             Expr *rhs = DeclRefExpr::Create(Context, NNSloc, loc, Param, false, loc, Param->getType().getNonReferenceType(), VK_LValue, nullptr);
+            if (paramIndex > 1)
+                rhs = CStyleCastExpr::Create(Context, fitem->getType(), VK_RValue, CK_IntegralToPointer, rhs, nullptr,
+               Param->getTypeSourceInfo(),
+                    //Context.getTrivialTypeSourceInfo(Param->getType().getNonReferenceType(), loc), 
+loc, loc);
             Expr *assign = new (Context) BinaryOperator(lhs, rhs, BO_Assign, Context.DependentTy, VK_RValue, OK_Ordinary, loc, false);
             assignVector.push_back(assign);
+            paramIndex++;
+//break;
+            }
             item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(assignVector), loc, loc));
 //new (Context) ReturnStmt(loc, nullptr, nullptr),
 #if 0
