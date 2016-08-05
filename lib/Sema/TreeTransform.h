@@ -1955,7 +1955,6 @@ public:
                                          TypeSourceInfo *TInfo,
                                          SourceLocation RParenLoc,
                                          Expr *SubExpr) {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     return getSema().BuildCStyleCastExpr(LParenLoc, TInfo, RParenLoc,
                                          SubExpr);
   }
@@ -8064,7 +8063,12 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   ExprResult SubExpr
     = getDerived().TransformExpr(E->getSubExprAsWritten());
 E->dump();
+E->getType()->dump();
 SubExpr.get()->dump();
+E->getSubExpr()->dump();
+printf("[%s:%d]types\n", __FUNCTION__, __LINE__);
+Type->getType()->dump();
+E->getTypeInfoAsWritten()->getType()->dump();
   if (SubExpr.isInvalid())
     return ExprError();
 
