@@ -4959,8 +4959,8 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   } else if (R->isFunctionType()) {
     if (auto CC = dyn_cast<TagDecl>(DC))
     if (CC->getTagKind() == TTK_AInterface) {
-printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
       std::string mname = D.getName().Identifier->getName();
+printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, mname.c_str());
       const char *Dummy = nullptr;
       AttributeFactory attrFactory;
       unsigned DiagID;
@@ -4980,8 +4980,10 @@ printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
       auto NewExtra = ActOnFunctionDeclarator(S, DNew, DC, GetTypeForDeclarator(DNew, S), Previous,
                                   TemplateParamLists,
                                   AddToScope);
-      CurContext->addHiddenDecl(NewExtra);
-//NewExtra->dump();
+      PushOnScopeChains(NewExtra, S, true);
+      //CurContext->addHiddenDecl(NewExtra);
+NewExtra->dump();
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       buildFunction(this, &D, mname + "__RDY" + "p", DeclSpec::TST_bool);
       buildFunction(this, &D, mname + "p", DeclSpec::TST_void);
     }
