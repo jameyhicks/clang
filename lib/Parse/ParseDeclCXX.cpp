@@ -3088,10 +3088,8 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       ADDPARAM(Dconstcharp);
       ADDPARAM(Dvoidp);
       for (auto item: Actions.CurContext->decls())
-          if (dyn_cast<CXXMethodDecl>(item)) {
+          if (dyn_cast<CXXMethodDecl>(item))
               ADDPARAM(Dunsignedlong);
-              ADDPARAM(Dunsignedlong);
-          }
       ArrayRef<DeclaratorChunk::ParamInfo> pparam = llvm::makeArrayRef(initParamTypes);
       DeclSpec NDS(attrFactory);
       (void)NDS.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());

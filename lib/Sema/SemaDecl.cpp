@@ -4980,7 +4980,8 @@ printf("[%s:%d] after ActOnFunctionDeclarator\n", __FUNCTION__, __LINE__);
       auto NewExtra = ActOnFunctionDeclarator(S, DNew, DC, GetTypeForDeclarator(DNew, S), Previous,
                                   TemplateParamLists,
                                   AddToScope);
-NewExtra->dump();
+      CurContext->addHiddenDecl(NewExtra);
+//NewExtra->dump();
       buildFunction(this, &D, mname + "__RDY" + "p", DeclSpec::TST_bool);
       buildFunction(this, &D, mname + "p", DeclSpec::TST_void);
     }
@@ -12492,10 +12493,11 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
         TSInfo = bitem.getTypeSourceInfo();
     bool vmethodFlag = false;
     for (auto item: cdecl->methods()) {
-printf("[%s:%d] method %p\n", __FUNCTION__, __LINE__, item);
+printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, item->getDeclName().isIdentifier(), isa<CXXConstructorDecl>(item));
       SourceLocation loc = item->getLocation();
       if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
         std::string mname = item->getName();
+//printf("[%s:%d] method %p mname %s\n", __FUNCTION__, __LINE__, item, mname.c_str());
         if (mname == "VMETHODDECL") {
             vmethodFlag = true;
             continue;
@@ -12503,12 +12505,11 @@ printf("[%s:%d] method %p\n", __FUNCTION__, __LINE__, item);
         item->setIsUsed();
         item->addAttr(UsedAttr::CreateImplicit(Context));
         NestedNameSpecifierLoc NNSloc;
+        std::vector<Stmt *> compoundList;
+        QualType ThisTy = Context.getPointerType(Context.getTypeDeclType(cdecl));
+        Expr *baseExpr = new (Context) CXXThisExpr(loc, ThisTy, /*isImplicit=*/true);
         if (mname == "init") {
-printf("[%s:%d] befthis\n", __FUNCTION__, __LINE__);
-            QualType ThisTy = Context.getPointerType(Context.getTypeDeclType(cdecl));
-            Expr *baseExpr = new (Context) CXXThisExpr(loc, ThisTy, /*isImplicit=*/true);
             int paramIndex = 1; // skip first 'init' parameter
-            std::vector<Stmt *> assignVector;
             for (auto fitem: cdecl->fields()) {
 //printf("[%s:%d]MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM %p \n", __FUNCTION__, __LINE__, fitem);
 //fitem->dump();
@@ -12520,19 +12521,47 @@ printf("[%s:%d] befthis\n", __FUNCTION__, __LINE__);
             if (paramIndex > 1)
                 rhs = CStyleCastExpr::Create(Context, fitem->getType(), VK_RValue, CK_IntegralToPointer, rhs, nullptr, fitem->getTypeSourceInfo(), loc, loc);
             Expr *assign = new (Context) BinaryOperator(lhs, rhs, BO_Assign, Context.DependentTy, VK_RValue, OK_Ordinary, loc, false);
-            assignVector.push_back(assign);
+            compoundList.push_back(assign);
             paramIndex++;
             }
-            item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(assignVector), loc, loc));
+            item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(compoundList), loc, loc));
 //new (Context) ReturnStmt(loc, nullptr, nullptr),
-item->dump();
+//item->dump();
             continue;
         }
+        else {
+            FieldDecl *tpitem = NULL;
+            for (auto fitem: cdecl->fields()) {
+                tpitem = fitem;
+                break;
+            }
+            for (auto fitem: cdecl->fields()) {
+//printf("[%s:%d] mname %s fname %s ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZzzzzz\n", __FUNCTION__, __LINE__, mname.c_str(), fitem->getName().str().c_str());
+                if (mname + "p" == fitem->getName()) {
+                    MemberExpr *func = new (Context) MemberExpr(baseExpr, true, loc, fitem, loc, fitem->getType(), VK_RValue, OK_Ordinary);
+                    std::vector<Expr *> argList;
+                                //MultiExprArg Args,
+                    argList.push_back(new (Context) MemberExpr(baseExpr, true, loc, tpitem, loc, tpitem->getType(), VK_RValue, OK_Ordinary));
+                    for (auto pitem: item->parameters()) {
+                        argList.push_back(DeclRefExpr::Create(Context, NNSloc, loc, pitem, false, loc, pitem->getType().getNonReferenceType(), VK_RValue, nullptr));
+                        pitem->setIsUsed();
+                    }
+                    QualType retType = item->getReturnType();
+                    Expr *call = new (Context) CallExpr(Context, func, llvm::makeArrayRef(argList), retType, VK_RValue, loc);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+retType->dump();
+                    Stmt *callStmt = call;
+                    if (!retType->isVoidType())
+                        callStmt = new (Context) ReturnStmt(loc, call, nullptr);
+                    compoundList.push_back(callStmt);
+                    break;
+                }
+            }
+        }
         if (!item->hasBody())
-            item->setBody(new (Context) CompoundStmt(Context,
-                new (Context) ReturnStmt(loc, nullptr, nullptr),
-                loc, loc));
-else item->dump();
+            item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(compoundList), loc, loc));
+//else item->dump();
+item->dump();
         item->addAttr(::new (Context) TargetAttr(loc, Context, StringRef("atomicc_method"), 0));
         //std::string readyString = vmethodFlag ? "__READY" : "__RDY";
         //IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
