@@ -9310,7 +9310,6 @@ static bool CheckForModifiableLvalue(Expr *E, SourceLocation Loc, Sema &S) {
     llvm_unreachable("readonly properties should be processed differently");
   case Expr::MLV_InvalidMessageExpression:
     DiagID = diag::error_readonly_message_assignment;
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     break;
   case Expr::MLV_SubObjCPropertySetting:
     DiagID = diag::error_no_subobject_property_setting;
@@ -9353,6 +9352,9 @@ static void CheckIdentityFieldAssignment(Expr *LHSExpr, Expr *RHSExpr,
 QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
                                        SourceLocation Loc,
                                        QualType CompoundType) {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+LHSExpr->dump();
+RHS.get()->dump();
   assert(!LHSExpr->hasPlaceholderType(BuiltinType::PseudoObject));
 
   // Verify that LHS is a modifiable lvalue, and emit error if not.
@@ -9436,6 +9438,7 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
     ConvTy = CheckAssignmentConstraints(Loc, LHSType, RHSType);
   }
 
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   if (DiagnoseAssignmentResult(ConvTy, Loc, LHSType, RHSType,
                                RHS.get(), AA_Assigning))
     return QualType();
@@ -11751,7 +11754,6 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
         IFace = IFaceT->getDecl();
     }
     DiagKind = diag::warn_incompatible_qualified_id;
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     break;
   }
   case IncompatibleVectors:

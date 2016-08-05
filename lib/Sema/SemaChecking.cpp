@@ -2364,7 +2364,6 @@ bool Sema::SemaBuiltinVAStartARM(CallExpr *Call) {
     const Expr *Arg = Call->getArg(AT.ArgNo)->IgnoreParens();
     if (Arg->getType().getCanonicalType() == AT.Type.getCanonicalType())
       continue;
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     Diag(Arg->getLocStart(), diag::err_typecheck_convert_incompatible)
       << Arg->getType() << AT.Type << 1 /* different class */
       << 0 /* qualifier difference */ << 3 /* parameter mismatch */

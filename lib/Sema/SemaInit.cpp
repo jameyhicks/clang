@@ -6595,6 +6595,7 @@ InitializationSequence::Perform(Sema &S,
     }
 
     case SK_CAssignment: {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       QualType SourceType = CurInit.get()->getType();
       ExprResult Result = CurInit;
       Sema::AssignConvertType ConvTy =
@@ -6616,15 +6617,18 @@ InitializationSequence::Perform(Sema &S,
       CurInit = CurInitExprRes;
 
       bool Complained;
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       if (S.DiagnoseAssignmentResult(ConvTy, Kind.getLocation(),
                                      Step->Type, SourceType,
                                      CurInit.get(),
                                      getAssignmentAction(Entity, true),
                                      &Complained)) {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         PrintInitLocationNote(S, Entity);
         return ExprError();
       } else if (Complained)
         PrintInitLocationNote(S, Entity);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       break;
     }
 

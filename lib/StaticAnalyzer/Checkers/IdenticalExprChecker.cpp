@@ -341,6 +341,7 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
   case Stmt::CStyleCastExprClass: {
     const CStyleCastExpr* CastExpr1 = cast<CStyleCastExpr>(Stmt1);
     const CStyleCastExpr* CastExpr2 = cast<CStyleCastExpr>(Stmt2);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
     return CastExpr1->getTypeAsWritten() == CastExpr2->getTypeAsWritten();
   }

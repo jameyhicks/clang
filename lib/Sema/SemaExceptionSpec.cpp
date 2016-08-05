@@ -1074,6 +1074,7 @@ CanThrowResult Sema::canThrow(const Expr *E) {
   case Expr::MaterializeTemporaryExprClass:
   case Expr::UnaryOperatorClass: {
     CanThrowResult CT = E->isTypeDependent() ? CT_Dependent : CT_Cannot;
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     return mergeCanThrow(CT, canSubExprsThrow(*this, E));
   }
 

@@ -1955,6 +1955,7 @@ public:
                                          TypeSourceInfo *TInfo,
                                          SourceLocation RParenLoc,
                                          Expr *SubExpr) {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     return getSema().BuildCStyleCastExpr(LParenLoc, TInfo, RParenLoc,
                                          SubExpr);
   }
@@ -8055,12 +8056,15 @@ TreeTransform<Derived>::TransformImplicitCastExpr(ImplicitCastExpr *E) {
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCStyleCastExpr(CStyleCastExpr *E) {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   TypeSourceInfo *Type = getDerived().TransformType(E->getTypeInfoAsWritten());
   if (!Type)
     return ExprError();
 
   ExprResult SubExpr
     = getDerived().TransformExpr(E->getSubExprAsWritten());
+E->dump();
+SubExpr.get()->dump();
   if (SubExpr.isInvalid())
     return ExprError();
 

@@ -1175,6 +1175,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::ObjCBridgedCastExprClass: {
       Bldr.takeNodes(Pred);
       const CastExpr *C = cast<CastExpr>(S);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       // Handle the previsit checks.
       ExplodedNodeSet dstPrevisit;
       getCheckerManager().runCheckersForPreStmt(dstPrevisit, Pred, C, *this);

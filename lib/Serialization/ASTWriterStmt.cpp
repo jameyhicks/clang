@@ -650,6 +650,7 @@ void ASTStmtWriter::VisitExplicitCastExpr(ExplicitCastExpr *E) {
 }
 
 void ASTStmtWriter::VisitCStyleCastExpr(CStyleCastExpr *E) {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   VisitExplicitCastExpr(E);
   Writer.AddSourceLocation(E->getLParenLoc(), Record);
   Writer.AddSourceLocation(E->getRParenLoc(), Record);
