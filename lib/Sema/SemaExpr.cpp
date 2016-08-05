@@ -9352,9 +9352,6 @@ static void CheckIdentityFieldAssignment(Expr *LHSExpr, Expr *RHSExpr,
 QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
                                        SourceLocation Loc,
                                        QualType CompoundType) {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-LHSExpr->dump();
-RHS.get()->dump();
   assert(!LHSExpr->hasPlaceholderType(BuiltinType::PseudoObject));
 
   // Verify that LHS is a modifiable lvalue, and emit error if not.
@@ -9438,7 +9435,6 @@ RHS.get()->dump();
     ConvTy = CheckAssignmentConstraints(Loc, LHSType, RHSType);
   }
 
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   if (DiagnoseAssignmentResult(ConvTy, Loc, LHSType, RHSType,
                                RHS.get(), AA_Assigning))
     return QualType();
@@ -11764,10 +11760,6 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     break;
   case Incompatible:
     DiagKind = diag::err_typecheck_convert_incompatible;
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-SrcExpr->dump();
-SrcType->dump();
-DstType->dump();
     ConvHints.tryToFixConversion(SrcExpr, SrcType, DstType, *this);
     MayHaveConvFixit = true;
     isInvalid = true;

@@ -12510,43 +12510,21 @@ printf("[%s:%d] befthis\n", __FUNCTION__, __LINE__);
             int paramIndex = 1; // skip first 'init' parameter
             std::vector<Stmt *> assignVector;
             for (auto fitem: cdecl->fields()) {
-printf("[%s:%d]MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM %p \n", __FUNCTION__, __LINE__, fitem);
-fitem->dump();
+//printf("[%s:%d]MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM %p \n", __FUNCTION__, __LINE__, fitem);
+//fitem->dump();
             MemberExpr *lhs = new (Context) MemberExpr(baseExpr, true, loc, fitem, loc, fitem->getType(), VK_LValue, OK_Ordinary);
             MarkMemberReferenced(lhs);
             ParmVarDecl *Param = item->getParamDecl(paramIndex);
-printf("[%s:%d] paramct %d/%d\n", __FUNCTION__, __LINE__, paramIndex, item->getNumParams());
             Param->setIsUsed();
             Expr *rhs = DeclRefExpr::Create(Context, NNSloc, loc, Param, false, loc, Param->getType().getNonReferenceType(), VK_LValue, nullptr);
             if (paramIndex > 1)
-                rhs = CStyleCastExpr::Create(Context, fitem->getType(), VK_RValue, CK_IntegralToPointer, rhs, nullptr,
-               Param->getTypeSourceInfo(),
-                    //Context.getTrivialTypeSourceInfo(Param->getType().getNonReferenceType(), loc), 
-loc, loc);
+                rhs = CStyleCastExpr::Create(Context, fitem->getType(), VK_RValue, CK_IntegralToPointer, rhs, nullptr, fitem->getTypeSourceInfo(), loc, loc);
             Expr *assign = new (Context) BinaryOperator(lhs, rhs, BO_Assign, Context.DependentTy, VK_RValue, OK_Ordinary, loc, false);
             assignVector.push_back(assign);
             paramIndex++;
-//break;
             }
             item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(assignVector), loc, loc));
 //new (Context) ReturnStmt(loc, nullptr, nullptr),
-#if 0
-|-CompoundStmt 0x4d5add8 <col:92, line:113:43>
-| |-BinaryOperator 0x4d5aa90 <line:111:9, col:15> '<dependent type>' '='
-| | |-MemberExpr 0x4d5aa30 <col:9> 'void *' lvalue ->zzp 0x4d59e78
-| | | `-CXXThisExpr 0x4d5aa18 <col:9> 'PipeIn<T> *' this
-| | `-DeclRefExpr 0x4d5aa68 <col:15> 'void *' lvalue ParmVar AP 'ap' 'void *'
-| |-BinaryOperator 0x4d5ac20 <line:112:9, col:46> '<dependent type>' '='
-| | |-MemberExpr 0x4d5aad0 <col:9> 'GUARDPTR':'_Bool (*)(void *)' lvalue ->zzenq__RDYp 0x4d59ef0
-| | | `-CXXThisExpr 0x4d5aab8 <col:9> 'PipeIn<T> *' this
-| | `-CStyleCastExpr 0x4d5abf8 <col:23, col:46> 'decltype(this->zzenq__RDYp)' <Dependent>
-| |   `-DeclRefExpr 0x4d5ab58 <col:46> 'unsigned long' lvalue ParmVar AENQRDYP 'aenq__RDYp' 'unsigned long'
-| `-BinaryOperator 0x4d5adb0 <line:113:9, col:36> '<dependent type>' '='
-|   |-MemberExpr 0x4d5ac60 <col:9> 'void (*)(void *, const T &)' lvalue ->zzenqp 0x4d5a168
-|   | `-CXXThisExpr 0x4d5ac48 <col:9> 'PipeIn<T> *' this
-|   `-CStyleCastExpr 0x4d5ad88 <col:18, col:36> 'decltype(this->zzenqp)' <Dependent>
-|     `-DeclRefExpr 0x4d5ace8 <col:36> 'unsigned long' lvalue ParmVar AENQP 'aenqp' 'unsigned long'
-#endif
 item->dump();
             continue;
         }

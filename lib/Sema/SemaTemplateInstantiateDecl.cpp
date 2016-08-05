@@ -555,11 +555,6 @@ Decl *TemplateDeclInstantiator::VisitAccessSpecDecl(AccessSpecDecl *D) {
 Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
   bool Invalid = false;
   TypeSourceInfo *DI = D->getTypeSourceInfo();
-if (!DI) {
-printf("[%s:%d] missing getTypeSourceInfo\n", __FUNCTION__, __LINE__);
-D->dump();
-exit(-1);
-}
   if (DI->getType()->isInstantiationDependentType() ||
       DI->getType()->isVariablyModifiedType())  {
     DI = SemaRef.SubstType(DI, TemplateArgs,
@@ -1338,12 +1333,6 @@ static QualType adjustFunctionTypeForInstantiation(ASTContext &Context,
                                                    TypeSourceInfo *TInfo) {
   const FunctionProtoType *OrigFunc
     = D->getType()->castAs<FunctionProtoType>();
-if (CXXMethodDecl *CD = dyn_cast<CXXMethodDecl>(D))
-if (CD->getAttr<TargetAttr>()) {
-printf("[%s:%d] D %p TInfo %p\n", __FUNCTION__, __LINE__, D, TInfo);
-D->dump();
-TInfo->getType()->dump();
-}
   const FunctionProtoType *NewFunc
     = TInfo->getType()->castAs<FunctionProtoType>();
   if (OrigFunc->getExtInfo() == NewFunc->getExtInfo())
@@ -1390,10 +1379,6 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D,
 
   SmallVector<ParmVarDecl *, 4> Params;
   TypeSourceInfo *TInfo = SubstFunctionType(D, Params);
-if (CXXMethodDecl *CD = dyn_cast<CXXMethodDecl>(D))
-if (CD->getAttr<TargetAttr>()) {
-printf("[%s:%d] TInfo %p\n", __FUNCTION__, __LINE__, TInfo);
-}
   if (!TInfo)
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
@@ -1642,10 +1627,6 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
                                       TemplateParameterList *TemplateParams,
                                       bool IsClassScopeSpecialization) {
   FunctionTemplateDecl *FunctionTemplate = D->getDescribedFunctionTemplate();
-if (CXXMethodDecl *CD = dyn_cast<CXXMethodDecl>(D))
-if (CD->getAttr<TargetAttr>()) {
-printf("[%s:%d] START\n", __FUNCTION__, __LINE__);
-}
   if (FunctionTemplate && !TemplateParams) {
     // We are creating a function template specialization from a function
     // template. Check whether there is already a function template
@@ -1688,10 +1669,6 @@ printf("[%s:%d] START\n", __FUNCTION__, __LINE__);
 
   SmallVector<ParmVarDecl *, 4> Params;
   TypeSourceInfo *TInfo = SubstFunctionType(D, Params);
-if (CXXMethodDecl *CD = dyn_cast<CXXMethodDecl>(D))
-if (CD->getAttr<TargetAttr>()) {
-printf("[%s:%d] TInfo %p\n", __FUNCTION__, __LINE__, TInfo);
-}
   if (!TInfo)
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);

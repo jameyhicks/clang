@@ -4947,7 +4947,6 @@ QualType TreeTransform<Derived>::TransformTypeOfType(TypeLocBuilder &TLB,
 template<typename Derived>
 QualType TreeTransform<Derived>::TransformAtomiccBitsType(TypeLocBuilder &TLB,
                                                      AtomiccBitsTypeLoc TL) {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   TypeSourceInfo* Old_Under_TI = TL.getUnderlyingTInfo();
   TypeSourceInfo* New_Under_TI = getDerived().TransformType(Old_Under_TI);
   if (!New_Under_TI)
@@ -8055,20 +8054,12 @@ TreeTransform<Derived>::TransformImplicitCastExpr(ImplicitCastExpr *E) {
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCStyleCastExpr(CStyleCastExpr *E) {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   TypeSourceInfo *Type = getDerived().TransformType(E->getTypeInfoAsWritten());
   if (!Type)
     return ExprError();
 
   ExprResult SubExpr
     = getDerived().TransformExpr(E->getSubExprAsWritten());
-E->dump();
-E->getType()->dump();
-SubExpr.get()->dump();
-E->getSubExpr()->dump();
-printf("[%s:%d]types\n", __FUNCTION__, __LINE__);
-Type->getType()->dump();
-E->getTypeInfoAsWritten()->getType()->dump();
   if (SubExpr.isInvalid())
     return ExprError();
 
