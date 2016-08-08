@@ -4095,6 +4095,8 @@ public:
     auto Args = llvm::makeArrayRef(E->getArgs(), E->getNumArgs());
     bool HasQualifier = false;
 
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+//Callee->dump();
     // Extract function decl and 'this' pointer from the callee.
     if (CalleeType->isSpecificBuiltinType(BuiltinType::BoundMember)) {
       const ValueDecl *Member = nullptr;

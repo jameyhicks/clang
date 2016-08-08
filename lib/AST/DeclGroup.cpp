@@ -32,16 +32,3 @@ DeclGroup::DeclGroup(unsigned numdecls, Decl** decls) : NumDecls(numdecls) {
   assert(decls);
   memcpy(this+1, decls, numdecls * sizeof(*decls));
 }
-#include <stdio.h>
-extern "C" void jcadecl(void) {}
-extern "C" void jcad(Decl ** Decls, unsigned NumDecls)
-{
-printf("[%s:%d]DGRCREATE %d\n", __FUNCTION__, __LINE__, NumDecls);
-for (unsigned ii = 0; ii < NumDecls; ii++) {
-  if (Decls[ii]->getKind() == Decl::CXXMethod) {
-printf("[%s:%d] METHOD %d/%d\n", __FUNCTION__, __LINE__, ii, NumDecls);
-jcadecl();
-    //EmitGlobal(cast<FunctionDecl>(D));
-  }
-}
-}

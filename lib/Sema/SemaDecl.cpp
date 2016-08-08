@@ -12563,8 +12563,8 @@ retType->dump();
         if (!item->hasBody())
             item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(compoundList), loc, loc));
 //else item->dump();
-item->dump();
         item->addAttr(::new (Context) TargetAttr(loc, Context, StringRef("atomicc_method"), 0));
+item->dump();
         //std::string readyString = vmethodFlag ? "__READY" : "__RDY";
         //IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
             //(uint64_t) 1), Context.BoolTy, loc);
@@ -12572,6 +12572,7 @@ item->dump();
         //Method->setBody(new (Context) CompoundStmt(Context, Return, loc, loc));
         //Method->setLexicalDeclContext(CurContext);
         //Consumer.HandleInlineMethodDefinition(Method);
+        //Consumer.HandleInlineMethodDefinition(item);
       }
     }
     //for (auto item: cdecl->fields()) { item->dump(); }
