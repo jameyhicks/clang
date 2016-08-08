@@ -52,6 +52,7 @@ public:
   }
 };
 
+extern "C" void jcad(Decl ** Decls, unsigned NumDecls);
 class DeclGroupRef {
   // Note this is not a PointerIntPair because we need the address of the
   // non-group case to be valid as a Decl** for iteration.
@@ -70,6 +71,7 @@ public:
     : D((Decl*) (reinterpret_cast<uintptr_t>(dg) | DeclGroupKind)) {}
 
   static DeclGroupRef Create(ASTContext &C, Decl **Decls, unsigned NumDecls) {
+jcad(Decls, NumDecls);
     if (NumDecls == 0)
       return DeclGroupRef();
     if (NumDecls == 1)

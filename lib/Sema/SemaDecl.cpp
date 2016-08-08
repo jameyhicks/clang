@@ -4977,11 +4977,11 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, m
       DNew.setFunctionDefinitionKind(D.getFunctionDefinitionKind());
       IdentifierInfo &IDI = Context.Idents.get(mname + "__RDY");
       DNew.SetIdentifier(&IDI, D.getName().StartLocation);
-      auto NewExtra = ActOnFunctionDeclarator(S, DNew, DC, GetTypeForDeclarator(DNew, S), Previous,
+      NamedDecl *NewExtra = ActOnFunctionDeclarator(S, DNew, DC, GetTypeForDeclarator(DNew, S), Previous,
                                   TemplateParamLists,
                                   AddToScope);
+//WeakTopLevelDecl.push_back(NewExtra);
       PushOnScopeChains(NewExtra, S, true);
-      //CurContext->addHiddenDecl(NewExtra);
 NewExtra->dump();
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       buildFunction(this, &D, mname + "__RDY" + "p", DeclSpec::TST_bool);
