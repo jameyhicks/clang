@@ -4967,7 +4967,6 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, m
       SourceLocation loc = D.getLocStart();
       SourceLocation NoLoc;
 
-if (mname.substr(0,4) != "BOZO") {
       DeclSpec DS(attrFactory);
       (void)DS.SetTypeSpecType(DeclSpec::TST_bool, D.getLocStart(), Dummy, DiagID, Context.getPrintingPolicy());
       Declarator DNew(DS, D.getContext());
@@ -4986,7 +4985,6 @@ NewExtra->dump();
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       buildFunction(this, &D, mname + "__RDY" + "p", DeclSpec::TST_bool);
       buildFunction(this, &D, mname + "p", DeclSpec::TST_void);
-}
     }
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
                                   TemplateParamLists,
@@ -12505,15 +12503,9 @@ printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, it
             vmethodFlag = true;
             continue;
         }
-if (mname.substr(0,4) == "BOZO") {
-printf("[%s:%d]EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\n", __FUNCTION__, __LINE__);
-item->dump();
-continue;
-}
         item->setIsUsed();
         item->addAttr(UsedAttr::CreateImplicit(Context));
         QualType retType = item->getReturnType();
-        bool hasRet = !retType->isVoidType();
         NestedNameSpecifierLoc NNSloc;
         std::vector<Stmt *> compoundList;
         QualType ThisTy = Context.getPointerType(Context.getTypeDeclType(cdecl));
@@ -12548,31 +12540,20 @@ continue;
             for (auto fitem: cdecl->fields()) {
 //printf("[%s:%d] mname %s fname %s ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZzzzzz\n", __FUNCTION__, __LINE__, mname.c_str(), fitem->getName().str().c_str());
                 if (mname + "p" == fitem->getName()) {
-                    Expr *func = new (Context) MemberExpr(baseExpr, true, loc, fitem, loc, fitem->getType(),
-                         true ? VK_LValue : VK_RValue, OK_Ordinary);
+                    Expr *func = new (Context) MemberExpr(baseExpr, true, loc, fitem, loc, fitem->getType(), VK_LValue, OK_Ordinary);
+                    func = ImplicitCastExpr::Create(Context, func->getType(), CK_LValueToRValue, func, /*base paths*/ nullptr, VK_RValue);
                     std::vector<Expr *> argList;
                     argList.push_back(new (Context) MemberExpr(baseExpr, true, loc, tpitem, loc, tpitem->getType(), VK_RValue, OK_Ordinary));
                     for (auto pitem: item->parameters()) {
                         argList.push_back(DeclRefExpr::Create(Context, NNSloc, loc, pitem, false, loc, pitem->getType().getNonReferenceType(), VK_RValue, nullptr));
                         pitem->setIsUsed();
                     }
-                    //if (hasRet) {
-                        func = ImplicitCastExpr::Create(Context, func->getType(), CK_LValueToRValue, func, /*base paths*/ nullptr, VK_RValue);
-                    //}
                     Expr *call = new (Context) CallExpr(Context, func, llvm::makeArrayRef(argList), retType, VK_RValue, loc);
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 retType->dump();
                     Stmt *callStmt = call;
-                    if (hasRet) {
-#if 1
+                    if (!retType->isVoidType())
                         callStmt = new (Context) ReturnStmt(loc, call, nullptr);
-#else
-                        compoundList.push_back(callStmt);
-                        IntegerLiteral *IL = IntegerLiteral::Create(Context, llvm::APInt(Context.getIntWidth(Context.BoolTy),
-                            (uint64_t) 1), Context.BoolTy, loc);
-                        callStmt = new (Context) ReturnStmt(loc, IL, nullptr);
-#endif
-                    }
                     compoundList.push_back(callStmt);
                     break;
                 }
@@ -12584,7 +12565,6 @@ retType->dump();
         item->addAttr(::new (Context) TargetAttr(loc, Context, StringRef("atomicc_method"), 0));
 item->dump();
         //std::string readyString = vmethodFlag ? "__READY" : "__RDY";
-        //Method->setBody(new (Context) CompoundStmt(Context, Return, loc, loc));
         //Method->setLexicalDeclContext(CurContext);
         Consumer.HandleInlineMethodDefinition(item);
       }
