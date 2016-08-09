@@ -5832,6 +5832,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state,
   // wrap the whole thing in an AttributedType as written.  The modified type
   // might have a different CC if we ignored the attribute.
   FunctionType::ExtInfo EI = unwrapped.get()->getExtInfo().withCallingConv(CC);
+printf("[%s:%d]HANDLECC %d\n", __FUNCTION__, __LINE__, (int)CC);
   QualType Equivalent =
       unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
   type = S.Context.getAttributedType(CCAttrKind, type, Equivalent);

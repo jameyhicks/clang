@@ -4751,13 +4751,7 @@ static void buildFunction(Sema *sema, Declarator *D, std::string mname, bool rdy
   ArrayRef<DeclaratorChunk::ParamInfo> pparam2 = llvm::makeArrayRef(ptype2);
   DeclSpec NDSf2(attrFactory);
   (void)NDSf2.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, sema->Context.getPrintingPolicy());
-  const DeclSpec &pNDSf2 = NDSf2;
-printf("[%s:%d]VVVVVVVVVVVVVVVVVVVVVVVVVV\n", __FUNCTION__, __LINE__);
-  if (rdy)
-      pNDSf2 = D->getDeclSpec();
-  Declarator DNewf2(pNDSf2, Declarator::MemberContext);
-  TypeSourceInfo *jj = sema->GetTypeForDeclarator(DNewf2, sema->getCurScope());
-jj->getType()->dump();
+  Declarator DNewf2(rdy ? NDSf2 : D->getDeclSpec(), Declarator::MemberContext);
   DNewf2.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
   DNewf2.AddTypeInfo(DeclaratorChunk::getParen(loc, loc), parsedAttrs, loc);
   DNewf2.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
@@ -4974,6 +4968,13 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, m
       SourceLocation NoLoc;
 
       DeclSpec DS(attrFactory);
+      IdentifierInfo &aname = Context.Idents.get("AAAANAME");
+      IdentifierInfo &sname = Context.Idents.get("SSSSNAME");
+      ParsedType pa;
+      //AttributeList foo(&aname, loc, &sname, loc, pa, AttributeList::AS_CXX11);
+      //DS.addAttributes(&foo);
+//::new (Context) VectorCallAttr(loc, Context, 0));
+  //void addAttributes(AttributeList *AL)
       (void)DS.SetTypeSpecType(DeclSpec::TST_bool, D.getLocStart(), Dummy, DiagID, Context.getPrintingPolicy());
       Declarator DNew(DS, D.getContext());
       DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction( true, false, NoLoc,
@@ -4987,8 +4988,8 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, m
                                   TemplateParamLists,
                                   AddToScope);
       PushOnScopeChains(NewExtra, S, true);
-NewExtra->dump();
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+//NewExtra->dump();
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       buildFunction(this, &D, mname + "__RDY" + "p", true);
       buildFunction(this, &D, mname + "p", false);
     }
@@ -12555,8 +12556,8 @@ printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, it
                         pitem->setIsUsed();
                     }
                     Expr *call = new (Context) CallExpr(Context, func, llvm::makeArrayRef(argList), retType, VK_RValue, loc);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-retType->dump();
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+//retType->dump();
                     Stmt *callStmt = call;
                     if (!retType->isVoidType())
                         callStmt = new (Context) ReturnStmt(loc, call, nullptr);
@@ -12569,10 +12570,16 @@ retType->dump();
             item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(compoundList), loc, loc));
 //else item->dump();
         item->addAttr(::new (Context) TargetAttr(loc, Context, StringRef("atomicc_method"), 0));
+        item->addAttr(::new (Context) VectorCallAttr(loc, Context, 0));
+        //item->setCallingConvention(llvm::CallingConv::X86_VectorCall);
 item->dump();
         //std::string readyString = vmethodFlag ? "__READY" : "__RDY";
         //Method->setLexicalDeclContext(CurContext);
         Consumer.HandleInlineMethodDefinition(item);
+  if (!item->hasAttr<VectorCallAttr>()) {
+printf("[%s:%d] DIDNTGETVECTOR\n", __FUNCTION__, __LINE__);
+exit(-1);
+}
       }
     }
     //for (auto item: cdecl->fields()) { item->dump(); }

@@ -3499,6 +3499,7 @@ static void handleCallConvAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   }
 }
 
+extern "C" void jca(void) {}
 bool Sema::CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC, 
                                 const FunctionDecl *FD) {
   if (attr.isInvalid())
@@ -3517,7 +3518,11 @@ bool Sema::CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC,
   case AttributeList::AT_StdCall: CC = CC_X86StdCall; break;
   case AttributeList::AT_ThisCall: CC = CC_X86ThisCall; break;
   case AttributeList::AT_Pascal: CC = CC_X86Pascal; break;
-  case AttributeList::AT_VectorCall: CC = CC_X86VectorCall; break;
+  //case AttributeList::AT_VectorCall: CC = CC_X86VectorCall; break;
+  case AttributeList::AT_VectorCall: CC = CC_X86VectorCall; 
+printf("[%s:%d] *********************************************************************************PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP\n", __FUNCTION__, __LINE__);
+jca();
+break;
   case AttributeList::AT_MSABI:
     CC = Context.getTargetInfo().getTriple().isOSWindows() ? CC_C :
                                                              CC_X86_64Win64;
