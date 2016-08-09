@@ -4715,7 +4715,7 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
   return false;
 }
 
-static void buildFunction(Sema *sema, Declarator *D, std::string mname, const DeclSpec::TST retType)
+static void buildFunction(Sema *sema, Declarator *D, std::string mname, bool rdy)
 {
   const char *Dummy = nullptr;
   AttributeFactory attrFactory;
@@ -4732,7 +4732,7 @@ static void buildFunction(Sema *sema, Declarator *D, std::string mname, const De
   TypeSourceInfo *ptmp = sema->GetTypeForDeclarator(Dvoidp, sema->getCurScope());
   ptype2.push_back(DeclaratorChunk::ParamInfo(nullptr, loc,
       ParmVarDecl::Create(sema->Context, sema->CurContext, loc, loc, nullptr, ptmp->getType(), ptmp, SC_None, nullptr)));
-  if (retType == DeclSpec::TST_void)
+  if (!rdy)
   for (unsigned i = 0; i < D->getNumTypeObjects(); i++) {
       const DeclaratorChunk &cptr = D->getTypeObject(i);
       if (cptr.Kind == DeclaratorChunk::Function)
@@ -4750,8 +4750,14 @@ static void buildFunction(Sema *sema, Declarator *D, std::string mname, const De
   }
   ArrayRef<DeclaratorChunk::ParamInfo> pparam2 = llvm::makeArrayRef(ptype2);
   DeclSpec NDSf2(attrFactory);
-  (void)NDSf2.SetTypeSpecType(retType, loc, Dummy, DiagID, sema->Context.getPrintingPolicy());
-  Declarator DNewf2(NDSf2, Declarator::MemberContext);
+  (void)NDSf2.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, sema->Context.getPrintingPolicy());
+  const DeclSpec &pNDSf2 = NDSf2;
+printf("[%s:%d]VVVVVVVVVVVVVVVVVVVVVVVVVV\n", __FUNCTION__, __LINE__);
+  if (rdy)
+      pNDSf2 = D->getDeclSpec();
+  Declarator DNewf2(pNDSf2, Declarator::MemberContext);
+  TypeSourceInfo *jj = sema->GetTypeForDeclarator(DNewf2, sema->getCurScope());
+jj->getType()->dump();
   DNewf2.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
   DNewf2.AddTypeInfo(DeclaratorChunk::getParen(loc, loc), parsedAttrs, loc);
   DNewf2.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
@@ -4983,8 +4989,8 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, m
       PushOnScopeChains(NewExtra, S, true);
 NewExtra->dump();
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-      buildFunction(this, &D, mname + "__RDY" + "p", DeclSpec::TST_bool);
-      buildFunction(this, &D, mname + "p", DeclSpec::TST_void);
+      buildFunction(this, &D, mname + "__RDY" + "p", true);
+      buildFunction(this, &D, mname + "p", false);
     }
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
                                   TemplateParamLists,
