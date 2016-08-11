@@ -1759,11 +1759,6 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
                                    StartLoc, NameInfo, T, TInfo,
                                    SC, D->isInlineSpecified(),
                                    D->isConstexpr(), D->getLocEnd());
-if ((cast<TagDecl>(Record))->getTagKind() == TTK_AInterface) {
-printf("[%s:%d] after CXXMethodDecl::Create owner %p method %p\n", __FUNCTION__, __LINE__, Owner, Method);
-//Record->dump();
-Method->dump();
-}
   }
 
   if (D->isInlined())

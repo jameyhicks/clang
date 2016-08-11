@@ -3089,7 +3089,7 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       ADDPARAM(Dvoidp);
       for (auto item: Actions.CurContext->decls())
           if (auto Method = dyn_cast<CXXMethodDecl>(item))
-          if (Method->getName().str().substr(0, 4) != "BOZO")
+          if (Method->getName() != "VMETHODDECL")
               ADDPARAM(Dunsignedlong);
       ArrayRef<DeclaratorChunk::ParamInfo> pparam = llvm::makeArrayRef(initParamTypes);
       DeclSpec NDS(attrFactory);

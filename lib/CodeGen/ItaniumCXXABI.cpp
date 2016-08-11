@@ -858,7 +858,6 @@ bool ItaniumCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
   // FIXME: Use canCopyArgument() when it is fixed to handle lazily declared
   // special members.
   if (RD->hasNonTrivialDestructor() || RD->hasNonTrivialCopyConstructor()) {
-printf("[%s:%d] RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR\n", __FUNCTION__, __LINE__);
     FI.getReturnInfo() = ABIArgInfo::getIndirect(0, /*ByVal=*/false);
     return true;
   }

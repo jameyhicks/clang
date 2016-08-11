@@ -4967,6 +4967,7 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     if (auto CC = dyn_cast<TagDecl>(DC))
     if (CC->getTagKind() == TTK_AInterface) {
       std::string mname = D.getName().Identifier->getName();
+      if (mname != "VMETHODDECL") {
 printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, mname.c_str());
       const char *Dummy = nullptr;
       AttributeFactory attrFactory;
@@ -4993,6 +4994,7 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, m
 //printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       buildFunction(this, &D, mname + "__RDY" + "p", true);
       buildFunction(this, &D, mname + "p", false);
+      }
     }
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
                                   TemplateParamLists,
