@@ -4845,6 +4845,13 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     }
   }
 
+  if (auto CC = dyn_cast<TagDecl>(DC))
+  if (CC->getTagKind() == TTK_AInterface) {
+      IdentifierInfo &aname = Context.Idents.get("__vectorcall");
+      SourceLocation loc = D.getLocStart();
+      D.getMutableDeclSpec().addAttributes(
+          D.getAttributePool().create(&aname, loc, nullptr, loc, nullptr, 0, AttributeList::AS_Keyword));
+  }
   TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
   QualType R = TInfo->getType();
 
@@ -4968,19 +4975,13 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, m
       SourceLocation NoLoc;
 
       DeclSpec DS(attrFactory);
-      IdentifierInfo &aname = Context.Idents.get("AAAANAME");
-      IdentifierInfo &sname = Context.Idents.get("SSSSNAME");
-      ParsedType pa;
-      //AttributeList foo(&aname, loc, &sname, loc, pa, AttributeList::AS_CXX11);
-      //DS.addAttributes(&foo);
-//::new (Context) VectorCallAttr(loc, Context, 0));
-  //void addAttributes(AttributeList *AL)
+      ParsedAttributes parsedAttrs(attrFactory);
       (void)DS.SetTypeSpecType(DeclSpec::TST_bool, D.getLocStart(), Dummy, DiagID, Context.getPrintingPolicy());
       Declarator DNew(DS, D.getContext());
-      DNew.AddInnermostTypeInfo(DeclaratorChunk::getFunction( true, false, NoLoc,
+      DNew.AddTypeInfo(DeclaratorChunk::getFunction( true, false, NoLoc,
           nullptr, 0, NoLoc, NoLoc, 0, false, NoLoc, NoLoc, NoLoc,
           NoLoc, NoLoc, EST_None, NoLoc,
-          nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew));
+          nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew), parsedAttrs, loc);
       DNew.setFunctionDefinitionKind(D.getFunctionDefinitionKind());
       IdentifierInfo &IDI = Context.Idents.get(mname + "__RDY");
       DNew.SetIdentifier(&IDI, D.getName().StartLocation);
