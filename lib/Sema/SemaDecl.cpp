@@ -12514,16 +12514,13 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
     TypeSourceInfo *TSInfo = NULL;
     for (auto bitem: cdecl->bases())
         TSInfo = bitem.getTypeSourceInfo();
-    bool vmethodFlag = false;
     for (auto item: cdecl->methods()) {
 printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, item->getDeclName().isIdentifier(), isa<CXXConstructorDecl>(item));
       SourceLocation loc = item->getLocation();
       if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
         std::string mname = item->getName();
-        if (mname == "VMETHODDECL") {
-            vmethodFlag = true;
+        if (mname == "VMETHODDECL")
             continue;
-        }
         item->setIsUsed();
         item->addAttr(UsedAttr::CreateImplicit(Context));
         QualType retType = item->getReturnType();
@@ -12576,7 +12573,6 @@ printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, it
         if (!item->hasBody())
             item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(compoundList), loc, loc));
         item->addAttr(::new (Context) TargetAttr(loc, Context, StringRef("atomicc_method"), 0));
-        //item->addAttr(::new (Context) VectorCallAttr(loc, Context, 0));
 item->dump();
         Consumer.HandleInlineMethodDefinition(item);
       }
