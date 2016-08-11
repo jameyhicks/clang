@@ -4966,9 +4966,21 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   } else if (R->isFunctionType()) {
     if (auto CC = dyn_cast<TagDecl>(DC))
     if (CC->getTagKind() == TTK_AInterface) {
+      bool vmethodFlag = false;
+      if (CXXRecordDecl *cdecl = dyn_cast<CXXRecordDecl>(CC)) {
+        for (auto item: cdecl->methods()) {
+          if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
+            std::string mname = item->getName();
+//printf("[%s:%d] prev %s\n", __FUNCTION__, __LINE__, mname.c_str());
+            if (mname == "VMETHODDECL")
+                vmethodFlag = true;
+          }
+        }
+      }
       std::string mname = D.getName().Identifier->getName();
       if (mname != "VMETHODDECL") {
 printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, mname.c_str());
+      std::string readyString = vmethodFlag ? "__READY" : "__RDY";
       const char *Dummy = nullptr;
       AttributeFactory attrFactory;
       unsigned DiagID;
@@ -4984,7 +4996,7 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, m
           NoLoc, NoLoc, EST_None, NoLoc,
           nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew), parsedAttrs, loc);
       DNew.setFunctionDefinitionKind(D.getFunctionDefinitionKind());
-      IdentifierInfo &IDI = Context.Idents.get(mname + "__RDY");
+      IdentifierInfo &IDI = Context.Idents.get(mname + readyString);
       DNew.SetIdentifier(&IDI, D.getName().StartLocation);
       NamedDecl *NewExtra = ActOnFunctionDeclarator(S, DNew, DC, GetTypeForDeclarator(DNew, S), Previous,
                                   TemplateParamLists,
@@ -4992,7 +5004,7 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, m
       PushOnScopeChains(NewExtra, S, true);
 //NewExtra->dump();
 //printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-      buildFunction(this, &D, mname + "__RDY" + "p", true);
+      buildFunction(this, &D, mname + readyString + "p", true);
       buildFunction(this, &D, mname + "p", false);
       }
     }
@@ -12508,7 +12520,6 @@ printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, it
       SourceLocation loc = item->getLocation();
       if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
         std::string mname = item->getName();
-//printf("[%s:%d] method %p mname %s\n", __FUNCTION__, __LINE__, item, mname.c_str());
         if (mname == "VMETHODDECL") {
             vmethodFlag = true;
             continue;
@@ -12523,8 +12534,6 @@ printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, it
         if (mname == "init") {
             int paramIndex = 1; // skip first 'init' parameter
             for (auto fitem: cdecl->fields()) {
-//printf("[%s:%d]MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM %p \n", __FUNCTION__, __LINE__, fitem);
-//fitem->dump();
             MemberExpr *lhs = new (Context) MemberExpr(baseExpr, true, loc, fitem, loc, fitem->getType(), VK_LValue, OK_Ordinary);
             MarkMemberReferenced(lhs);
             ParmVarDecl *Param = item->getParamDecl(paramIndex);
@@ -12537,8 +12546,6 @@ printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, it
             paramIndex++;
             }
             item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(compoundList), loc, loc));
-//new (Context) ReturnStmt(loc, nullptr, nullptr),
-//item->dump();
             continue;
         }
         else {
@@ -12548,7 +12555,6 @@ printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, it
                 break;
             }
             for (auto fitem: cdecl->fields()) {
-//printf("[%s:%d] mname %s fname %s ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZzzzzz\n", __FUNCTION__, __LINE__, mname.c_str(), fitem->getName().str().c_str());
                 if (mname + "p" == fitem->getName()) {
                     Expr *func = new (Context) MemberExpr(baseExpr, true, loc, fitem, loc, fitem->getType(), VK_LValue, OK_Ordinary);
                     func = ImplicitCastExpr::Create(Context, func->getType(), CK_LValueToRValue, func, /*base paths*/ nullptr, VK_RValue);
@@ -12559,8 +12565,6 @@ printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, it
                         pitem->setIsUsed();
                     }
                     Expr *call = new (Context) CallExpr(Context, func, llvm::makeArrayRef(argList), retType, VK_RValue, loc);
-//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-//retType->dump();
                     Stmt *callStmt = call;
                     if (!retType->isVoidType())
                         callStmt = new (Context) ReturnStmt(loc, call, nullptr);
@@ -12571,18 +12575,10 @@ printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, it
         }
         if (!item->hasBody())
             item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(compoundList), loc, loc));
-//else item->dump();
         item->addAttr(::new (Context) TargetAttr(loc, Context, StringRef("atomicc_method"), 0));
-        item->addAttr(::new (Context) VectorCallAttr(loc, Context, 0));
-        //item->setCallingConvention(llvm::CallingConv::X86_VectorCall);
+        //item->addAttr(::new (Context) VectorCallAttr(loc, Context, 0));
 item->dump();
-        //std::string readyString = vmethodFlag ? "__READY" : "__RDY";
-        //Method->setLexicalDeclContext(CurContext);
         Consumer.HandleInlineMethodDefinition(item);
-  if (!item->hasAttr<VectorCallAttr>()) {
-printf("[%s:%d] DIDNTGETVECTOR\n", __FUNCTION__, __LINE__);
-exit(-1);
-}
       }
     }
     //for (auto item: cdecl->fields()) { item->dump(); }
