@@ -4775,6 +4775,7 @@ void setAtomiccMethod(NamedDecl *methodItem)
       EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
       newFD->setType(newFD->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
       newFD->addAttr(::new (newFD->getASTContext()) TargetAttr(newFD->getLocStart(), newFD->getASTContext(), StringRef("atomicc_method"), 0));
+      newFD->addAttr(::new (newFD->getASTContext()) UsedAttr(newFD->getLocStart(), newFD->getASTContext(), 0));
   }
 }
 
