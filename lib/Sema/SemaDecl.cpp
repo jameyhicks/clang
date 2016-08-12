@@ -4767,6 +4767,16 @@ static void buildFunction(Sema *sema, Declarator *D, std::string mname, bool rdy
   sema->CurContext->addDecl(Newf2);
 Newf2->dump();
 }
+void setAtomiccMethod(NamedDecl *methodItem)
+{
+  if (auto newFD = dyn_cast<FunctionDecl>(methodItem)) {
+      const FunctionProtoType *FPT = newFD->getType()->castAs<FunctionProtoType>();
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
+      newFD->setType(newFD->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
+      newFD->addAttr(::new (newFD->getASTContext()) TargetAttr(newFD->getLocStart(), newFD->getASTContext(), StringRef("atomicc_method"), 0));
+  }
+}
 
 NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
                                   MultiTemplateParamsArg TemplateParamLists) {
@@ -4994,12 +5004,7 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, m
       NamedDecl *NewExtra = ActOnFunctionDeclarator(S, DNew, DC, GetTypeForDeclarator(DNew, S), Previous,
                                   TemplateParamLists,
                                   AddToScope);
-      if (auto newFD = dyn_cast<FunctionDecl>(NewExtra)) {
-          const FunctionProtoType *FPT = newFD->getType()->castAs<FunctionProtoType>();
-          FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-          EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
-          newFD->setType(newFD->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
-      }
+      setAtomiccMethod(NewExtra);
       PushOnScopeChains(NewExtra, S, true);
 //NewExtra->dump();
 //printf("[%s:%d]\n", __FUNCTION__, __LINE__);
@@ -5012,12 +5017,7 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, m
                                   AddToScope);
     if (auto CC = dyn_cast<TagDecl>(DC))
     if (CC->getTagKind() == TTK_AInterface)
-      if (auto newFD = dyn_cast<FunctionDecl>(New)) {
-          const FunctionProtoType *FPT = newFD->getType()->castAs<FunctionProtoType>();
-          FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-          EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
-          newFD->setType(newFD->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
-      }
+      setAtomiccMethod(New);
   } else {
     New = ActOnVariableDeclarator(S, D, DC, TInfo, Previous, TemplateParamLists,
                                   AddToScope);

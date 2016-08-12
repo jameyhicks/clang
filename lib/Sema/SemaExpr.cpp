@@ -4904,6 +4904,7 @@ ExprResult Sema::ActOnConvertVectorExpr(Expr *E, ParsedType ParsedDestTy,
 /// block-pointer type.
 ///
 /// \param NDecl the declaration being called, if available
+void setAtomiccMethod(NamedDecl *methodItem);
 ExprResult
 Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
                             SourceLocation LParenLoc,
@@ -4930,22 +4931,14 @@ Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   if (FDecl && FDecl->getDeclName().isIdentifier())
   if (FDecl->getName() == "methodToFunction") {
 printf("[%s:%d] calledNAME %s\n", __FUNCTION__, __LINE__, FDecl->getName().str().c_str());
-for (auto item: Args) {
-item->dump();
-#if 0
-[BuildResolvedCallExpr:4932] calledNAME methodToFunction
-CStyleCastExpr 0x7f8e21aedc60 'METHPTR':'_Bool (class Module::*)(void)' <ReinterpretMemberPointer>
-`-ParenExpr 0x7f8e21aedc40 'void (class foo::*)(int, int) __attribute__((vectorcall))'
-  `-UnaryOperator 0x7f8e21aedbe0 'void (class foo::*)(int, int) __attribute__((vectorcall))' prefix '&'
-    `-DeclRefExpr 0x7f8e21aedb48 'void (int, int) __attribute__((vectorcall))':'void (int, int) __attribute__((vectorcall))' CXXMethod 0x7f8e21aecb48 'heard' 'void (int, int) __attribute__((vectorcall))':'void (int, int) __attribute__((vectorcall))'
-#endif
-printf("[%s:%d]JJ\n", __FUNCTION__, __LINE__);
-Expr *arg = item->IgnoreParenCasts();
-//arg->dump();
-if (auto dre = dyn_cast_or_null<UnaryOperator>(arg)) {
-dre->dump();
-}
-}
+    for (auto item: Args)
+      if (auto dre = dyn_cast_or_null<UnaryOperator>(item->IgnoreParenCasts()))
+      if (auto ee = dyn_cast<DeclRefExpr>(dre->getSubExpr()))
+      if (auto ff = dyn_cast<CXXMethodDecl>(ee->getDecl())) {
+          printf("[%s:%d]JJ\n", __FUNCTION__, __LINE__);
+          setAtomiccMethod(ff);
+          ff->dump();
+      }
   }
 
   // Make the call expr early, before semantic checks.  This guarantees cleanup
