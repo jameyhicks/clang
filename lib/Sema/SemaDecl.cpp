@@ -4770,6 +4770,8 @@ Newf2->dump();
 void setAtomiccMethod(NamedDecl *methodItem)
 {
   if (auto newFD = dyn_cast<FunctionDecl>(methodItem)) {
+      if (newFD->getName() == "VMETHODDECL")
+          return;
       const FunctionProtoType *FPT = newFD->getType()->castAs<FunctionProtoType>();
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
@@ -12580,8 +12582,7 @@ printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, it
         }
         if (!item->hasBody())
             item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(compoundList), loc, loc));
-        item->addAttr(::new (Context) TargetAttr(loc, Context, StringRef("atomicc_method"), 0));
-item->dump();
+//item->dump();
         Consumer.HandleInlineMethodDefinition(item);
       }
     }
