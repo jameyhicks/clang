@@ -12525,7 +12525,7 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
     for (auto bitem: cdecl->bases())
         TSInfo = bitem.getTypeSourceInfo();
     for (auto item: cdecl->methods()) {
-printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, item->getDeclName().isIdentifier(), isa<CXXConstructorDecl>(item));
+//printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, item->getDeclName().isIdentifier(), isa<CXXConstructorDecl>(item));
       SourceLocation loc = item->getLocation();
       if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
         std::string mname = item->getName();

@@ -4930,14 +4930,13 @@ Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   Fn = Result.get();
   if (FDecl && FDecl->getDeclName().isIdentifier())
   if (FDecl->getName() == "methodToFunction") {
-printf("[%s:%d] calledNAME %s\n", __FUNCTION__, __LINE__, FDecl->getName().str().c_str());
     for (auto item: Args)
       if (auto dre = dyn_cast_or_null<UnaryOperator>(item->IgnoreParenCasts()))
       if (auto ee = dyn_cast<DeclRefExpr>(dre->getSubExpr()))
       if (auto ff = dyn_cast<CXXMethodDecl>(ee->getDecl())) {
-          printf("[%s:%d]JJ\n", __FUNCTION__, __LINE__);
           setAtomiccMethod(ff);
-          ff->dump();
+//printf("[%s:%d] calledNAME %s\n", __FUNCTION__, __LINE__, FDecl->getName().str().c_str());
+          //ff->dump();
       }
   }
 

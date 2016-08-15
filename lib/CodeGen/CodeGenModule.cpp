@@ -1666,8 +1666,28 @@ llvm::Constant *CodeGenModule::GetAddrOfFunction(GlobalDecl GD,
     Ty = getTypes().ConvertType(cast<ValueDecl>(GD.getDecl())->getType());
   
   StringRef MangledName = getMangledName(GD);
-//printf("[%s:%d] %s\n", __FUNCTION__, __LINE__, MangledName.str().c_str());
-  return GetOrCreateLLVMFunction(MangledName, Ty, GD, ForVTable, DontDefer);
+  llvm::Constant *C =
+      GetOrCreateLLVMFunction(MangledName, Ty, GD, ForVTable, DontDefer);
+  if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(GD.getDecl()))
+  if (!MD->doesThisDeclarationHaveABody())
+  if (!isa<CXXConstructorDecl>(MD))
+  if (auto *F = dyn_cast<llvm::Function>(C))
+  if (const auto *TD = GD.getDecl()->getAttr<TargetAttr>()) {
+     StringRef FeaturesStr = TD->getFeatures();
+printf("[%s:%d] %s %d\n", __FUNCTION__, __LINE__, MangledName.str().c_str(), MD->isInstance());
+MD->dump();
+F->dump();
+      FunctionArgList Args;
+      if (MD->isInstance()) {
+        //CGM.getCXXABI().buildThisParam(*this, Args);
+      }
+#if 0
+      Args.append(FD->param_begin(), FD->param_end());
+      for (unsigned I = 0, E = Args.size(); I != E; ++I)
+          ArgVals[I].getPointer()->setName(Args[I]->getName());
+#endif
+  }
+  return C;
 }
 
 /// CreateRuntimeFunction - Create a new runtime function with the specified
