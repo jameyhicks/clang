@@ -1669,24 +1669,14 @@ llvm::Constant *CodeGenModule::GetAddrOfFunction(GlobalDecl GD,
   llvm::Constant *C =
       GetOrCreateLLVMFunction(MangledName, Ty, GD, ForVTable, DontDefer);
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(GD.getDecl()))
-  if (!MD->doesThisDeclarationHaveABody())
-  if (!isa<CXXConstructorDecl>(MD))
+  if (!MD->doesThisDeclarationHaveABody() && !isa<CXXConstructorDecl>(MD))
   if (auto *F = dyn_cast<llvm::Function>(C))
   if (const auto *TD = GD.getDecl()->getAttr<TargetAttr>()) {
-     StringRef FeaturesStr = TD->getFeatures();
-printf("[%s:%d] %s %d\n", __FUNCTION__, __LINE__, MangledName.str().c_str(), MD->isInstance());
-MD->dump();
-F->dump();
-      FunctionArgList Args;
-      if (MD->isInstance()) {
-        //CGM.getCXXABI().buildThisParam(*this, Args);
-      }
+      //StringRef FeaturesStr = TD->getFeatures();
       auto AI = ++F->arg_begin(), AE = F->arg_end();
-      auto DI = MD->param_begin(), DE = MD->param_end();
-      for (; AI != AE; AI++, DI++) {
-printf("[%s:%d] func %s parm %s decl %s\n", __FUNCTION__, __LINE__, F->getName().str().c_str(), AI->getName().str().c_str(), (*DI)->getName().str().c_str());
+      auto DI = MD->param_begin();
+      for (; AI != AE; AI++, DI++)
           AI->setName((*DI)->getName());
-      }
   }
   return C;
 }
