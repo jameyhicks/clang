@@ -14285,8 +14285,16 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
           DeclarationName::CXXDestructorName)
         PD = PDiag(diag::err_dtor_expr_without_call) << /*destructor*/ 0;
     }
+printf("[%s:%d] beforrr\n", __FUNCTION__, __LINE__);
     tryToRecoverWithCall(result, PD,
-                         /*complain*/ true);
+                         /*complain*/ 
+#if 0
+true
+#else
+false
+#endif
+);
+printf("[%s:%d] afterrrrr\n", __FUNCTION__, __LINE__);
     return result;
   }
 
