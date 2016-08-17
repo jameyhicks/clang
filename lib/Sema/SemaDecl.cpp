@@ -12553,6 +12553,7 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
             paramIndex++;
             }
             item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(compoundList), loc, loc));
+item->dump();
             continue;
         }
         else {

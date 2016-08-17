@@ -7149,7 +7149,10 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &RHS,
                                         ICS, AA_Assigning);
       }
       if (Res.isInvalid())
+{
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         return Incompatible;
+}
       Sema::AssignConvertType result = Compatible;
       if (getLangOpts().ObjCAutoRefCount &&
           !CheckObjCARCUnavailableWeakConversion(LHSType,
@@ -9306,8 +9309,12 @@ static bool CheckForModifiableLvalue(Expr *E, SourceLocation Loc, Sema &S) {
     break;
   case Expr::MLV_Valid:
     llvm_unreachable("did not take early return for MLV_Valid");
-  case Expr::MLV_InvalidExpression:
   case Expr::MLV_MemberFunction:
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+E->dump();
+E->getType()->dump();
+    return false;
+  case Expr::MLV_InvalidExpression:
   case Expr::MLV_ClassTemporary:
     DiagID = diag::err_typecheck_expression_not_modifiable_lvalue;
     break;
@@ -9381,6 +9388,8 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
 
     QualType LHSTy(LHSType);
     ConvTy = CheckSingleAssignmentConstraints(LHSTy, RHS);
+if (ConvTy)
+printf("[%s:%d] convvvvty %d\n", __FUNCTION__, __LINE__, ConvTy);
     if (RHS.isInvalid())
       return QualType();
     // Special case of NSObject attributes on c-style pointer types.
@@ -10135,6 +10144,42 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
 
   switch (Opc) {
   case BO_Assign:
+    if (LHS.get()->isModifiableLvalue(Context, &OpLoc) == Expr::MLV_MemberFunction) {
+      if (auto mExpr = dyn_cast<MemberExpr>(LHS.get()))
+      if (auto vdecl = dyn_cast<CXXMethodDecl>(mExpr->getMemberDecl())) {
+          const CXXRecordDecl *RD = vdecl->getParent();
+          Expr *base = mExpr->getBase();
+          FieldDecl *thisp = NULL;
+          std::string mname = vdecl->getName();
+printf("[%s:%d] METHODMEMBER arrow %d impl %d mname %s\n", __FUNCTION__, __LINE__, mExpr->isArrow(), mExpr->isImplicitAccess(), mname.c_str());
+base->dump();
+vdecl->dump();
+          for (auto fitem: RD->fields()) {
+              std::string fname = fitem->getName();
+              if (fname == "p")
+                  thisp = fitem;
+              else if (fname == mname + "p") {
+                  printf("[%s:%d] field %s\n", __FUNCTION__, __LINE__, fname.c_str());
+                  fitem->dump();
+            MemberExpr *lhs = new (Context) MemberExpr(base, true, OpLoc, fitem, OpLoc, fitem->getType(), VK_LValue, OK_Ordinary);
+            MarkMemberReferenced(lhs);
+            LHS = lhs;
+#if 0
+            ParmVarDecl *Param = item->getParamDecl(paramIndex);
+            Param->setIsUsed();
+            Expr *rhs = DeclRefExpr::Create(Context, NNSloc, loc, Param, false, loc, Param->getType().getNonReferenceType(), VK_LValue, nullptr);
+            if (paramIndex > 1)
+                rhs = CStyleCastExpr::Create(Context, fitem->getType(), VK_RValue, CK_IntegralToPointer, rhs, nullptr, fitem->getTypeSourceInfo(), loc, loc);
+            Expr *assign = new (Context) BinaryOperator(lhs, rhs, BO_Assign, Context.DependentTy, VK_RValue, OK_Ordinary, loc, false);
+            compoundList.push_back(assign);
+            paramIndex++;
+#endif
+              }
+          }
+      LHS.get()->dump();
+      RHS.get()->dump();
+      }
+    }
     ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType());
     if (getLangOpts().CPlusPlus &&
         LHS.get()->getObjectKind() != OK_ObjCProperty) {
@@ -11820,7 +11865,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   if (MayHaveFunctionDiff)
     HandleFunctionTypeMismatch(FDiag, SecondType, FirstType);
 
+printf("[%s:%d] befiiiiiiiiiiiiiiiiiii\n", __FUNCTION__, __LINE__);
   Diag(Loc, FDiag);
+printf("[%s:%d] aftiiiiiiiiiiiiiiiiiii\n", __FUNCTION__, __LINE__);
   if (DiagKind == diag::warn_incompatible_qualified_id &&
       PDecl && IFace && !IFace->hasDefinition())
       Diag(IFace->getLocation(), diag::not_incomplete_class_and_qualified_id)

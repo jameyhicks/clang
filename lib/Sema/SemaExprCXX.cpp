@@ -2895,6 +2895,7 @@ static ExprResult BuildCXXCastArgument(Sema &S,
                                        DeclAccessPair FoundDecl,
                                        bool HadMultipleCandidates,
                                        Expr *From) {
+printf("[%s:%d] KIND %d\n", __FUNCTION__, __LINE__, Kind);
   switch (Kind) {
   default: llvm_unreachable("Unhandled cast kind!");
   case CK_ConstructorConversion: {
@@ -2974,6 +2975,15 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       CastKind CastKind;
       QualType BeforeToType;
       assert(FD && "no conversion function for user-defined conversion seq");
+      if (From->isModifiableLvalue(Context) == Expr::MLV_MemberFunction) {
+      if (auto mExpr = dyn_cast<MemberExpr>(From))
+      if (auto vdecl = dyn_cast<CXXMethodDecl>(mExpr->getMemberDecl())) {
+printf("[%s:%d]JJJPERFORM conversion from method to function pointer\n", __FUNCTION__, __LINE__);
+//From->dump();
+//ToType->dump();
+  return From;
+      }
+      } else
       if (const CXXConversionDecl *Conv = dyn_cast<CXXConversionDecl>(FD)) {
         CastKind = CK_UserDefinedConversion;
 
@@ -3003,6 +3013,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
         From = Res.get();
       }
 
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       ExprResult CastArg
         = BuildCXXCastArgument(*this,
                                From->getLocStart(),
@@ -3011,6 +3022,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                ICS.UserDefined.FoundConversionFunction,
                                ICS.UserDefined.HadMultipleCandidates,
                                From);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
       if (CastArg.isInvalid())
         return ExprError();

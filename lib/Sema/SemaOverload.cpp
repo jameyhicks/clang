@@ -3187,6 +3187,14 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     llvm_unreachable("Not a constructor or conversion function?");
 
   case OR_No_Viable_Function:
+    if (From->isModifiableLvalue(S.Context) == Expr::MLV_MemberFunction)
+    if (auto mExpr = dyn_cast<MemberExpr>(From))
+    if (auto vdecl = dyn_cast<CXXMethodDecl>(mExpr->getMemberDecl())) {
+printf("[%s:%d]JJJAllowing conversion from method to function pointer\n", __FUNCTION__, __LINE__);
+From->dump();
+ToType->dump();
+      return OR_Success;
+    }
     return OR_No_Viable_Function;
 
   case OR_Ambiguous:
@@ -5433,6 +5441,10 @@ ExprResult Sema::PerformContextualImplicitConversion(
       }
     }
   }
+#if 1
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+From->dump();
+#endif
 
   if (getLangOpts().CPlusPlus14) {
     // C++1y [conv]p6:
