@@ -10143,10 +10143,6 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
           FieldDecl *thisp = NULL;
           std::string mname = vdecl->getName();
 printf("[%s:%d] JJMETHODMEMBER arrow %d impl %d mname %s\n", __FUNCTION__, __LINE__, mExpr->isArrow(), mExpr->isImplicitAccess(), mname.c_str());
-//base->dump();
-//vdecl->dump();
-//LHS.get()->dump();
-//RHS.get()->dump();
           for (auto fitem: RD->fields()) {
               std::string fname = fitem->getName();
               if (fname == "p")
@@ -10154,12 +10150,28 @@ printf("[%s:%d] JJMETHODMEMBER arrow %d impl %d mname %s\n", __FUNCTION__, __LIN
               else if (fname == mname + "p") {
                   printf("[%s:%d] JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJfield %s\n", __FUNCTION__, __LINE__, fname.c_str());
                   fitem->dump();
-            MemberExpr *lhs = new (Context) MemberExpr(
-                   base, //ImplicitCastExpr::Create(Context, base->getType(), CK_LValueToRValue, base, nullptr, VK_RValue),
-                   true, OpLoc, fitem, OpLoc, fitem->getType(), VK_LValue, OK_Ordinary);
-            MarkMemberReferenced(lhs);
-            LHS = lhs;
-            RHS.get()->setType(LHS.get()->getType());
+              MemberExpr *lhs = new (Context) MemberExpr(base, true, OpLoc, fitem, OpLoc, fitem->getType(), VK_LValue, OK_Ordinary);
+              MarkMemberReferenced(lhs);
+              LHS = lhs;
+              QualType LHSTy = LHS.get()->getType();
+LHSTy->dump();
+              RHS.get()->setType(LHSTy);
+              if (auto unop = dyn_cast<UnaryOperator>(RHS.get()))
+              if (auto dre = dyn_cast<DeclRefExpr>(unop->getSubExpr()))
+              if (auto ff = dyn_cast<CXXMethodDecl>(dre->getDecl())) {
+                   QualType origType = LHSTy->getAs<PointerType>()->getPointeeType();
+                   dre->setType(origType);
+printf("[%s:%d]DRE\n", __FUNCTION__, __LINE__);
+dre->getType()->dump();
+dre->dump();
+            NestedNameSpecifierLoc NNSloc;
+            Expr *rhs = DeclRefExpr::Create(Context, NNSloc, OpLoc, ff, false, OpLoc, origType, VK_LValue, nullptr);
+            RHS = new (Context) UnaryOperator(rhs, unop->getOpcode(), LHSTy, unop->getValueKind(), unop->getObjectKind(), OpLoc);
+printf("[%s:%d] NEWRHS\n", __FUNCTION__, __LINE__);
+RHS.get()->dump();
+            //if (paramIndex > 1)
+                //rhs = CStyleCastExpr::Create(Context, fitem->getType(), VK_RValue, CK_IntegralToPointer, rhs, nullptr, fitem->getTypeSourceInfo(), loc, loc);
+              }
               }
           }
       LHS.get()->dump();
