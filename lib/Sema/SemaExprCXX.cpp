@@ -2895,7 +2895,6 @@ static ExprResult BuildCXXCastArgument(Sema &S,
                                        DeclAccessPair FoundDecl,
                                        bool HadMultipleCandidates,
                                        Expr *From) {
-printf("[%s:%d] KIND %d\n", __FUNCTION__, __LINE__, Kind);
   switch (Kind) {
   default: llvm_unreachable("Unhandled cast kind!");
   case CK_ConstructorConversion: {
@@ -2974,17 +2973,6 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       FunctionDecl *FD = ICS.UserDefined.ConversionFunction;
       CastKind CastKind;
       QualType BeforeToType;
-      //if (From->isModifiableLvalue(Context) == Expr::MLV_MemberFunction)
-      //if (auto mExpr = dyn_cast<MemberExpr>(From))
-      //if (auto vdecl = dyn_cast<CXXMethodDecl>(mExpr->getMemberDecl())) {
-      if (auto unop = dyn_cast<UnaryOperator>(From))
-      if (auto dre = dyn_cast<DeclRefExpr>(unop->getSubExpr()))
-      if (auto vdecl = dyn_cast<CXXMethodDecl>(dre->getDecl())) {
-printf("[%s:%d]JJJPERFORM conversion from method to function pointer\n", __FUNCTION__, __LINE__);
-//From->dump();
-//ToType->dump();
-  return From;
-      }
       assert(FD && "no conversion function for user-defined conversion seq");
       if (const CXXConversionDecl *Conv = dyn_cast<CXXConversionDecl>(FD)) {
         CastKind = CK_UserDefinedConversion;
@@ -3015,7 +3003,6 @@ printf("[%s:%d]JJJPERFORM conversion from method to function pointer\n", __FUNCT
         From = Res.get();
       }
 
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       ExprResult CastArg
         = BuildCXXCastArgument(*this,
                                From->getLocStart(),
@@ -3024,7 +3011,6 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
                                ICS.UserDefined.FoundConversionFunction,
                                ICS.UserDefined.HadMultipleCandidates,
                                From);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
       if (CastArg.isInvalid())
         return ExprError();

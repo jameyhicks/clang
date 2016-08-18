@@ -5018,15 +5018,6 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, m
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
                                   TemplateParamLists,
                                   AddToScope);
-if (auto MD = dyn_cast<CXXMethodDecl>(New))
-if (MD->getDeclName().isIdentifier()) {
-    std::string mname = MD->getName();
-    if (mname == "BBBB") {
-printf("[%s:%d]BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB %d\n", __FUNCTION__, __LINE__, MD->hasBody());
-//New->getBody()->dump();
-MD->dump();
-    }
-}
     if (auto CC = dyn_cast<TagDecl>(DC))
     if (CC->getTagKind() == TTK_AInterface)
       setAtomiccMethod(New);

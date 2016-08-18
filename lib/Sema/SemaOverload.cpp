@@ -1094,7 +1094,6 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
                          bool AllowObjCConversionOnExplicit) {
   ImplicitConversionSequence ICS;
 
-//printf("[%s:%d] start\n", __FUNCTION__, __LINE__);
   if (SuppressUserConversions) {
     // We're not in the case above, so there is no conversion that
     // we can perform.
@@ -1102,17 +1101,14 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     return ICS;
   }
 
-//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   // Attempt user-defined conversion.
   OverloadCandidateSet Conversions(From->getExprLoc(),
                                    OverloadCandidateSet::CSK_Normal);
-//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   switch (IsUserDefinedConversion(S, From, ToType, ICS.UserDefined,
                                   Conversions, AllowExplicit,
                                   AllowObjCConversionOnExplicit)) {
   case OR_Success:
   case OR_Deleted:
-//printf("[%s:%d] success %p\n", __FUNCTION__, __LINE__, ICS.UserDefined.ConversionFunction);
     ICS.setUserDefined();
     ICS.UserDefined.Before.setAsIdentityConversion();
     // C++ [over.ics.user]p4:
@@ -1123,7 +1119,7 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     //   constructor (i.e., a user-defined conversion function) is
     //   called for those cases.
     if (CXXConstructorDecl *Constructor
-          = dyn_cast_or_null<CXXConstructorDecl>(ICS.UserDefined.ConversionFunction)) {
+          = dyn_cast<CXXConstructorDecl>(ICS.UserDefined.ConversionFunction)) {
       QualType FromCanon
         = S.Context.getCanonicalType(From->getType().getUnqualifiedType());
       QualType ToCanon
@@ -1144,7 +1140,6 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     break;
 
   case OR_Ambiguous:
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     ICS.setAmbiguous();
     ICS.Ambiguous.setFromType(From->getType());
     ICS.Ambiguous.setToType(ToType);
@@ -1156,12 +1151,10 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
     // Fall through.
   case OR_No_Viable_Function:
-//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     ICS.setBad(BadConversionSequence::no_conversion, From, ToType);
     break;
   }
 
-//printf("[%s:%d]end\n", __FUNCTION__, __LINE__);
   return ICS;
 }
 
@@ -3194,15 +3187,6 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     llvm_unreachable("Not a constructor or conversion function?");
 
   case OR_No_Viable_Function:
-    if (auto unop = dyn_cast<UnaryOperator>(From))
-    if (auto dre = dyn_cast<DeclRefExpr>(unop->getSubExpr()))
-    if (auto vdecl = dyn_cast<CXXMethodDecl>(dre->getDecl())) {
-printf("[%s:%d]JJJAllowing conversion from method to function pointer\n", __FUNCTION__, __LINE__);
-From->dump();
-ToType->dump();
-User.ConversionFunction = nullptr;
-      return OR_Success;
-    }
     return OR_No_Viable_Function;
 
   case OR_Ambiguous:
@@ -5449,10 +5433,6 @@ ExprResult Sema::PerformContextualImplicitConversion(
       }
     }
   }
-#if 1
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-From->dump();
-#endif
 
   if (getLangOpts().CPlusPlus14) {
     // C++1y [conv]p6:
