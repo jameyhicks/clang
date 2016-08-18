@@ -2974,8 +2974,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       FunctionDecl *FD = ICS.UserDefined.ConversionFunction;
       CastKind CastKind;
       QualType BeforeToType;
-      assert(FD && "no conversion function for user-defined conversion seq");
-      if (From->isModifiableLvalue(Context) == Expr::MLV_MemberFunction) {
+      if (From->isModifiableLvalue(Context) == Expr::MLV_MemberFunction)
       if (auto mExpr = dyn_cast<MemberExpr>(From))
       if (auto vdecl = dyn_cast<CXXMethodDecl>(mExpr->getMemberDecl())) {
 printf("[%s:%d]JJJPERFORM conversion from method to function pointer\n", __FUNCTION__, __LINE__);
@@ -2983,7 +2982,7 @@ printf("[%s:%d]JJJPERFORM conversion from method to function pointer\n", __FUNCT
 //ToType->dump();
   return From;
       }
-      } else
+      assert(FD && "no conversion function for user-defined conversion seq");
       if (const CXXConversionDecl *Conv = dyn_cast<CXXConversionDecl>(FD)) {
         CastKind = CK_UserDefinedConversion;
 

@@ -10161,7 +10161,9 @@ vdecl->dump();
               else if (fname == mname + "p") {
                   printf("[%s:%d] field %s\n", __FUNCTION__, __LINE__, fname.c_str());
                   fitem->dump();
-            MemberExpr *lhs = new (Context) MemberExpr(base, true, OpLoc, fitem, OpLoc, fitem->getType(), VK_LValue, OK_Ordinary);
+            MemberExpr *lhs = new (Context) MemberExpr(
+                   ImplicitCastExpr::Create(Context, base->getType(), CK_LValueToRValue, lhs, nullptr, VK_RValue),
+                   true, OpLoc, fitem, OpLoc, fitem->getType(), VK_LValue, OK_Ordinary);
             MarkMemberReferenced(lhs);
             LHS = lhs;
 #if 0
