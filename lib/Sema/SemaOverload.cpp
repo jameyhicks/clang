@@ -1094,7 +1094,7 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
                          bool AllowObjCConversionOnExplicit) {
   ImplicitConversionSequence ICS;
 
-printf("[%s:%d] start\n", __FUNCTION__, __LINE__);
+//printf("[%s:%d] start\n", __FUNCTION__, __LINE__);
   if (SuppressUserConversions) {
     // We're not in the case above, so there is no conversion that
     // we can perform.
@@ -1102,17 +1102,17 @@ printf("[%s:%d] start\n", __FUNCTION__, __LINE__);
     return ICS;
   }
 
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   // Attempt user-defined conversion.
   OverloadCandidateSet Conversions(From->getExprLoc(),
                                    OverloadCandidateSet::CSK_Normal);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   switch (IsUserDefinedConversion(S, From, ToType, ICS.UserDefined,
                                   Conversions, AllowExplicit,
                                   AllowObjCConversionOnExplicit)) {
   case OR_Success:
   case OR_Deleted:
-printf("[%s:%d] success %p\n", __FUNCTION__, __LINE__, ICS.UserDefined.ConversionFunction);
+//printf("[%s:%d] success %p\n", __FUNCTION__, __LINE__, ICS.UserDefined.ConversionFunction);
     ICS.setUserDefined();
     ICS.UserDefined.Before.setAsIdentityConversion();
     // C++ [over.ics.user]p4:
@@ -1156,12 +1156,12 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
     // Fall through.
   case OR_No_Viable_Function:
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     ICS.setBad(BadConversionSequence::no_conversion, From, ToType);
     break;
   }
 
-printf("[%s:%d]end\n", __FUNCTION__, __LINE__);
+//printf("[%s:%d]end\n", __FUNCTION__, __LINE__);
   return ICS;
 }
 
@@ -3194,9 +3194,9 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     llvm_unreachable("Not a constructor or conversion function?");
 
   case OR_No_Viable_Function:
-    if (From->isModifiableLvalue(S.Context) == Expr::MLV_MemberFunction)
-    if (auto mExpr = dyn_cast<MemberExpr>(From))
-    if (auto vdecl = dyn_cast<CXXMethodDecl>(mExpr->getMemberDecl())) {
+    if (auto unop = dyn_cast<UnaryOperator>(From))
+    if (auto dre = dyn_cast<DeclRefExpr>(unop->getSubExpr()))
+    if (auto vdecl = dyn_cast<CXXMethodDecl>(dre->getDecl())) {
 printf("[%s:%d]JJJAllowing conversion from method to function pointer\n", __FUNCTION__, __LINE__);
 From->dump();
 ToType->dump();

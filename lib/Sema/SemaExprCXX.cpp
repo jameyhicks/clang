@@ -2974,9 +2974,12 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       FunctionDecl *FD = ICS.UserDefined.ConversionFunction;
       CastKind CastKind;
       QualType BeforeToType;
-      if (From->isModifiableLvalue(Context) == Expr::MLV_MemberFunction)
-      if (auto mExpr = dyn_cast<MemberExpr>(From))
-      if (auto vdecl = dyn_cast<CXXMethodDecl>(mExpr->getMemberDecl())) {
+      //if (From->isModifiableLvalue(Context) == Expr::MLV_MemberFunction)
+      //if (auto mExpr = dyn_cast<MemberExpr>(From))
+      //if (auto vdecl = dyn_cast<CXXMethodDecl>(mExpr->getMemberDecl())) {
+      if (auto unop = dyn_cast<UnaryOperator>(From))
+      if (auto dre = dyn_cast<DeclRefExpr>(unop->getSubExpr()))
+      if (auto vdecl = dyn_cast<CXXMethodDecl>(dre->getDecl())) {
 printf("[%s:%d]JJJPERFORM conversion from method to function pointer\n", __FUNCTION__, __LINE__);
 //From->dump();
 //ToType->dump();
@@ -6641,8 +6644,6 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
   // lambda where we've entered the introducer but not the body, or represent a
   // lambda where we've entered the body, depending on where the
   // parser/instantiation has got to).
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-FullExpr.get()->dump();
   if (!IsLambdaInitCaptureInitializer && 
       DiagnoseUnexpandedParameterPack(FullExpr.get()))
     return ExprError();

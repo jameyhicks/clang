@@ -10151,21 +10151,24 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
           Expr *base = mExpr->getBase();
           FieldDecl *thisp = NULL;
           std::string mname = vdecl->getName();
-printf("[%s:%d] METHODMEMBER arrow %d impl %d mname %s\n", __FUNCTION__, __LINE__, mExpr->isArrow(), mExpr->isImplicitAccess(), mname.c_str());
+printf("[%s:%d] JJMETHODMEMBER arrow %d impl %d mname %s\n", __FUNCTION__, __LINE__, mExpr->isArrow(), mExpr->isImplicitAccess(), mname.c_str());
 base->dump();
-vdecl->dump();
+//vdecl->dump();
+LHS.get()->dump();
+RHS.get()->dump();
           for (auto fitem: RD->fields()) {
               std::string fname = fitem->getName();
               if (fname == "p")
                   thisp = fitem;
               else if (fname == mname + "p") {
-                  printf("[%s:%d] field %s\n", __FUNCTION__, __LINE__, fname.c_str());
+                  printf("[%s:%d] JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJfield %s\n", __FUNCTION__, __LINE__, fname.c_str());
                   fitem->dump();
             MemberExpr *lhs = new (Context) MemberExpr(
-                   ImplicitCastExpr::Create(Context, base->getType(), CK_LValueToRValue, lhs, nullptr, VK_RValue),
+                   base, //ImplicitCastExpr::Create(Context, base->getType(), CK_LValueToRValue, base, nullptr, VK_RValue),
                    true, OpLoc, fitem, OpLoc, fitem->getType(), VK_LValue, OK_Ordinary);
             MarkMemberReferenced(lhs);
             LHS = lhs;
+            RHS.get()->setType(LHS.get()->getType());
 #if 0
             ParmVarDecl *Param = item->getParamDecl(paramIndex);
             Param->setIsUsed();
