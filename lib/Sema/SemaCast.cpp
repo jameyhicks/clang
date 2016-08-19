@@ -1929,6 +1929,9 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
   bool destIsPtr = DestType->isAnyPointerType() ||
                    DestType->isBlockPointerType();
   bool srcIsPtr = SrcType->isAnyPointerType() ||
+#if 1 //jca
+                  SrcType->isMemberPointerType() ||
+#endif
                   SrcType->isBlockPointerType();
   if (!destIsPtr && !srcIsPtr) {
     // Except for std::nullptr_t->integer and lvalue->reference, which are

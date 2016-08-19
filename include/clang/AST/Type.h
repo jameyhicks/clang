@@ -5529,6 +5529,9 @@ inline bool Type::canDecayToPointerType() const {
 
 inline bool Type::hasPointerRepresentation() const {
   return (isPointerType() || isReferenceType() || isBlockPointerType() ||
+#if 1 //jca
+          isMemberPointerType() ||
+#endif
           isObjCObjectPointerType() || isNullPtrType());
 }
 
