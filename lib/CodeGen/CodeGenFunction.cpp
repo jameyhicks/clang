@@ -945,6 +945,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   // a quick pass now to see if we can.
   if (!CurFn->doesNotThrow())
     TryMarkNoThrow(CurFn);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+Fn->dump();
 }
 
 /// ContainsLabel - Return true if the statement contains a label in it.  If

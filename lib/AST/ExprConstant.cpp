@@ -4725,6 +4725,8 @@ bool LValueExprEvaluator::VisitBinAssign(const BinaryOperator *E) {
 
   APValue NewVal;
 
+printf("[%s:%d] AAAAAAAAAAAAAAAAAAAAASSSSSSSSSSSSSSSSSSSSSSIIIIIIIIIIIIII\n", __FUNCTION__, __LINE__);
+E->dump();
   if (!this->Visit(E->getLHS())) {
     if (Info.keepEvaluatingAfterFailure())
       Evaluate(NewVal, this->Info, E->getRHS());
