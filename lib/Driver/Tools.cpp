@@ -8046,6 +8046,8 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
     return "elf_i386";
   case llvm::Triple::aarch64:
     return "aarch64linux";
+  case llvm::Triple::atomicc:
+    return "atomicc";
   case llvm::Triple::aarch64_be:
     return "aarch64_be_linux";
   case llvm::Triple::arm:
