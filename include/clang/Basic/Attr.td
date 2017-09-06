@@ -394,6 +394,12 @@ def AtomiccWidth : Attr {
   let Documentation = [AtomiccWidthDocs];
 }
 
+def AtomiccInterface : InheritableAttr {
+  let Spellings = [ GNU<"atomicc_interface"> ];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let Documentation = [Undocumented];
+}
+
 def AlignMac68k : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];

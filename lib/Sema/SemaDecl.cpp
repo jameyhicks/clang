@@ -4971,7 +4971,7 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     New = ActOnTypedefDeclarator(S, D, DC, TInfo, Previous);
   } else if (R->isFunctionType()) {
     if (auto CC = dyn_cast<TagDecl>(DC))
-    if (CC->getTagKind() == TTK_AInterface) {
+    if (CC->hasAttr<AtomiccInterfaceAttr>()) {
       bool vmethodFlag = false;
       if (CXXRecordDecl *cdecl = dyn_cast<CXXRecordDecl>(CC)) {
         for (auto item: cdecl->methods()) {
@@ -5019,7 +5019,7 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, m
                                   TemplateParamLists,
                                   AddToScope);
     if (auto CC = dyn_cast<TagDecl>(DC))
-    if (CC->getTagKind() == TTK_AInterface)
+    if (CC->hasAttr<AtomiccInterfaceAttr>())
       setAtomiccMethod(New);
   } else {
     New = ActOnVariableDeclarator(S, D, DC, TInfo, Previous, TemplateParamLists,
@@ -12519,7 +12519,7 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
   AdjustDeclIfTemplate(TagD);
   TagDecl *Tag = cast<TagDecl>(TagD);
   Tag->setRBraceLoc(RBraceLoc);
-  if (Tag->getTagKind() == TTK_AInterface)
+  if (Tag->hasAttr<AtomiccInterfaceAttr>())
   if (CXXRecordDecl *cdecl = dyn_cast<CXXRecordDecl>(Tag)) {
     TypeSourceInfo *TSInfo = NULL;
     for (auto bitem: cdecl->bases())
