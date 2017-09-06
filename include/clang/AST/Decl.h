@@ -1544,6 +1544,7 @@ private:
   /// 'enum Y' in 'void f(enum Y {AA} x) {}'.
   ArrayRef<NamedDecl *> DeclsInPrototypeScope;
 
+  LazyDeclStmtPtr Guard;
   LazyDeclStmtPtr Body;
 
   // FIXME: This can be packed into the bitfields in Decl.

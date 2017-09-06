@@ -1033,6 +1033,66 @@ public:
 };
 
 
+/// RuleStmt - This represents an atomic C rule
+///
+class RuleStmt : public Stmt {
+  enum { VAR, COND, BODY, END_EXPR };
+  Stmt* SubExprs[END_EXPR];
+
+  SourceLocation RuleLoc;
+  //Token RuleName;
+
+public:
+  RuleStmt(const ASTContext &C, SourceLocation RL, VarDecl *var, Expr *cond,
+         Stmt *body);
+
+  /// \brief Build an empty if/then/else statement
+  explicit RuleStmt(EmptyShell Empty) : Stmt(RuleStmtClass, Empty) { }
+
+  /// \brief Retrieve the variable declared in this "if" statement, if any.
+  ///
+  /// In the following example, "x" is the condition variable.
+  /// \code
+  /// if (int x = foo()) {
+  ///   printf("x is %d", x);
+  /// }
+  /// \endcode
+  VarDecl *getConditionVariable() const;
+  void setConditionVariable(const ASTContext &C, VarDecl *V);
+
+  /// If this IfStmt has a condition variable, return the faux DeclStmt
+  /// associated with the creation of that condition variable.
+  const DeclStmt *getConditionVariableDeclStmt() const {
+    return reinterpret_cast<DeclStmt*>(SubExprs[VAR]);
+  }
+
+  const Expr *getCond() const { return reinterpret_cast<Expr*>(SubExprs[COND]);}
+  void setCond(Expr *E) { SubExprs[COND] = reinterpret_cast<Stmt *>(E); }
+  const Stmt *getBody() const { return SubExprs[BODY]; }
+  void setBody(Stmt *S) { SubExprs[BODY] = S; }
+
+  Expr *getCond() { return reinterpret_cast<Expr*>(SubExprs[COND]); }
+  Stmt *getBody() { return SubExprs[BODY]; }
+
+  SourceLocation getRuleLoc() const { return RuleLoc; }
+  void setRuleLoc(SourceLocation L) { RuleLoc = L; }
+
+  SourceLocation getLocStart() const LLVM_READONLY { return RuleLoc; }
+  SourceLocation getLocEnd() const LLVM_READONLY {
+    return SubExprs[BODY]->getLocEnd();
+  }
+
+  // Iterators over subexpressions.  The iterators will include iterating
+  // over the initialization expression referenced by the condition variable.
+  child_range children() {
+    return child_range(&SubExprs[0], &SubExprs[0]+END_EXPR);
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == RuleStmtClass;
+  }
+};
+
 /// WhileStmt - This represents a 'while' stmt.
 ///
 class WhileStmt : public Stmt {

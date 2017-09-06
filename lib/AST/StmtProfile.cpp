@@ -132,6 +132,11 @@ void StmtProfiler::VisitDoStmt(const DoStmt *S) {
   VisitStmt(S);
 }
 
+void StmtProfiler::VisitRuleStmt(const RuleStmt *S) {
+  VisitStmt(S);
+  VisitDecl(S->getConditionVariable());
+}
+
 void StmtProfiler::VisitForStmt(const ForStmt *S) {
   VisitStmt(S);
 }

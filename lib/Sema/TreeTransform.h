@@ -1201,6 +1201,15 @@ public:
                                  Cond, RParenLoc);
   }
 
+  /// \brief Build a new "rule" statement.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  StmtResult RebuildRuleStmt(SourceLocation RuleLoc, Sema::FullExprArg Cond,
+                           VarDecl *CondVar, Stmt *Body) {
+    return getSema().ActOnRuleStmt(RuleLoc, Cond, CondVar, Body);
+  }
+
   /// \brief Build a new for statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
@@ -6132,6 +6141,56 @@ TreeTransform<Derived>::TransformDoStmt(DoStmt *S) {
   return getDerived().RebuildDoStmt(S->getDoLoc(), Body.get(), S->getWhileLoc(),
                                     /*FIXME:*/S->getWhileLoc(), Cond.get(),
                                     S->getRParenLoc());
+}
+
+template<typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformRuleStmt(RuleStmt *S) {
+  // Transform the condition
+  ExprResult Cond;
+  VarDecl *ConditionVar = nullptr;
+  if (S->getConditionVariable()) {
+    ConditionVar
+      = cast_or_null<VarDecl>(
+                   getDerived().TransformDefinition(
+                                      S->getConditionVariable()->getLocation(),
+                                                    S->getConditionVariable()));
+    if (!ConditionVar)
+      return StmtError();
+  } else {
+    Cond = getDerived().TransformExpr(S->getCond());
+
+    if (Cond.isInvalid())
+      return StmtError();
+
+    // Convert the condition to a boolean value.
+    if (S->getCond()) {
+      ExprResult CondE = getSema().ActOnBooleanCondition(nullptr, S->getRuleLoc(),
+                                                         Cond.get());
+      if (CondE.isInvalid())
+        return StmtError();
+
+      Cond = CondE.get();
+    }
+  }
+
+  Sema::FullExprArg FullCond(getSema().MakeFullExpr(Cond.get()));
+  if (!S->getConditionVariable() && S->getCond() && !FullCond.get())
+    return StmtError();
+
+  // Transform the "then" branch.
+  StmtResult Body = getDerived().TransformStmt(S->getBody());
+  if (Body.isInvalid())
+    return StmtError();
+
+  if (!getDerived().AlwaysRebuild() &&
+      FullCond.get() == S->getCond() &&
+      ConditionVar == S->getConditionVariable() &&
+      Body.get() == S->getBody())
+    return S;
+
+  return getDerived().RebuildRuleStmt(S->getRuleLoc(), FullCond, ConditionVar,
+				      Body.get());
 }
 
 template<typename Derived>

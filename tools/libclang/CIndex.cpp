@@ -4173,6 +4173,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
       return cxstring::createRef("WhileStmt");
   case CXCursor_DoStmt:
       return cxstring::createRef("DoStmt");
+  case CXCursor_RuleStmt:
+      return cxstring::createRef("RuleStmt");
   case CXCursor_ForStmt:
       return cxstring::createRef("ForStmt");
   case CXCursor_GotoStmt:

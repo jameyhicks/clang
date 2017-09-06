@@ -910,6 +910,34 @@ void IfStmt::setConditionVariable(const ASTContext &C, VarDecl *V) {
                                    VarRange.getEnd());
 }
 
+RuleStmt::RuleStmt(const ASTContext &C, SourceLocation RL, VarDecl *var, Expr *cond,
+               Stmt *body)
+  : Stmt(RuleStmtClass), RuleLoc(RL)
+{
+  setConditionVariable(C, var);
+  SubExprs[COND] = cond;
+  SubExprs[BODY] = body;
+}
+
+VarDecl *RuleStmt::getConditionVariable() const {
+  if (!SubExprs[VAR])
+    return nullptr;
+
+  DeclStmt *DS = cast<DeclStmt>(SubExprs[VAR]);
+  return cast<VarDecl>(DS->getSingleDecl());
+}
+
+void RuleStmt::setConditionVariable(const ASTContext &C, VarDecl *V) {
+  if (!V) {
+    SubExprs[VAR] = nullptr;
+    return;
+  }
+
+  SourceRange VarRange = V->getSourceRange();
+  SubExprs[VAR] = new (C) DeclStmt(DeclGroupRef(V), VarRange.getBegin(),
+                                   VarRange.getEnd());
+}
+
 ForStmt::ForStmt(const ASTContext &C, Stmt *Init, Expr *Cond, VarDecl *condVar,
                  Expr *Inc, Stmt *Body, SourceLocation FL, SourceLocation LP,
                  SourceLocation RP)

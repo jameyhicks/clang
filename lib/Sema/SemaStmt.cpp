@@ -1269,6 +1269,37 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
   return new (Context) DoStmt(Body, Cond, DoLoc, WhileLoc, CondRParen);
 }
 
+StmtResult
+Sema::ActOnRuleStmt(SourceLocation RuleLoc, FullExprArg CondVal, Decl *CondVar, Stmt *bodyStmt) {
+  // If the condition was invalid, discard the rule statement.  We could recover
+  // better by replacing it with a valid expr, but don't do that yet.
+  if (!CondVal.get() && !CondVar) {
+    getCurFunction()->setHasDroppedStmt();
+    return StmtError();
+  }
+
+  ExprResult CondResult(CondVal.release());
+
+  VarDecl *ConditionVar = nullptr;
+  if (CondVar) {
+    ConditionVar = cast<VarDecl>(CondVar);
+    CondResult = CheckConditionVariable(ConditionVar, RuleLoc, true);
+    CondResult = ActOnFinishFullExpr(CondResult.get(), RuleLoc);
+    if (CondResult.isInvalid())
+      return StmtError();
+  }
+  Expr *ConditionExpr = CondResult.getAs<Expr>();
+  if (!ConditionExpr)
+    return StmtError();
+
+  DiagnoseUnusedExprResult(bodyStmt);
+
+  DiagnoseEmptyStmtBody(ConditionExpr->getLocEnd(), bodyStmt,
+			diag::warn_empty_if_body);
+
+  return new (Context) RuleStmt(Context, RuleLoc, ConditionVar, ConditionExpr, bodyStmt);
+}
+
 namespace {
   // This visitor will traverse a conditional statement and store all
   // the evaluated decls into a vector.  Simple is set to true if none

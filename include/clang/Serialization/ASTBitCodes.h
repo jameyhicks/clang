@@ -1145,6 +1145,8 @@ namespace clang {
       /// \brief A WhileStmt record.
       STMT_WHILE,
       /// \brief A DoStmt record.
+      STMT_RULE,
+      /// \brief A RuleStmt record.
       STMT_DO,
       /// \brief A ForStmt record.
       STMT_FOR,

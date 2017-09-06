@@ -290,6 +290,10 @@ Retry:
     SemiError = "__leave";
     break;
 
+  case tok::kw_rule:
+    return ParseRuleStatement(TrailingElseLoc);
+    break;
+
   case tok::annot_pragma_vis:
     ProhibitAttributes(Attrs);
     HandlePragmaVisibility();
@@ -801,6 +805,96 @@ StmtResult Parser::ParseDefaultStatement() {
 
   return Actions.ActOnDefaultStmt(DefaultLoc, ColonLoc,
                                   SubStmt.get(), getCurScope());
+}
+
+StmtResult Parser::ParseRuleStatement(SourceLocation *TrailingElseLoc) {
+  assert(Tok.is(tok::kw_rule) && "Not a rule stmt!");
+  SourceLocation RuleLoc = ConsumeToken();  // eat the 'do'.
+
+  assert(Tok.is(tok::identifier) && "No rule name!");
+  Token RuleName = NextToken();
+  ConsumeToken();
+
+  assert(Tok.is(tok::kw_if) && "No guard on a rule stmt!");
+  SourceLocation GuardLoc = ConsumeToken();  // eat the 'if'.
+
+  if (Tok.isNot(tok::l_paren)) {
+    Diag(Tok, diag::err_expected_lparen_after) << "if";
+    SkipUntil(tok::semi);
+    return StmtError();
+  }
+
+  bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
+
+  // C99 6.8.4p3 - In C99, the if statement is a block.  This is not
+  // the case for C90.
+  //
+  // C++ 6.4p3:
+  // A name introduced by a declaration in a condition is in scope from its
+  // point of declaration until the end of the substatements controlled by the
+  // condition.
+  // C++ 3.3.2p4:
+  // Names declared in the for-init-statement, and in the condition of if,
+  // while, for, and switch statements are local to the if, while, for, or
+  // switch statement (including the controlled statement).
+  //
+  ParseScope RuleScope(this, Scope::DeclScope | Scope::ControlScope, C99orCXX);
+
+  // Parse the condition.
+  ExprResult CondExp;
+  Decl *CondVar = nullptr;
+  if (ParseParenExprOrCondition(CondExp, CondVar, RuleLoc, true))
+    return StmtError();
+
+  FullExprArg FullCondExp(Actions.MakeFullExpr(CondExp.get(), RuleLoc));
+
+  // C99 6.8.4p3 - In C99, the body of the if statement is a scope, even if
+  // there is no compound stmt.  C90 does not have this clause.  We only do this
+  // if the body isn't a compound statement to avoid push/pop in common cases.
+  //
+  // C++ 6.4p1:
+  // The substatement in a selection-statement (each substatement, in the else
+  // form of the if statement) implicitly defines a local scope.
+  //
+  // For C++ we create a scope for the condition and a new scope for
+  // substatements because:
+  // -When the 'then' scope exits, we want the condition declaration to still be
+  //    active for the 'else' scope too.
+  // -Sema will detect name clashes by considering declarations of a
+  //    'ControlScope' as part of its direct subscope.
+  // -If we wanted the condition and substatement to be in the same scope, we
+  //    would have to notify ParseStatement not to create a new scope. It's
+  //    simpler to let it create a new scope.
+  //
+  ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
+
+  // Read the 'then' stmt.
+  SourceLocation BodyStmtLoc = Tok.getLocation();
+
+  SourceLocation InnerStatementTrailingElseLoc;
+  StmtResult BodyStmt(ParseStatement(&InnerStatementTrailingElseLoc));
+
+  // Pop the 'if' scope if needed.
+  InnerScope.Exit();
+
+  // If it has an else, parse it.
+  SourceLocation ElseLoc;
+  SourceLocation ElseStmtLoc;
+  StmtResult ElseStmt;
+
+  if (Tok.is(tok::code_completion)) {
+    Actions.CodeCompleteAfterIf(getCurScope());
+    cutOffParsing();
+    return StmtError();
+  }
+
+  RuleScope.Exit();
+
+  // Now if either are invalid, replace with a ';'.
+  if (BodyStmt.isInvalid())
+    BodyStmt = Actions.ActOnNullStmt(BodyStmtLoc);
+
+  return Actions.ActOnRuleStmt(RuleLoc, FullCondExp, CondVar, BodyStmt.get());
 }
 
 StmtResult Parser::ParseCompoundStatement(bool isStmtExpr) {

@@ -2237,7 +2237,12 @@ enum CXCursorKind {
    */
   CXCursor_OMPCancelDirective             = 256,
 
-  CXCursor_LastStmt                    = CXCursor_OMPCancelDirective,
+  /** \brief A rule statement
+   */
+  CXCursor_RuleStmt                       = 257,
+
+
+  CXCursor_LastStmt                    = CXCursor_RuleStmt,
 
   /**
    * \brief Cursor that represents the translation unit itself.
