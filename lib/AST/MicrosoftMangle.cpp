@@ -1865,7 +1865,6 @@ void MicrosoftCXXNameMangler::mangleType(const TagDecl *TD) {
       Out << 'T';
       break;
     case TTK_Struct:
-    case TTK_AInterface:
     case TTK_Interface:
       Out << 'U';
       break;

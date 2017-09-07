@@ -512,7 +512,6 @@ DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {
     if (const TagDecl *TD = R.getAsSingle<TagDecl>()) {
       switch (TD->getTagKind()) {
       case TTK_Struct: return DeclSpec::TST_struct;
-      case TTK_AInterface: return DeclSpec::TST_ainterface;
       case TTK_Interface: return DeclSpec::TST_interface;
       case TTK_Union:  return DeclSpec::TST_union;
       case TTK_Class:  return DeclSpec::TST_class;
@@ -683,10 +682,6 @@ static bool isTagTypeWithMissingTag(Sema &SemaRef, LookupResult &Result,
 
       case TTK_Struct:
         FixItTagName = "struct ";
-        break;
-
-      case TTK_AInterface:
-        FixItTagName = "ainterface ";
         break;
 
       case TTK_Interface:

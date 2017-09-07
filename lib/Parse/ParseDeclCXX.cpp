@@ -1245,6 +1245,12 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   // FIXME: Are we consistent with the ordering of parsing of different
   // styles of attributes?
   MaybeParseCXX11Attributes(attrs);
+  AttributeList *myattr = attrs.getList();
+  while(myattr) {
+      if (myattr->getName()->getName() == "atomicc_interface")
+          TagType = DeclSpec::TST_ainterface;
+      myattr = myattr->getNext();
+  }
 
   // Source location used by FIXIT to insert misplaced
   // C++11 attributes
