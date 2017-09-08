@@ -50,7 +50,11 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
                                      StringRef suffix) {
   SmallString<256> TypeName;
   llvm::raw_svector_ostream OS(TypeName);
-  OS << RD->getKindName() << '.';
+  StringRef Name = RD->getKindName();
+  if (RD->hasAttr<AtomiccInterfaceAttr>()) {
+      Name = "ainterface";
+  }
+  OS << Name << '.';
   
   // Name the codegen type after the typedef name
   // if there is no tag type name available

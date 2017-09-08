@@ -4145,7 +4145,6 @@ public:
 enum TagTypeKind {
   /// \brief The "struct" keyword.
   TTK_Struct,
-  TTK_AInterface,
   /// \brief The "__interface" keyword.
   TTK_Interface,
   /// \brief The "union" keyword.
@@ -4161,7 +4160,6 @@ enum TagTypeKind {
 enum ElaboratedTypeKeyword {
   /// \brief The "struct" keyword introduces the elaborated-type-specifier.
   ETK_Struct,
-  ETK_AInterface,
   /// \brief The "__interface" keyword introduces the elaborated-type-specifier.
   ETK_Interface,
   /// \brief The "union" keyword introduces the elaborated-type-specifier.

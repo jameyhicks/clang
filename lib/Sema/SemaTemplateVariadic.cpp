@@ -734,7 +734,6 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_enum:
   case TST_union:
   case TST_struct:
-  case TST_ainterface:
   case TST_interface:
   case TST_class:
   case TST_auto:

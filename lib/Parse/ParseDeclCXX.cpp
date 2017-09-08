@@ -1244,9 +1244,11 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   // styles of attributes?
   MaybeParseCXX11Attributes(attrs);
   AttributeList *myattr = attrs.getList();
+  bool isInterface = false;
   while(myattr) {
-      if (myattr->getName()->getName() == "atomicc_interface")
-          TagType = DeclSpec::TST_ainterface;
+      if (myattr->getName()->getName() == "atomicc_interface") {
+          isInterface = true;
+      }
       myattr = myattr->getNext();
   }
 
@@ -2795,7 +2797,6 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
                                          ParsedAttributesWithRange &Attrs,
                                          unsigned TagType, Decl *TagDecl) {
   assert((TagType == DeclSpec::TST_struct ||
-         TagType == DeclSpec::TST_ainterface ||
          TagType == DeclSpec::TST_interface ||
          TagType == DeclSpec::TST_union  ||
          TagType == DeclSpec::TST_class) && "Invalid TagType!");
@@ -2933,19 +2934,27 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
     Actions.ActOnStartCXXMemberDeclarations(getCurScope(), TagDecl, FinalLoc,
                                             IsFinalSpelledSealed,
                                             T.getOpenLocation());
+  bool isInterface = false;
+  AttributeList *myattr = Attrs.getList();
+  while(myattr) {
+      if (myattr->getName()->getName() == "atomicc_interface") {
+          isInterface = true;
+      }
+      myattr = myattr->getNext();
+  }
 
   // C++ 11p3: Members of a class defined with the keyword class are private
   // by default. Members of a class defined with the keywords struct or union
   // are public by default.
   AccessSpecifier CurAS;
-  if (TagType == DeclSpec::TST_class)
+  if (TagType == DeclSpec::TST_class && !isInterface)
     CurAS = AS_private;
   else
     CurAS = AS_public;
   ParsedAttributes AccessAttrs(AttrFactory);
 
   if (TagDecl) {
-    if(TagType == DeclSpec::TST_ainterface) {
+    if(isInterface) {
       const char *Dummy = nullptr;
       AttributeFactory attrFactory;
       ParsedAttributes parsedAttrs(attrFactory);
@@ -3059,7 +3068,7 @@ Newf->dump();
       ParseCXXClassMemberDeclaration(CurAS, AccessAttrs.getList());
     }
 
-    if(TagType == DeclSpec::TST_ainterface) {
+    if(isInterface) {
 printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       const char *Dummy = nullptr;
       AttributeFactory attrFactory;
