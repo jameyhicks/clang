@@ -400,6 +400,12 @@ def AtomiccInterface : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def AtomiccModule : InheritableAttr {
+  let Spellings = [ GNU<"atomicc_module"> ];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let Documentation = [Undocumented];
+}
+
 def AlignMac68k : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
