@@ -1341,6 +1341,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     Result = Context.IntTy;
     declarator.setInvalidType(true);
     break;
+  case DeclSpec::TST_ainterface: case DeclSpec::TST_amodule:
   case DeclSpec::TST_class:
   case DeclSpec::TST_enum:
   case DeclSpec::TST_union:

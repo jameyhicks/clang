@@ -3624,6 +3624,7 @@ void Sema::setTagNameForLinkagePurposes(TagDecl *TagFromDeclSpec,
 
 static unsigned GetDiagnosticTypeSpecifierID(DeclSpec::TST T) {
   switch (T) {
+  case DeclSpec::TST_ainterface: case DeclSpec::TST_amodule:
   case DeclSpec::TST_class:
     return 0;
   case DeclSpec::TST_struct:
@@ -3649,6 +3650,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   Decl *TagD = nullptr;
   TagDecl *Tag = nullptr;
   if (DS.getTypeSpecType() == DeclSpec::TST_class ||
+      DS.getTypeSpecType() == DeclSpec::TST_ainterface ||
+      DS.getTypeSpecType() == DeclSpec::TST_amodule ||
       DS.getTypeSpecType() == DeclSpec::TST_struct ||
       DS.getTypeSpecType() == DeclSpec::TST_interface ||
       DS.getTypeSpecType() == DeclSpec::TST_union ||
@@ -3835,7 +3838,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
       // Since mutable is not a viable storage class specifier in C, there is
       // no reason to treat it as an extension. Instead, diagnose as an error.
       Diag(DS.getStorageClassSpecLoc(), diag::err_mutable_nonmember);
-    else if (!DS.isExternInLinkageSpec() && SCS != DeclSpec::SCS_typedef)
+    else if (!DS.isExternInLinkageSpec() && SCS != DeclSpec::SCS_typedef
+        && DS.getTypeSpecType() != DeclSpec::TST_amodule)
       Diag(DS.getStorageClassSpecLoc(), DiagID)
         << DeclSpec::getSpecifierName(SCS);
   }
@@ -3859,6 +3863,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   if (!DS.getAttributes().empty()) {
     DeclSpec::TST TypeSpecType = DS.getTypeSpecType();
     if (TypeSpecType == DeclSpec::TST_class ||
+        TypeSpecType == DeclSpec::TST_ainterface ||
+        TypeSpecType == DeclSpec::TST_amodule ||
         TypeSpecType == DeclSpec::TST_struct ||
         TypeSpecType == DeclSpec::TST_interface ||
         TypeSpecType == DeclSpec::TST_union ||
@@ -11351,6 +11357,7 @@ TypedefDecl *Sema::ParseTypedefDecl(Scope *S, Declarator &D, QualType T,
   case TST_struct:
   case TST_interface:
   case TST_union:
+  case TST_ainterface: case TST_amodule:
   case TST_class: {
     TagDecl *tagFromDeclSpec = cast<TagDecl>(D.getDeclSpec().getRepAsDecl());
     setTagNameForLinkagePurposes(tagFromDeclSpec, NewTD);

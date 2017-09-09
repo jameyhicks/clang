@@ -56,6 +56,8 @@ namespace clang {
     TST_union,
     TST_struct,
     TST_class,        // C++ class type
+    TST_ainterface,   // atomicc_interface
+    TST_amodule,      // atomicc_module
     TST_interface,    // C++ (Microsoft-specific) __interface type
     TST_typename,     // Typedef, C++ class-name or enum name, etc.
     TST_typeofType,

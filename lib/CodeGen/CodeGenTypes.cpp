@@ -53,6 +53,8 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   StringRef Name = RD->getKindName();
   if (RD->hasAttr<AtomiccInterfaceAttr>())
       Name = "ainterface";
+  else if (RD->hasAttr<AtomiccEModuleAttr>())
+      Name = "emodule";
   else if (RD->hasAttr<AtomiccModuleAttr>())
       Name = "module";
   OS << Name << '.';

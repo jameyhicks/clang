@@ -2334,6 +2334,7 @@ TypeWithKeyword::getKeywordForTypeSpec(unsigned TypeSpec) {
   switch (TypeSpec) {
   default: return ETK_None;
   case TST_typename: return ETK_Typename;
+  case TST_ainterface: case TST_amodule:
   case TST_class: return ETK_Class;
   case TST_struct: return ETK_Struct;
   case TST_interface: return ETK_Interface;
@@ -2345,6 +2346,7 @@ TypeWithKeyword::getKeywordForTypeSpec(unsigned TypeSpec) {
 TagTypeKind
 TypeWithKeyword::getTagTypeKindForTypeSpec(unsigned TypeSpec) {
   switch(TypeSpec) {
+  case TST_ainterface: case TST_amodule:
   case TST_class: return TTK_Class;
   case TST_struct: return TTK_Struct;
   case TST_interface: return TTK_Interface;

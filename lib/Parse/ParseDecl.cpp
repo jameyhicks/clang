@@ -2277,6 +2277,7 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
       case DeclSpec::TST_interface:
         TagName="__interface"; FixitTagName = "__interface ";
         TagKind=tok::kw___interface;break;
+      case DeclSpec::TST_ainterface: case DeclSpec::TST_amodule:
       case DeclSpec::TST_class:
         TagName="class" ; FixitTagName = "class " ;TagKind=tok::kw_class ;break;
     }
