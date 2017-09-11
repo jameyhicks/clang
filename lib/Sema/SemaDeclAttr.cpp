@@ -4697,10 +4697,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleSimpleAttribute<AtomiccInterfaceAttr>(S, D, Attr);
     break;
   case AttributeList::AT_AtomiccModule:
-//if (D.getStorageClassSpec() == DeclSpec::SCS_extern)
-//if (D->hasExternalFormalLinkage())
-//printf("[%s:%d] MODEXTERN linkage\n", __FUNCTION__, __LINE__);
-//else printf("[%s:%d] NNNNOT MODEXTERN\n", __FUNCTION__, __LINE__);
     handleSimpleAttribute<AtomiccModuleAttr>(S, D, Attr);
     break;
   case AttributeList::AT_AtomiccEModule:

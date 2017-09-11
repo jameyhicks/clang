@@ -3838,8 +3838,7 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
       // Since mutable is not a viable storage class specifier in C, there is
       // no reason to treat it as an extension. Instead, diagnose as an error.
       Diag(DS.getStorageClassSpecLoc(), diag::err_mutable_nonmember);
-    else if (!DS.isExternInLinkageSpec() && SCS != DeclSpec::SCS_typedef
-        && DS.getTypeSpecType() != DeclSpec::TST_amodule)
+    else if (!DS.isExternInLinkageSpec() && SCS != DeclSpec::SCS_typedef)
       Diag(DS.getStorageClassSpecLoc(), DiagID)
         << DeclSpec::getSpecifierName(SCS);
   }
