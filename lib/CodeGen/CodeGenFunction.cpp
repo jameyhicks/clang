@@ -790,6 +790,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
 
 void CodeGenFunction::EmitFunctionBody(FunctionArgList &Args,
                                        const Stmt *Body) {
+printf("[%s:%d] FFFFFFFFFFFFFFFFFFFFFFFFFF\n", __FUNCTION__, __LINE__);
+Body->dump();
   incrementProfileCounter(Body);
   if (const CompoundStmt *S = dyn_cast<CompoundStmt>(Body))
     EmitCompoundStmtWithoutScope(*S);
@@ -842,6 +844,8 @@ static void TryMarkNoThrow(llvm::Function *F) {
 void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
                                    const CGFunctionInfo &FnInfo) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
+printf("[%s:%d] GGGGGGGGGGGGGGGGGGG\n", __FUNCTION__, __LINE__);
+Fn->dump();
 
   // Check if we should generate debug info for this function.
   if (FD->hasAttr<NoDebugAttr>())
