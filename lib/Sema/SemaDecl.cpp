@@ -4981,8 +4981,8 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
         }
       }
       std::string mname = D.getName().Identifier->getName();
-      if (mname != "VMETHODDECL") {
 printf("[%s:%d] before ActOnFunctionDeclarator: %s\n", __FUNCTION__, __LINE__, mname.c_str());
+      if (mname != "VMETHODDECL") {
       std::string readyString = vmethodFlag ? "__READY" : "__RDY";
       const char *Dummy = nullptr;
       AttributeFactory attrFactory;

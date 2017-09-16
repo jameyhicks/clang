@@ -2398,7 +2398,7 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     auto &After = GetLookAheadToken(2);
     if (!After.isOneOf(tok::semi, tok::comma) &&
         !(AllowDefinition &&
-          After.isOneOf(tok::l_brace, tok::colon, tok::kw_try)))
+          After.isOneOf(tok::l_brace, tok::colon, tok::kw_try, tok::kw_if)))
       return false;
 
     EqualLoc = ConsumeToken();
@@ -2433,7 +2433,7 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     if (Tok.is(tok::l_brace) && !getLangOpts().CPlusPlus11) {
       DefinitionKind = FDK_Definition;
     } else if (DeclaratorInfo.isFunctionDeclarator()) {
-      if (Tok.isOneOf(tok::l_brace, tok::colon, tok::kw_try)) {
+      if (Tok.isOneOf(tok::l_brace, tok::colon, tok::kw_try, tok::kw_if)) {
         DefinitionKind = FDK_Definition;
       } else if (Tok.is(tok::equal)) {
         const Token &KW = NextToken();

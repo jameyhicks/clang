@@ -1810,6 +1810,7 @@ private:
       ForRangeInit *FRI = nullptr);
   Decl *ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope);
   Decl *ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope);
+  Decl *ParseFunctionIfBlock(Decl *Decl, ParseScope &BodyScope); // atomicc
 
   /// \brief When in code-completion, skip parsing of the function/method body
   /// unless the body contains the code-completion point.

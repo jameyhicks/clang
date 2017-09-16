@@ -842,6 +842,7 @@ bool Parser::isStartOfFunctionDefinition(const ParsingDeclarator &Declarator) {
   }
   
   return Tok.is(tok::colon) ||         // X() : Base() {} (used for ctors)
+         Tok.is(tok::kw_if) ||         // atomicc
          Tok.is(tok::kw_try);          // X() try { ... }
 }
 
@@ -1042,7 +1043,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   }
   else if (CurParsedObjCImpl && 
            !TemplateInfo.TemplateParams &&
-           (Tok.is(tok::l_brace) || Tok.is(tok::kw_try) ||
+           (Tok.is(tok::l_brace) || Tok.is(tok::kw_try) || Tok.is(tok::kw_if) ||
             Tok.is(tok::colon)) && 
       Actions.CurContext->isTranslationUnit()) {
     ParseScope BodyScope(this, Scope::FnScope|Scope::DeclScope);
@@ -1065,12 +1066,15 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // Enter a scope for the function body.
   ParseScope BodyScope(this, Scope::FnScope|Scope::DeclScope);
 
+//Diag(Tok, diag::err_expected) << tok::l_brace;//jca
   // Tell the actions module that we have entered a function definition with the
   // specified Declarator for the function.
   Decl *Res = TemplateInfo.TemplateParams?
       Actions.ActOnStartOfFunctionTemplateDef(getCurScope(),
                                               *TemplateInfo.TemplateParams, D)
     : Actions.ActOnStartOfFunctionDef(getCurScope(), D);
+printf("[%s:%d] BBBBBBBBBBBBBBBBBBBBBBBBBBBB\n", __FUNCTION__, __LINE__);
+llvm::outs() << Res;
 
   // Break out of the ParsingDeclarator context before we parse the body.
   D.complete(Res);
@@ -1115,6 +1119,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
 
   if (Tok.is(tok::kw_try))
     return ParseFunctionTryBlock(Res, BodyScope);
+  else if (Tok.is(tok::kw_if))                      // atomicc
+    return ParseFunctionIfBlock(Res, BodyScope);    // atomicc
 
   // If we have a colon, then we're probably parsing a C++
   // ctor-initializer.

@@ -2016,6 +2016,196 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
   return Actions.ActOnFinishFunctionBody(Decl, FnBody.get());
 }
 
+/// ParseFunctionIfBlock - Parse a C++ function-if-block.
+///
+///       function-if-block:
+///         'if' ctor-initializer[opt] compound-statement handler-seq
+///
+Decl *Parser::ParseFunctionIfBlock(Decl *Decl, ParseScope &BodyScope) {
+  assert(Tok.is(tok::kw_if) && "Expected 'if'");
+  SourceLocation IfLoc = ConsumeToken();
+  PrettyDeclStackTraceEntry CrashInfo(Actions, Decl, IfLoc,
+                                      "parsing function if block");
+  // Constructor initializer list?
+  if (Tok.is(tok::colon))
+    ParseConstructorInitializer(Decl);
+  else
+    Actions.ActOnDefaultCtorInitializers(Decl);
+
+  if (SkipFunctionBodies && Actions.canSkipFunctionBody(Decl) &&
+      trySkippingFunctionBody()) {
+    BodyScope.Exit();
+    return Actions.ActOnSkippedFunctionBody(Decl);
+  }
+
+  SourceLocation LParenLoc = Tok.getLocation();
+  assert(Tok.is(tok::l_paren) && "Expected '('");
+  StmtVector Handlers;
+  //DiagnoseAndSkipCXX11Attributes();
+  SourceLocation LBraceLoc = Tok.getLocation();
+  PrettyStackTraceLoc CrashInfo2(PP.getSourceManager(), Tok.getLocation(), "in function if ('{}')"); 
+  Sema::FPContractStateRAII SaveFPContractState(Actions);
+  InMessageExpressionRAIIObject InMessage(*this, false);
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.consumeOpen()) {
+assert(false && "not open");
+    //return StmtError();
+  }
+  Sema::CompoundScopeRAII CompoundScope(Actions);
+  StmtVector Stmts;
+  StmtResult R;
+  ParenBraceBracketBalancer BalancerRAIIObj(*this); 
+  ParsedAttributesWithRange Attrs(AttrFactory);
+  StmtResult Res;
+  ExprResult Rexp;
+  SourceLocation ReturnLoc = Tok.getLocation();
+  Rexp = ParseExpression();
+  if (Rexp.isInvalid()) {
+      SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
+      Res = StmtError();
+  }
+  else {
+      //Res = Actions.ActOnReturnStmt(ReturnLoc, Rexp.get(), getCurScope());
+printf("[%s:%d] REETTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n", __FUNCTION__, __LINE__);
+//Res = Actions.ActOnCapScopeReturnStmt(ReturnLoc, Rexp.get());
+#if 0
+StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
+  CapturingScopeInfo *CurCap = cast<CapturingScopeInfo>(getCurFunction());
+  QualType FnRetType = CurCap->ReturnType;
+  const VarDecl *NRVOCandidate = nullptr;
+  if (FnRetType->isDependentType()) {
+  } else if (!RetValExp->isTypeDependent()) {
+    NRVOCandidate = getCopyElisionCandidate(FnRetType, RetValExp, false);
+    InitializedEntity Entity = InitializedEntity::InitializeResult(ReturnLoc, FnRetType, NRVOCandidate != nullptr);
+    ExprResult Res = PerformMoveOrCopyInitialization(Entity, NRVOCandidate, FnRetType, RetValExp);
+    if (Res.isInvalid()) {
+      return StmtError();
+    }
+    RetValExp = Res.get();
+    CheckReturnValExpr(RetValExp, FnRetType, ReturnLoc);
+  }
+  if (RetValExp) {
+    ExprResult ER = ActOnFinishFullExpr(RetValExp, ReturnLoc);
+    if (ER.isInvalid())
+      return StmtError();
+    RetValExp = ER.get();
+  }
+  ReturnStmt *Result = new (Context) ReturnStmt(ReturnLoc, RetValExp, NRVOCandidate); 
+  return Result;
+}
+StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
+  if (RetValExp && DiagnoseUnexpandedParameterPack(RetValExp))
+    return StmtError();
+  if (isa<CapturingScopeInfo>(getCurFunction()))
+    return ActOnCapScopeReturnStmt(ReturnLoc, RetValExp);
+  QualType FnRetType;
+  QualType RelatedRetType;
+  const AttrVec *Attrs = nullptr;
+  bool isObjCMethod = false;
+  if (const FunctionDecl *FD = getCurFunctionDecl()) {
+    FnRetType = FD->getReturnType();
+    if (FD->hasAttrs())
+      Attrs = &FD->getAttrs();
+    if (FD->isNoReturn())
+      Diag(ReturnLoc, diag::warn_noreturn_function_has_return_expr) << FD->getDeclName();
+  } else if (ObjCMethodDecl *MD = getCurMethodDecl()) {
+    FnRetType = MD->getReturnType();
+    isObjCMethod = true;
+    if (MD->hasAttrs())
+      Attrs = &MD->getAttrs();
+  } else // If we don't have a function/method context, bail.
+    return StmtError();
+  if (getLangOpts().CPlusPlus14) {
+    if (AutoType *AT = FnRetType->getContainedAutoType()) {
+      FunctionDecl *FD = cast<FunctionDecl>(CurContext);
+      if (DeduceFunctionTypeFromReturnExpr(FD, ReturnLoc, RetValExp, AT)) {
+        FD->setInvalidDecl();
+        return StmtError();
+      } else {
+        FnRetType = FD->getReturnType();
+      }
+    }
+  }
+  bool HasDependentReturnType = FnRetType->isDependentType();
+  ReturnStmt *Result = nullptr;
+  if (FnRetType->isVoidType()) {
+    if (RetValExp) {
+      if (RetValExp) {
+        ExprResult ER = ActOnFinishFullExpr(RetValExp, ReturnLoc);
+        if (ER.isInvalid())
+          return StmtError();
+        RetValExp = ER.get();
+      }
+    } 
+    Result = new (Context) ReturnStmt(ReturnLoc, RetValExp, nullptr);
+  } else if (!RetValExp && !HasDependentReturnType) {
+  } else {
+    assert(RetValExp || HasDependentReturnType);
+    const VarDecl *NRVOCandidate = nullptr;
+    QualType RetType = RelatedRetType.isNull() ? FnRetType : RelatedRetType;
+    // C99 6.8.6.4p3(136): The return statement is not an assignment. The
+    // overlap restriction of subclause 6.5.16.1 does not apply to the case of
+    // function return.
+    // In C++ the return statement is handled via a copy initialization,
+    // the C version of which boils down to CheckSingleAssignmentConstraints.
+    if (RetValExp)
+      NRVOCandidate = getCopyElisionCandidate(FnRetType, RetValExp, false);
+    if (!HasDependentReturnType && !RetValExp->isTypeDependent()) {
+      // we have a non-void function with an expression, continue checking
+      InitializedEntity Entity = InitializedEntity::InitializeResult(ReturnLoc, RetType, NRVOCandidate != nullptr);
+      ExprResult Res = PerformMoveOrCopyInitialization(Entity, NRVOCandidate, RetType, RetValExp);
+      if (Res.isInvalid()) {
+        // FIXME: Clean up temporaries here anyway?
+        return StmtError();
+      }
+      RetValExp = Res.getAs<Expr>();
+
+      // If we have a related result type, we need to implicitly
+      // convert back to the formal result type.  We can't pretend to
+      // initialize the result again --- we might end double-retaining
+      // --- so instead we initialize a notional temporary.
+      if (!RelatedRetType.isNull()) {
+        Entity = InitializedEntity::InitializeRelatedResult(getCurMethodDecl(), FnRetType);
+        Res = PerformCopyInitialization(Entity, ReturnLoc, RetValExp);
+        if (Res.isInvalid()) {
+          // FIXME: Clean up temporaries here anyway?
+          return StmtError();
+        }
+        RetValExp = Res.getAs<Expr>();
+      } 
+      CheckReturnValExpr(RetValExp, FnRetType, ReturnLoc, isObjCMethod, Attrs, getCurFunctionDecl());
+    } 
+    if (RetValExp) {
+      ExprResult ER = ActOnFinishFullExpr(RetValExp, ReturnLoc);
+      if (ER.isInvalid())
+        return StmtError();
+      RetValExp = ER.get();
+    }
+    Result = new (Context) ReturnStmt(ReturnLoc, RetValExp, NRVOCandidate);
+  } 
+  return Result;
+}
+#endif
+  }
+  //R = Actions.ProcessStmtAttributes(Res.get(), Attrs.getList(), Attrs.Range);
+  if (Res.isUsable())
+    Stmts.push_back(Res.get());
+  SourceLocation CloseLoc = Tok.getLocation();
+  if (!T.consumeClose())
+    CloseLoc = T.getCloseLocation();
+  StmtResult FnBody(Actions.ActOnCompoundStmt(T.getOpenLocation(), CloseLoc, Stmts, true));
+  if (!FnBody.isInvalid())
+    FnBody = Actions.ActOnCXXCatchBlock(LBraceLoc, nullptr, FnBody.get());
+  if (!FnBody.isInvalid())
+    Handlers.push_back(FnBody.get());
+  if (FnBody.isInvalid()) {
+    Sema::CompoundScopeRAII CompoundScope(Actions);
+    FnBody = Actions.ActOnCompoundStmt(LParenLoc, LParenLoc, None, false);
+  }
+  BodyScope.Exit();
+  return Actions.ActOnFinishFunctionBody(Decl, FnBody.get());
+}
+
 bool Parser::trySkippingFunctionBody() {
   assert(Tok.is(tok::l_brace));
   assert(SkipFunctionBodies &&
