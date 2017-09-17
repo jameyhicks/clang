@@ -2038,41 +2038,37 @@ Decl *Parser::ParseFunctionIfBlock(Decl *Decl, ParseScope &BodyScope) {
     return Actions.ActOnSkippedFunctionBody(Decl);
   }
 
-  SourceLocation LParenLoc = Tok.getLocation();
   assert(Tok.is(tok::l_paren) && "Expected '('");
-  StmtVector Handlers;
-  SourceLocation LBraceLoc = Tok.getLocation();
-  PrettyStackTraceLoc CrashInfo2(PP.getSourceManager(), Tok.getLocation(), "in function if ('{}')"); 
-  Sema::FPContractStateRAII SaveFPContractState(Actions);
-  InMessageExpressionRAIIObject InMessage(*this, false);
   BalancedDelimiterTracker T(*this, tok::l_paren);
   if (T.consumeOpen()) {
 assert(false && "not open");
     //return StmtError();
   }
-  Sema::CompoundScopeRAII CompoundScope(Actions);
   StmtVector Stmts;
-  ParenBraceBracketBalancer BalancerRAIIObj(*this); 
-  ParsedAttributesWithRange Attrs(AttrFactory);
+  //ParenBraceBracketBalancer BalancerRAIIObj(*this); 
+  //ParsedAttributesWithRange Attrs(AttrFactory);
   StmtResult Res;
-  ExprResult Rexp;
   SourceLocation ReturnLoc = Tok.getLocation();
-  Rexp = ParseExpression();
+  ExprResult Rexp = ParseExpression();
   if (Rexp.isInvalid()) {
       SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
       Res = StmtError();
   }
   else {
       Res = Rexp.get();
+      //Res = Actions.BuildReturnStmt(ReturnLoc, Rexp.get());
+      Stmts.push_back(Res.get());
   }
-  if (Res.isUsable())
-    Stmts.push_back(Res.get());
-  SourceLocation CloseLoc = Tok.getLocation();
   if (!T.consumeClose())
-    CloseLoc = T.getCloseLocation();
-  StmtResult FnBody(Actions.ActOnCompoundStmt(T.getOpenLocation(), CloseLoc, Stmts, true));
-  if (!FnBody.isInvalid())
-    Handlers.push_back(FnBody.get());
+    {}
+  assert(Tok.is(tok::l_brace));
+  SourceLocation LBraceLoc = Tok.getLocation();
+  StmtResult FnBody(ParseCompoundStatementBody());
+  // If the function body could not be parsed, make a bogus compoundstmt.
+  if (FnBody.isInvalid()) {
+    Sema::CompoundScopeRAII CompoundScope(Actions);
+    FnBody = Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc, None, false);
+  }
   BodyScope.Exit();
   return Actions.ActOnFinishFunctionBody(Decl, FnBody.get());
 }
