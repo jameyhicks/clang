@@ -989,7 +989,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // we may have a colon.
   if (Tok.isNot(tok::l_brace) && 
       (!getLangOpts().CPlusPlus ||
-       (Tok.isNot(tok::colon) && Tok.isNot(tok::kw_try) &&
+       (Tok.isNot(tok::colon) && Tok.isNot(tok::kw_try) && Tok.isNot(tok::kw_if) &&
         Tok.isNot(tok::equal)))) {
     Diag(Tok, diag::err_expected_fn_body);
 
@@ -1066,15 +1066,14 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // Enter a scope for the function body.
   ParseScope BodyScope(this, Scope::FnScope|Scope::DeclScope);
 
-//Diag(Tok, diag::err_expected) << tok::l_brace;//jca
   // Tell the actions module that we have entered a function definition with the
   // specified Declarator for the function.
   Decl *Res = TemplateInfo.TemplateParams?
       Actions.ActOnStartOfFunctionTemplateDef(getCurScope(),
                                               *TemplateInfo.TemplateParams, D)
     : Actions.ActOnStartOfFunctionDef(getCurScope(), D);
-printf("[%s:%d] BBBBBBBBBBBBBBBBBBBBBBBBBBBB\n", __FUNCTION__, __LINE__);
-llvm::outs() << Res;
+//printf("[%s:%d] BBBBBBBBBBBBBBBBBBBBBBBBBBBB\n", __FUNCTION__, __LINE__);
+//llvm::outs() << Res;
 
   // Break out of the ParsingDeclarator context before we parse the body.
   D.complete(Res);

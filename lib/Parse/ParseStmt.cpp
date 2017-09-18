@@ -2023,6 +2023,10 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
 ///
 Decl *Parser::ParseFunctionIfBlock(Decl *Decl, ParseScope &BodyScope) {
   assert(Tok.is(tok::kw_if) && "Expected 'if'");
+  std::string mname;
+  if (const CXXMethodDecl *mdecl = cast<CXXMethodDecl>(Decl)) {
+      mname = mdecl->getName();
+  }
   SourceLocation IfLoc = ConsumeToken();
   PrettyDeclStackTraceEntry CrashInfo(Actions, Decl, IfLoc,
                                       "parsing function if block");
@@ -2044,20 +2048,16 @@ Decl *Parser::ParseFunctionIfBlock(Decl *Decl, ParseScope &BodyScope) {
 assert(false && "not open");
     //return StmtError();
   }
-  StmtVector Stmts;
-  //ParenBraceBracketBalancer BalancerRAIIObj(*this); 
-  //ParsedAttributesWithRange Attrs(AttrFactory);
-  StmtResult Res;
   SourceLocation ReturnLoc = Tok.getLocation();
   ExprResult Rexp = ParseExpression();
   if (Rexp.isInvalid()) {
       SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
-      Res = StmtError();
   }
   else {
-      Res = Rexp.get();
+      //Res = Rexp.get();
+printf("[%s:%d] IfBlock '%s'\n", __FUNCTION__, __LINE__, mname.c_str());
+Decl->dump();
       //Res = Actions.BuildReturnStmt(ReturnLoc, Rexp.get());
-      Stmts.push_back(Res.get());
   }
   if (!T.consumeClose())
     {}
