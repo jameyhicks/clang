@@ -24,6 +24,8 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/SmallString.h"
+#include "clang/Sema/Lookup.h" // LookupResult for adding 'xxx_RDY()'
+#include "clang/AST/Stmt.h"    // CompoundStmt
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
@@ -2021,25 +2023,66 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
 ///       function-if-block:
 ///         'if' ctor-initializer[opt] compound-statement handler-seq
 ///
-Decl *Parser::ParseFunctionIfBlock(Decl *Decl, ParseScope &BodyScope) {
+static FunctionDecl *buildGFunction(Sema *sema, std::string mname, SourceLocation loc)
+{
+  const char *Dummy = nullptr;
+  AttributeFactory attrFactory;
+  ParsedAttributes parsedAttrs(attrFactory);
+  unsigned DiagID;
+  SourceLocation NoLoc;
+
+  DeclSpec NDSboolp(attrFactory);
+  (void)NDSboolp.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, sema->Context.getPrintingPolicy());
+  Declarator Dboolp(NDSboolp, Declarator::MemberContext);
+  Dboolp.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
+
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+  std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
+  ArrayRef<DeclaratorChunk::ParamInfo> pparam = llvm::makeArrayRef(initParamTypes);
+  DeclSpec NDS(attrFactory);
+  (void)NDS.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, sema->Context.getPrintingPolicy());
+  Declarator DNew(NDS, Declarator::MemberContext);
+  DNew.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
+          (DeclaratorChunk::ParamInfo *)pparam.data(), pparam.size(),
+          NoLoc, loc, 0, true, loc, loc, loc, loc, loc, EST_None, loc,
+          nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew), parsedAttrs, loc);
+  DNew.setFunctionDefinitionKind(FDK_Declaration);
+  IdentifierInfo &IDI = sema->Context.Idents.get(mname);
+  DNew.SetIdentifier(&IDI, loc);
+  LookupResult Previous(*sema, sema->GetNameForDeclarator(DNew), Sema::LookupOrdinaryName, Sema::ForRedeclaration);
+  bool AddToScope = true;
+  MultiTemplateParamsArg TemplateParams(nullptr, (size_t)0);
+  auto New = sema->ActOnFunctionDeclarator(sema->getCurScope(), DNew,
+      sema->CurContext, sema->GetTypeForDeclarator(DNew, sema->getCurScope()), Previous, TemplateParams, AddToScope);
+  New->addAttr(UsedAttr::CreateImplicit(sema->Context));
+  sema->CurContext->addDecl(New);
+  New->setIsUsed();
+  New->setAccess(AS_public);
+  return New->getAsFunction();
+
+printf("[%s:%d] JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n", __FUNCTION__, __LINE__);
+New->dump();
+}
+
+Decl *Parser::ParseFunctionIfBlock(Decl *aDecl, ParseScope &BodyScope) {
   assert(Tok.is(tok::kw_if) && "Expected 'if'");
   std::string mname;
-  if (const CXXMethodDecl *mdecl = cast<CXXMethodDecl>(Decl)) {
+  if (const CXXMethodDecl *mdecl = cast<CXXMethodDecl>(aDecl)) {
       mname = mdecl->getName();
   }
   SourceLocation IfLoc = ConsumeToken();
-  PrettyDeclStackTraceEntry CrashInfo(Actions, Decl, IfLoc,
+  PrettyDeclStackTraceEntry CrashInfo(Actions, aDecl, IfLoc,
                                       "parsing function if block");
   // Constructor initializer list?
   if (Tok.is(tok::colon))
-    ParseConstructorInitializer(Decl);
+    ParseConstructorInitializer(aDecl);
   else
-    Actions.ActOnDefaultCtorInitializers(Decl);
+    Actions.ActOnDefaultCtorInitializers(aDecl);
 
-  if (SkipFunctionBodies && Actions.canSkipFunctionBody(Decl) &&
+  if (SkipFunctionBodies && Actions.canSkipFunctionBody(aDecl) &&
       trySkippingFunctionBody()) {
     BodyScope.Exit();
-    return Actions.ActOnSkippedFunctionBody(Decl);
+    return Actions.ActOnSkippedFunctionBody(aDecl);
   }
 
   assert(Tok.is(tok::l_paren) && "Expected '('");
@@ -2050,14 +2093,14 @@ assert(false && "not open");
   }
   SourceLocation ReturnLoc = Tok.getLocation();
   ExprResult Rexp = ParseExpression();
+  FunctionDecl *FD = nullptr;
   if (Rexp.isInvalid()) {
       SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
   }
   else {
-      //Res = Rexp.get();
 printf("[%s:%d] IfBlock '%s'\n", __FUNCTION__, __LINE__, mname.c_str());
-Decl->dump();
-      //Res = Actions.BuildReturnStmt(ReturnLoc, Rexp.get());
+aDecl->dump();
+FD = buildGFunction(&Actions, mname + "__RDYZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ", ReturnLoc);
   }
   if (!T.consumeClose())
     {}
@@ -2070,7 +2113,15 @@ Decl->dump();
     FnBody = Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc, None, false);
   }
   BodyScope.Exit();
-  return Actions.ActOnFinishFunctionBody(Decl, FnBody.get());
+  Decl *ret = Actions.ActOnFinishFunctionBody(aDecl, FnBody.get());
+  std::vector<Stmt *> compoundList;
+  StmtResult retStmt = Actions.BuildReturnStmt(ReturnLoc, Rexp.get());
+  compoundList.push_back(retStmt.get());
+  if (FD)
+      FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, llvm::makeArrayRef(compoundList), ReturnLoc, ReturnLoc));
+printf("[%s:%d] QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ\n", __FUNCTION__, __LINE__);
+FD->dump();
+  return ret;
 }
 
 bool Parser::trySkippingFunctionBody() {
