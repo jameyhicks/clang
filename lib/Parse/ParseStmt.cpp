@@ -2023,47 +2023,6 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
 ///       function-if-block:
 ///         'if' ctor-initializer[opt] compound-statement handler-seq
 ///
-static FunctionDecl *buildGFunction(Sema *sema, std::string mname, SourceLocation loc)
-{
-  const char *Dummy = nullptr;
-  AttributeFactory attrFactory;
-  ParsedAttributes parsedAttrs(attrFactory);
-  unsigned DiagID;
-  SourceLocation NoLoc;
-
-  DeclSpec NDSboolp(attrFactory);
-  (void)NDSboolp.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, sema->Context.getPrintingPolicy());
-  Declarator Dboolp(NDSboolp, Declarator::MemberContext);
-  Dboolp.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
-
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-  std::vector<DeclaratorChunk::ParamInfo> initParamTypes;
-  ArrayRef<DeclaratorChunk::ParamInfo> pparam = llvm::makeArrayRef(initParamTypes);
-  DeclSpec NDS(attrFactory);
-  (void)NDS.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, sema->Context.getPrintingPolicy());
-  Declarator DNew(NDS, Declarator::MemberContext);
-  DNew.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
-          (DeclaratorChunk::ParamInfo *)pparam.data(), pparam.size(),
-          NoLoc, loc, 0, true, loc, loc, loc, loc, loc, EST_None, loc,
-          nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew), parsedAttrs, loc);
-  DNew.setFunctionDefinitionKind(FDK_Declaration);
-  IdentifierInfo &IDI = sema->Context.Idents.get(mname);
-  DNew.SetIdentifier(&IDI, loc);
-  LookupResult Previous(*sema, sema->GetNameForDeclarator(DNew), Sema::LookupOrdinaryName, Sema::ForRedeclaration);
-  bool AddToScope = true;
-  MultiTemplateParamsArg TemplateParams(nullptr, (size_t)0);
-  auto New = sema->ActOnFunctionDeclarator(sema->getCurScope(), DNew,
-      sema->CurContext, sema->GetTypeForDeclarator(DNew, sema->getCurScope()), Previous, TemplateParams, AddToScope);
-  New->addAttr(UsedAttr::CreateImplicit(sema->Context));
-  sema->CurContext->addDecl(New);
-  New->setIsUsed();
-  New->setAccess(AS_public);
-  return New->getAsFunction();
-
-printf("[%s:%d] JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n", __FUNCTION__, __LINE__);
-New->dump();
-}
-
 Decl *Parser::ParseFunctionIfBlock(Decl *aDecl, ParseScope &BodyScope) {
   assert(Tok.is(tok::kw_if) && "Expected 'if'");
   std::string mname;
@@ -2091,16 +2050,50 @@ Decl *Parser::ParseFunctionIfBlock(Decl *aDecl, ParseScope &BodyScope) {
 assert(false && "not open");
     //return StmtError();
   }
-  SourceLocation ReturnLoc = Tok.getLocation();
+  SourceLocation loc = Tok.getLocation();
   ExprResult Rexp = ParseExpression();
-  FunctionDecl *FD = nullptr;
   if (Rexp.isInvalid()) {
       SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
   }
   else {
 printf("[%s:%d] IfBlock '%s'\n", __FUNCTION__, __LINE__, mname.c_str());
+      const char *Dummy = nullptr;
+      AttributeFactory attrFactory;
+      ParsedAttributes parsedAttrs(attrFactory);
+      unsigned DiagID;
+      SourceLocation NoLoc;
+
+      DeclSpec NDSboolp(attrFactory);
+      (void)NDSboolp.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      Declarator Dboolp(NDSboolp, Declarator::MemberContext);
+      Dboolp.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
+
+      DeclSpec NDS(attrFactory);
+      (void)NDS.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      Declarator DNew(NDS, Declarator::MemberContext);
+      DNew.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
+          nullptr, 0, NoLoc, loc, 0, true, loc, loc, loc, loc, loc, EST_None, loc,
+          nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew), parsedAttrs, loc);
+      DNew.setFunctionDefinitionKind(FDK_Declaration);
+      IdentifierInfo &IDI = Actions.Context.Idents.get(mname + "__RDYZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
+      DNew.SetIdentifier(&IDI, loc);
+      LookupResult Previous(Actions, Actions.GetNameForDeclarator(DNew), Sema::LookupOrdinaryName, Sema::ForRedeclaration);
+      bool AddToScope = true;
+      MultiTemplateParamsArg TemplateParams(nullptr, (size_t)0);
+      auto New = Actions.ActOnFunctionDeclarator(Actions.getCurScope(), DNew,
+          Actions.CurContext, Actions.GetTypeForDeclarator(DNew, Actions.getCurScope()), Previous, TemplateParams, AddToScope);
+      FunctionDecl *FD = New->getAsFunction();
+      Actions.CurContext->addDecl(FD);
+      FD->setIsUsed();
+      FD->setAccess(AS_public);
+      FD->setAttrs(aDecl->getAttrs());
+      std::vector<Stmt *> compoundList;
+      StmtResult retStmt = new (Actions.Context) ReturnStmt(loc, Rexp.get(), nullptr);
+      compoundList.push_back(retStmt.get());
+      FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, llvm::makeArrayRef(compoundList), loc, loc));
+printf("[%s:%d] QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ\n", __FUNCTION__, __LINE__);
 aDecl->dump();
-FD = buildGFunction(&Actions, mname + "__RDYZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ", ReturnLoc);
+FD->dump();
   }
   if (!T.consumeClose())
     {}
@@ -2113,15 +2106,7 @@ FD = buildGFunction(&Actions, mname + "__RDYZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
     FnBody = Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc, None, false);
   }
   BodyScope.Exit();
-  Decl *ret = Actions.ActOnFinishFunctionBody(aDecl, FnBody.get());
-  std::vector<Stmt *> compoundList;
-  StmtResult retStmt = Actions.BuildReturnStmt(ReturnLoc, Rexp.get());
-  compoundList.push_back(retStmt.get());
-  if (FD)
-      FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, llvm::makeArrayRef(compoundList), ReturnLoc, ReturnLoc));
-printf("[%s:%d] QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ\n", __FUNCTION__, __LINE__);
-FD->dump();
-  return ret;
+  return Actions.ActOnFinishFunctionBody(aDecl, FnBody.get());
 }
 
 bool Parser::trySkippingFunctionBody() {
