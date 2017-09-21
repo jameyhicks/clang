@@ -515,7 +515,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);
 
   if (Tok.is(tok::kw_if)) {
-printf("[%s:%d] RRRRRRRRRRRRRRRRRRR\n", __FUNCTION__, __LINE__);
     ParseFunctionIfBlock(LM.D, FnScope);
 
     while (Tok.isNot(tok::eof))

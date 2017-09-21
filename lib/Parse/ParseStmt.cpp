@@ -2056,44 +2056,49 @@ assert(false && "not open");
       SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
   }
   else {
-printf("[%s:%d] IfBlock '%s'\n", __FUNCTION__, __LINE__, mname.c_str());
       const char *Dummy = nullptr;
       AttributeFactory attrFactory;
       ParsedAttributes parsedAttrs(attrFactory);
       unsigned DiagID;
       SourceLocation NoLoc;
+      DeclContext *DC = aDecl->getLexicalDeclContext();
 
-      DeclSpec NDSboolp(attrFactory);
-      (void)NDSboolp.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
-      Declarator Dboolp(NDSboolp, Declarator::MemberContext);
-      Dboolp.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
+      //DeclSpec NDSboolp(attrFactory);
+      //(void)NDSboolp.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy,
+          //DiagID, Actions.Context.getPrintingPolicy());
+      //Declarator Dboolp(NDSboolp, Declarator::MemberContext);
+      //Dboolp.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
 
+      IdentifierInfo &AttrName = Actions.Context.Idents.get("__vectorcall");
+      parsedAttrs.addNew(&AttrName, loc, nullptr, loc, nullptr, 0, AttributeList::AS_Keyword);
       DeclSpec NDS(attrFactory);
-      (void)NDS.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
+      (void)NDS.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy,
+          DiagID, Actions.Context.getPrintingPolicy());
       Declarator DNew(NDS, Declarator::MemberContext);
       DNew.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
           nullptr, 0, NoLoc, loc, 0, true, loc, loc, loc, loc, loc, EST_None, loc,
           nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew), parsedAttrs, loc);
       DNew.setFunctionDefinitionKind(FDK_Declaration);
-      IdentifierInfo &IDI = Actions.Context.Idents.get(mname + "__RDYZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
+      IdentifierInfo &IDI = Actions.Context.Idents.get(mname + "__RDYZZ");
       DNew.SetIdentifier(&IDI, loc);
-      LookupResult Previous(Actions, Actions.GetNameForDeclarator(DNew), Sema::LookupOrdinaryName, Sema::ForRedeclaration);
+      LookupResult Previous(Actions, Actions.GetNameForDeclarator(DNew),
+          Sema::LookupOrdinaryName, Sema::ForRedeclaration);
       bool AddToScope = true;
       MultiTemplateParamsArg TemplateParams(nullptr, (size_t)0);
       auto New = Actions.ActOnFunctionDeclarator(Actions.getCurScope(), DNew,
-          Actions.CurContext, Actions.GetTypeForDeclarator(DNew, Actions.getCurScope()), Previous, TemplateParams, AddToScope);
+          DC, Actions.GetTypeForDeclarator(DNew, Actions.getCurScope()),
+          Previous, TemplateParams, AddToScope);
       FunctionDecl *FD = New->getAsFunction();
-      Actions.CurContext->addDecl(FD);
       FD->setIsUsed();
       FD->setAccess(AS_public);
       FD->setAttrs(aDecl->getAttrs());
+      FD->setLexicalDeclContext(DC);
       std::vector<Stmt *> compoundList;
       StmtResult retStmt = new (Actions.Context) ReturnStmt(loc, Rexp.get(), nullptr);
       compoundList.push_back(retStmt.get());
-      FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, llvm::makeArrayRef(compoundList), loc, loc));
-printf("[%s:%d] QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ\n", __FUNCTION__, __LINE__);
-aDecl->dump();
-FD->dump();
+      FD->setBody(new (Actions.Context)
+          class CompoundStmt(Actions.Context, llvm::makeArrayRef(compoundList), loc, loc));
+      DC->addDecl(New);
   }
   if (!T.consumeClose())
     {}
