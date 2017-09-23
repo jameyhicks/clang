@@ -12577,10 +12577,11 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
                 }
             }
         }
-        if (!item->hasBody())
-            item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(compoundList), loc, loc));
+        //if (!item->hasBody())
+            //item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(compoundList), loc, loc));
 //item->dump();
-        Consumer.HandleInlineMethodDefinition(item);
+        if (item->hasBody())
+            Consumer.HandleInlineMethodDefinition(item);
       }
     }
     //for (auto item: cdecl->fields()) { item->dump(); }

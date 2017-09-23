@@ -2018,43 +2018,46 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
   return Actions.ActOnFinishFunctionBody(Decl, FnBody.get());
 }
 
-void createGuardMethod(Sema &Actions, DeclContext *DC, const AttrVec &DAttrs, SourceLocation loc, std::string mname, Expr *expr)
+FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, const AttrVec &DAttrs, SourceLocation loc, std::string mname, Expr *expr)
 {
-      StmtResult retStmt = new (Actions.Context) ReturnStmt(loc, expr, nullptr);
-      SmallVector<Stmt*, 32> Stmts;
-      Stmts.push_back(retStmt.get());
-      const char *Dummy = nullptr;
-      AttributeFactory attrFactory;
-      ParsedAttributes parsedAttrs(attrFactory);
-      unsigned DiagID;
-      SourceLocation NoLoc;
+    const char *Dummy = nullptr;
+    AttributeFactory attrFactory;
+    ParsedAttributes parsedAttrs(attrFactory);
+    unsigned DiagID;
+    SourceLocation NoLoc;
 
-      IdentifierInfo &AttrName = Actions.Context.Idents.get("__vectorcall");
-      parsedAttrs.addNew(&AttrName, loc, nullptr, loc, nullptr, 0, AttributeList::AS_Keyword);
-      DeclSpec DSBool(attrFactory);
-      (void)DSBool.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy,
-          DiagID, Actions.Context.getPrintingPolicy());
-      Declarator DFunc(DSBool, Declarator::MemberContext);
-      DFunc.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
-          nullptr, 0, NoLoc, loc, 0, true, loc, loc, loc, loc, loc, EST_None, loc,
-          nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DFunc), parsedAttrs, loc);
-      DFunc.setFunctionDefinitionKind(FDK_Declaration);
-      IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
-      DFunc.SetIdentifier(&funcName, loc);
-      LookupResult Previous(Actions, Actions.GetNameForDeclarator(DFunc),
-          Sema::LookupOrdinaryName, Sema::ForRedeclaration);
-      bool AddToScope = true;
-      MultiTemplateParamsArg TemplateParams(nullptr, (size_t)0);
-      auto New = Actions.ActOnFunctionDeclarator(Actions.getCurScope(), DFunc,
-          DC, Actions.GetTypeForDeclarator(DFunc, Actions.getCurScope()),
-          Previous, TemplateParams, AddToScope);
-      FunctionDecl *FD = New->getAsFunction();
-      FD->setIsUsed();
-      FD->setAccess(AS_public);
-      FD->setAttrs(DAttrs);
-      FD->setLexicalDeclContext(DC);
-      FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
-      DC->addDecl(New);
+    IdentifierInfo &AttrName = Actions.Context.Idents.get("__vectorcall");
+    parsedAttrs.addNew(&AttrName, loc, nullptr, loc, nullptr, 0, AttributeList::AS_Keyword);
+    DeclSpec DSBool(attrFactory);
+    (void)DSBool.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy,
+        DiagID, Actions.Context.getPrintingPolicy());
+    Declarator DFunc(DSBool, Declarator::MemberContext);
+    DFunc.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
+        nullptr, 0, NoLoc, loc, 0, true, loc, loc, loc, loc, loc, EST_None, loc,
+        nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DFunc), parsedAttrs, loc);
+    DFunc.setFunctionDefinitionKind(expr ? FDK_Declaration : FDK_Definition);
+    IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
+    DFunc.SetIdentifier(&funcName, loc);
+    LookupResult Previous(Actions, Actions.GetNameForDeclarator(DFunc),
+        Sema::LookupOrdinaryName, Sema::ForRedeclaration);
+    bool AddToScope = true;
+    MultiTemplateParamsArg TemplateParams(nullptr, (size_t)0);
+    auto New = Actions.ActOnFunctionDeclarator(Actions.getCurScope(), DFunc,
+        DC, Actions.GetTypeForDeclarator(DFunc, Actions.getCurScope()),
+        Previous, TemplateParams, AddToScope);
+    FunctionDecl *FD = New->getAsFunction();
+    FD->setIsUsed();
+    FD->setAccess(AS_public);
+    FD->setAttrs(DAttrs);
+    FD->setLexicalDeclContext(DC);
+    if (expr) {
+        StmtResult retStmt = new (Actions.Context) ReturnStmt(loc, expr, nullptr);
+        SmallVector<Stmt*, 32> Stmts;
+        Stmts.push_back(retStmt.get());
+        FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
+    }
+    DC->addDecl(New);
+    return FD;
 }
 /// ParseFunctionIfBlock - Parse a C++ function-if-block.
 ///

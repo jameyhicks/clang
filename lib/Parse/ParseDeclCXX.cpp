@@ -28,6 +28,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "clang/Sema/Lookup.h" // LookupResult for adding 'init()'
 using namespace clang;
+FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, const AttrVec &DAttrs, SourceLocation loc, std::string mname, Expr *expr);
 
 /// ParseNamespace - We know that the current token is a namespace keyword. This
 /// may either be a top level namespace or a block-level namespace alias. If
@@ -3096,9 +3097,14 @@ printf("[%s:%d] BEFOREENDMETHODLISTPROCESSING\n", __FUNCTION__, __LINE__);
       ADDPARAM(Dconstcharp);
       ADDPARAM(Dvoidp);
       for (auto item: Actions.CurContext->decls())
-          if (auto Method = dyn_cast<CXXMethodDecl>(item))
-          if (Method->getName() != "VMETHODDECL")
-              ADDPARAM(Dunsignedlong);
+          if (auto Method = dyn_cast<CXXMethodDecl>(item)) {
+              std::string mname = Method->getName();
+printf("[%s:%d] name %s\n", __FUNCTION__, __LINE__, mname.c_str());
+              if (mname != "VMETHODDECL" && (mname.length() < 7 || mname.substr(mname.length()-7) != "__RDYYY")) {
+                  ADDPARAM(Dunsignedlong);
+                  FunctionDecl *FD = createGuardMethod(Actions, Actions.CurContext, Method->getAttrs(), loc, mname + "__RDYYY", nullptr);
+              }
+          }
       ArrayRef<DeclaratorChunk::ParamInfo> pparam = llvm::makeArrayRef(initParamTypes);
       DeclSpec NDS(attrFactory);
       (void)NDS.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, Actions.Context.getPrintingPolicy());
