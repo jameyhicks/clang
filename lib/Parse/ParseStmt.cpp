@@ -24,7 +24,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/SmallString.h"
-#include "clang/Sema/Lookup.h" // LookupResult for adding 'xxx_RDY()'
+#include "clang/Sema/Lookup.h" // LookupResult for adding 'xxx__RDY()'
 #include "clang/AST/Stmt.h"    // CompoundStmt
 using namespace clang;
 

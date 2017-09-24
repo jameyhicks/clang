@@ -4712,58 +4712,6 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
   return false;
 }
 
-static void buildFunction(Sema *sema, Declarator *D, std::string mname, bool rdy)
-{
-  const char *Dummy = nullptr;
-  AttributeFactory attrFactory;
-  ParsedAttributes parsedAttrs(attrFactory);
-  unsigned DiagID;
-  SourceLocation loc = D->getLocStart();
-  SourceLocation NoLoc;
-  DeclSpec NDSvoidp(attrFactory);
-  (void)NDSvoidp.SetTypeSpecType(DeclSpec::TST_void, loc, Dummy, DiagID, sema->Context.getPrintingPolicy());
-  Declarator Dvoidp(NDSvoidp, Declarator::MemberContext);
-  Dvoidp.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
-
-  std::vector<DeclaratorChunk::ParamInfo> ptype2;
-  TypeSourceInfo *ptmp = sema->GetTypeForDeclarator(Dvoidp, sema->getCurScope());
-  ptype2.push_back(DeclaratorChunk::ParamInfo(nullptr, loc,
-      ParmVarDecl::Create(sema->Context, sema->CurContext, loc, loc, nullptr, ptmp->getType(), ptmp, SC_None, nullptr)));
-  if (!rdy)
-  for (unsigned i = 0; i < D->getNumTypeObjects(); i++) {
-      const DeclaratorChunk &cptr = D->getTypeObject(i);
-      if (cptr.Kind == DeclaratorChunk::Function)
-          for (unsigned pindex = 0; pindex < cptr.Fun.NumParams; pindex++) {
-               DeclaratorChunk::ParamInfo &ptr = cptr.Fun.Params[pindex];
-               ParmVarDecl *pv = dyn_cast<ParmVarDecl>(ptr.Param);
-               if (!pv) continue;
-               QualType qt = pv->getType();
-               TypeSourceInfo *tsp = pv->getTypeSourceInfo();
-               if (qt->isVoidType()) continue;
-               ParmVarDecl *pvd = ParmVarDecl::Create(sema->Context, sema->CurContext, loc, loc, nullptr, qt, tsp, SC_None, nullptr);
-               pvd->setScopeInfo(0, pindex + 1);
-               ptype2.push_back(DeclaratorChunk::ParamInfo(ptr.Ident, ptr.IdentLoc, pvd, ptr.DefaultArgTokens));
-          }
-  }
-  ArrayRef<DeclaratorChunk::ParamInfo> pparam2 = llvm::makeArrayRef(ptype2);
-  DeclSpec NDSf2(attrFactory);
-  (void)NDSf2.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy, DiagID, sema->Context.getPrintingPolicy());
-  Declarator DNewf2(rdy ? NDSf2 : D->getDeclSpec(), Declarator::MemberContext);
-  DNewf2.AddTypeInfo(DeclaratorChunk::getPointer(0, loc, loc, loc, loc, loc), parsedAttrs, loc);
-  DNewf2.AddTypeInfo(DeclaratorChunk::getParen(loc, loc), parsedAttrs, loc);
-  DNewf2.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
-      (DeclaratorChunk::ParamInfo *)pparam2.data(), pparam2.size(),
-      NoLoc, loc, 0, false, NoLoc, loc, loc, loc, loc, EST_None, loc,
-      nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNewf2), parsedAttrs, loc);
-  IdentifierInfo &IDIf2 = sema->Context.Idents.get(mname);
-  DNewf2.SetIdentifier(&IDIf2, loc);
-  TypeSourceInfo *TInfof2 = sema->GetTypeForDeclarator(DNewf2, sema->getCurScope());
-  auto Newf2 = FieldDecl::Create(sema->Context, sema->CurContext, loc, loc, &IDIf2, TInfof2->getType(), TInfof2, nullptr, true, ICIS_NoInit);
-  Newf2->setIsUsed();
-  Newf2->setAccess(AS_public);
-  sema->CurContext->addDecl(Newf2);
-Newf2->dump();
-}
 void setAtomiccMethod(NamedDecl *methodItem)
 {
   if (auto newFD = dyn_cast<FunctionDecl>(methodItem)) {
@@ -5008,8 +4956,6 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s DC %p\n", __FUNCTION__, __LIN
       PushOnScopeChains(NewExtra, S, true);
 //NewExtra->dump();
 //printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-      buildFunction(this, &D, mname + readyString + "p", true);
-      buildFunction(this, &D, mname + "p", false);
       }
     }
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
@@ -12535,48 +12481,6 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
         std::vector<Stmt *> compoundList;
         QualType ThisTy = Context.getPointerType(Context.getTypeDeclType(cdecl));
         Expr *baseExpr = new (Context) CXXThisExpr(loc, ThisTy, /*isImplicit=*/true);
-        if (mname == "init") {
-            int paramIndex = 1; // skip first 'init' parameter
-            for (auto fitem: cdecl->fields()) {
-            MemberExpr *lhs = new (Context) MemberExpr(baseExpr, true, loc, fitem, loc, fitem->getType(), VK_LValue, OK_Ordinary);
-            MarkMemberReferenced(lhs);
-            ParmVarDecl *Param = item->getParamDecl(paramIndex);
-            Param->setIsUsed();
-            Expr *rhs = DeclRefExpr::Create(Context, NNSloc, loc, Param, false, loc, Param->getType().getNonReferenceType(), VK_LValue, nullptr);
-            if (paramIndex > 1)
-                rhs = CStyleCastExpr::Create(Context, fitem->getType(), VK_RValue, CK_IntegralToPointer, rhs, nullptr, fitem->getTypeSourceInfo(), loc, loc);
-            Expr *assign = new (Context) BinaryOperator(lhs, rhs, BO_Assign, Context.DependentTy, VK_RValue, OK_Ordinary, loc, false);
-            compoundList.push_back(assign);
-            paramIndex++;
-            }
-            item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(compoundList), loc, loc));
-            continue;
-        }
-        else {
-            FieldDecl *tpitem = NULL;
-            for (auto fitem: cdecl->fields()) {
-                tpitem = fitem;
-                break;
-            }
-            for (auto fitem: cdecl->fields()) {
-                if (mname + "p" == fitem->getName()) {
-                    Expr *func = new (Context) MemberExpr(baseExpr, true, loc, fitem, loc, fitem->getType(), VK_LValue, OK_Ordinary);
-                    func = ImplicitCastExpr::Create(Context, func->getType(), CK_LValueToRValue, func, /*base paths*/ nullptr, VK_RValue);
-                    std::vector<Expr *> argList;
-                    argList.push_back(new (Context) MemberExpr(baseExpr, true, loc, tpitem, loc, tpitem->getType(), VK_RValue, OK_Ordinary));
-                    for (auto pitem: item->parameters()) {
-                        argList.push_back(DeclRefExpr::Create(Context, NNSloc, loc, pitem, false, loc, pitem->getType().getNonReferenceType(), VK_RValue, nullptr));
-                        pitem->setIsUsed();
-                    }
-                    Expr *call = new (Context) CallExpr(Context, func, llvm::makeArrayRef(argList), retType, VK_RValue, loc);
-                    Stmt *callStmt = call;
-                    if (!retType->isVoidType())
-                        callStmt = new (Context) ReturnStmt(loc, call, nullptr);
-                    compoundList.push_back(callStmt);
-                    break;
-                }
-            }
-        }
         //if (!item->hasBody())
             //item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(compoundList), loc, loc));
 //item->dump();
