@@ -2048,7 +2048,7 @@ FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, const AttrVec &D
     FunctionDecl *FD = New->getAsFunction();
     FD->setIsUsed();
     FD->setAccess(AS_public);
-    FD->setAttrs(DAttrs);
+    //FD->setAttrs(DAttrs);
     FD->setLexicalDeclContext(DC);
     if (expr) {
         StmtResult retStmt = new (Actions.Context) ReturnStmt(loc, expr, nullptr);
@@ -2056,6 +2056,14 @@ FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, const AttrVec &D
         Stmts.push_back(retStmt.get());
         FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
     }
+#if 0
+      const FunctionProtoType *FPT = FD->getType()->castAs<FunctionProtoType>();
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
+      FD->setType(FD->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
+#endif
+      FD->addAttr(::new (FD->getASTContext()) TargetAttr(FD->getLocStart(), FD->getASTContext(), StringRef("atomicc_method"), 0));
+      FD->addAttr(::new (FD->getASTContext()) UsedAttr(FD->getLocStart(), FD->getASTContext(), 0));
     DC->addDecl(New);
     return FD;
 }
