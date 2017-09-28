@@ -28,7 +28,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "clang/Sema/Lookup.h" // LookupResult for adding 'init()'
 using namespace clang;
-FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, const AttrVec &DAttrs, SourceLocation loc, std::string mname, Expr *expr);
+FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
 
 /// ParseNamespace - We know that the current token is a namespace keyword. This
 /// may either be a top level namespace or a block-level namespace alias. If
@@ -3050,7 +3050,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
               std::string mname = Method->getName();
 printf("[%s:%d] name %s\n", __FUNCTION__, __LINE__, mname.c_str());
               if (mname != "VMETHODDECL" && (mname.length() < 7 || mname.substr(mname.length()-7) != "__RDYYY")) {
-                  FunctionDecl *FD = createGuardMethod(Actions, Actions.CurContext, Method->getAttrs(), loc, mname + "__RDYYY", nullptr);
+                  FunctionDecl *FD = createGuardMethod(Actions, Actions.CurContext, loc, mname + "__RDYYY", nullptr);
               }
           }
       for (auto item: Actions.CurContext->decls())

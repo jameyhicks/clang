@@ -50,7 +50,7 @@
 #include <functional>
 using namespace clang;
 using namespace sema;
-FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, const AttrVec &DAttrs, SourceLocation loc, std::string mname, Expr *expr);
+FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
 
 Sema::DeclGroupPtrTy Sema::ConvertDeclToDeclGroup(Decl *Ptr, Decl *OwnedType) {
   if (OwnedType) {
@@ -4934,7 +4934,7 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s DC %p\n", __FUNCTION__, __LIN
       if (mname != "VMETHODDECL") {
       std::string readyString = vmethodFlag ? "__READY" : "__RDY";
       SourceLocation loc = D.getLocStart();
-#if 1
+#if 0
       const char *Dummy = nullptr;
       AttributeFactory attrFactory;
       unsigned DiagID;
@@ -4957,10 +4957,8 @@ printf("[%s:%d] before ActOnFunctionDeclarator: %s DC %p\n", __FUNCTION__, __LIN
       setAtomiccMethod(NewExtra);
       PushOnScopeChains(NewExtra, S, true);
 #else
-FunctionDecl *NewExtra = createGuardMethod(*this, CurContext, D.getAttributes(), loc, mname + readyString, nullptr);
+NamedDecl *NewExtra = createGuardMethod(*this, DC, loc, mname + readyString, nullptr);
 #endif
-//NewExtra->dump();
-//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       }
     }
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,

@@ -27,6 +27,7 @@
 #include "clang/Sema/Lookup.h" // LookupResult for adding 'xxx__RDY()'
 #include "clang/AST/Stmt.h"    // CompoundStmt
 using namespace clang;
+void setAtomiccMethod(NamedDecl *methodItem);
 
 //===----------------------------------------------------------------------===//
 // C99 6.8: Statements and Blocks.
@@ -2018,22 +2019,22 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
   return Actions.ActOnFinishFunctionBody(Decl, FnBody.get());
 }
 
-FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, const AttrVec &DAttrs, SourceLocation loc, std::string mname, Expr *expr)
+FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr)
 {
+printf("[%s:%d] start %s expr %p\n", __FUNCTION__, __LINE__, mname.c_str(), expr);
     const char *Dummy = nullptr;
-    AttributeFactory attrFactory;
-    ParsedAttributes parsedAttrs(attrFactory);
     unsigned DiagID;
     SourceLocation NoLoc;
 
-    IdentifierInfo &AttrName = Actions.Context.Idents.get("__vectorcall");
-    parsedAttrs.addNew(&AttrName, loc, nullptr, loc, nullptr, 0, AttributeList::AS_Keyword);
+    AttributeFactory attrFactory;
     DeclSpec DSBool(attrFactory);
     (void)DSBool.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy,
         DiagID, Actions.Context.getPrintingPolicy());
+
+    ParsedAttributes parsedAttrs(attrFactory);
     Declarator DFunc(DSBool, Declarator::MemberContext);
-    DFunc.AddTypeInfo(DeclaratorChunk::getFunction( true, false, loc,
-        nullptr, 0, NoLoc, loc, 0, true, loc, loc, loc, loc, loc, EST_None, loc,
+    DFunc.AddTypeInfo(DeclaratorChunk::getFunction( true, false, NoLoc,
+        nullptr, 0, NoLoc, NoLoc, 0, true, NoLoc, NoLoc, NoLoc, NoLoc, NoLoc, EST_None, NoLoc,
         nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DFunc), parsedAttrs, loc);
     DFunc.setFunctionDefinitionKind(expr ? FDK_Declaration : FDK_Definition);
     IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
@@ -2048,22 +2049,16 @@ FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, const AttrVec &D
     FunctionDecl *FD = New->getAsFunction();
     FD->setIsUsed();
     FD->setAccess(AS_public);
-    //FD->setAttrs(DAttrs);
     FD->setLexicalDeclContext(DC);
+    //FD->addAttr(::new (FD->getASTContext()) TargetAttr(FD->getLocStart(), FD->getASTContext(), StringRef("atomicc_method"), 0));
+    //FD->addAttr(::new (FD->getASTContext()) UsedAttr(FD->getLocStart(), FD->getASTContext(), 0));
+    setAtomiccMethod(FD);
     if (expr) {
         StmtResult retStmt = new (Actions.Context) ReturnStmt(loc, expr, nullptr);
         SmallVector<Stmt*, 32> Stmts;
         Stmts.push_back(retStmt.get());
         FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
     }
-#if 0
-      const FunctionProtoType *FPT = FD->getType()->castAs<FunctionProtoType>();
-      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-      EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
-      FD->setType(FD->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
-#endif
-      FD->addAttr(::new (FD->getASTContext()) TargetAttr(FD->getLocStart(), FD->getASTContext(), StringRef("atomicc_method"), 0));
-      FD->addAttr(::new (FD->getASTContext()) UsedAttr(FD->getLocStart(), FD->getASTContext(), 0));
     DC->addDecl(New);
     return FD;
 }
@@ -2105,7 +2100,7 @@ assert(false && "not open");
       SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
   }
   else {
-      createGuardMethod(Actions, Decl->getLexicalDeclContext(), Decl->getAttrs(), loc, mname + "__RDYZZ", Rexp.get());
+      createGuardMethod(Actions, Decl->getLexicalDeclContext(), loc, mname + "__RDYZZ", Rexp.get());
   }
   if (!T.consumeClose())
     {}
