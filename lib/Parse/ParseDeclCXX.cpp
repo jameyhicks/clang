@@ -3048,9 +3048,8 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
       for (auto item: Actions.CurContext->decls())
           if (auto Method = dyn_cast<CXXMethodDecl>(item)) {
               std::string mname = Method->getName();
-printf("[%s:%d] name %s\n", __FUNCTION__, __LINE__, mname.c_str());
-              if (mname != "VMETHODDECL" && (mname.length() < 7 || mname.substr(mname.length()-7) != "__RDYYY")) {
-                  FunctionDecl *FD = createGuardMethod(Actions, Actions.CurContext, loc, mname + "__RDYYY", nullptr);
+              if (mname != "VMETHODDECL" && (mname.length() < 5 || mname.substr(mname.length()-5) != "__RDY")) {
+                  FunctionDecl *FD = createGuardMethod(Actions, Actions.CurContext, loc, mname + "__RDY", nullptr);
               }
           }
       for (auto item: Actions.CurContext->decls())

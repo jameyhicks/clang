@@ -4932,33 +4932,8 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
       std::string mname = D.getName().Identifier->getName();
 printf("[%s:%d] before ActOnFunctionDeclarator: %s DC %p\n", __FUNCTION__, __LINE__, mname.c_str(), DC);
       if (mname != "VMETHODDECL") {
-      std::string readyString = vmethodFlag ? "__READY" : "__RDY";
-      SourceLocation loc = D.getLocStart();
-#if 0
-      const char *Dummy = nullptr;
-      AttributeFactory attrFactory;
-      unsigned DiagID;
-      SourceLocation NoLoc;
-
-      DeclSpec DS(attrFactory);
-      ParsedAttributes parsedAttrs(attrFactory);
-      (void)DS.SetTypeSpecType(DeclSpec::TST_bool, D.getLocStart(), Dummy, DiagID, Context.getPrintingPolicy());
-      Declarator DNew(DS, D.getContext());
-      DNew.AddTypeInfo(DeclaratorChunk::getFunction( true, false, NoLoc,
-          nullptr, 0, NoLoc, NoLoc, 0, false, NoLoc, NoLoc, NoLoc,
-          NoLoc, NoLoc, EST_None, NoLoc,
-          nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DNew), parsedAttrs, loc);
-      DNew.setFunctionDefinitionKind(D.getFunctionDefinitionKind());
-      IdentifierInfo &IDI = Context.Idents.get(mname + readyString);
-      DNew.SetIdentifier(&IDI, D.getName().StartLocation);
-      NamedDecl *NewExtra = ActOnFunctionDeclarator(S, DNew, DC, GetTypeForDeclarator(DNew, S), Previous,
-                                  TemplateParamLists,
-                                  AddToScope);
-      setAtomiccMethod(NewExtra);
-      PushOnScopeChains(NewExtra, S, true);
-#else
-NamedDecl *NewExtra = createGuardMethod(*this, DC, loc, mname + readyString, nullptr);
-#endif
+      std::string readyString = vmethodFlag ? "__READY" : "__RDYGG";
+      NamedDecl *NewExtra = createGuardMethod(*this, DC, D.getLocStart(), mname + readyString, nullptr);
       }
     }
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,

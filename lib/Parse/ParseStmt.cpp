@@ -2021,7 +2021,6 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
 
 FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr)
 {
-printf("[%s:%d] start %s expr %p\n", __FUNCTION__, __LINE__, mname.c_str(), expr);
     const char *Dummy = nullptr;
     unsigned DiagID;
     SourceLocation NoLoc;
