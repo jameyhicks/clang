@@ -375,6 +375,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   StringRef BTName;
   switch (BT->getKind()) {
 #define BUILTIN_TYPE(Id, SingletonId)
+#define DEPENDENT_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"
   case BuiltinType::Dependent:

@@ -1639,7 +1639,15 @@ static TryCastResult TryConstCast(Sema &Self, ExprResult &SrcExpr,
 
   // Since we're dealing in canonical types, the remainder must be the same.
   if (SrcType != DestType)
+{
+if (DestType->isPointerType()) {
+printf("[%s:%d] CASTFORCESUCCESS\n", __FUNCTION__, __LINE__);
+DestType->dump();
+SrcType->dump();
+  return TC_Success;
+}
     return TC_NotApplicable;
+}
 
   if (NeedToMaterializeTemporary)
     // This is a const_cast from a class prvalue to an rvalue reference type.

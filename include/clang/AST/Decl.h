@@ -2903,7 +2903,8 @@ public:
 
   bool isStruct() const { return getTagKind() == TTK_Struct; }
   bool isInterface() const { return getTagKind() == TTK_Interface; }
-  bool isClass()  const { return getTagKind() == TTK_Class; }
+  bool isClass()  const { return getTagKind() == TTK_Class
+     || getTagKind() == TTK_AInterface || getTagKind() == TTK_AModule || getTagKind() == TTK_AEModule; }
   bool isUnion()  const { return getTagKind() == TTK_Union; }
   bool isEnum()   const { return getTagKind() == TTK_Enum; }
 

@@ -1801,10 +1801,13 @@ Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
   // dependent name.
   DeclContext *DC = (SS.isEmpty() && !CallsUndergoingInstantiation.empty())
     ? CurContext : nullptr;
+printf("[%s:%d] ssemp %d undergoingempty %d\n", __FUNCTION__, __LINE__, SS.isEmpty(), CallsUndergoingInstantiation.empty());
   while (DC) {
+printf("[%s:%d] While DC %p isaRecord %d\n", __FUNCTION__, __LINE__, DC, isa<CXXRecordDecl>(DC));
     if (isa<CXXRecordDecl>(DC)) {
       LookupQualifiedName(R, DC);
 
+printf("[%s:%d] R.emp %d\n", __FUNCTION__, __LINE__, R.empty());
       if (!R.empty()) {
         // Don't give errors about ambiguities in this lookup.
         R.suppressDiagnostics();
@@ -2117,6 +2120,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
                  (Id.getKind() == UnqualifiedId::IK_ImplicitSelfParam) 
                   ? LookupObjCImplicitSelfParam : LookupOrdinaryName);
   if (TemplateArgs) {
+//printf("[%s:%d] TT\n", __FUNCTION__, __LINE__);
     // Lookup the template name again to correctly establish the context in
     // which it was found. This is really unfortunate as we already did the
     // lookup to determine that it was a template name in the first place. If
@@ -2133,6 +2137,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   } else {
     bool IvarLookupFollowUp = II && !SS.isSet() && getCurMethodDecl();
     LookupParsedName(R, S, &SS, !IvarLookupFollowUp);
+//printf("[%s:%d] not TT %d RESULT %d\n", __FUNCTION__, __LINE__, IvarLookupFollowUp, R.getResultKind());
 
     // If the result might be in a dependent base class, this is a dependent 
     // id-expression.
@@ -4597,7 +4602,9 @@ static bool isPlaceholderToRemoveAsArg(QualType type) {
   switch (placeholder->getKind()) {
   // Ignore all the non-placeholder types.
 #define PLACEHOLDER_TYPE(ID, SINGLETON_ID)
+#define MEMBER_TYPE(ID, SINGLETON_ID)
 #define BUILTIN_TYPE(ID, SINGLETON_ID) case BuiltinType::ID:
+#define DEPENDENT_TYPE(ID, SINGLETON_ID) case BuiltinType::ID:
 #include "clang/AST/BuiltinTypes.def"
     return false;
 
@@ -4730,6 +4737,12 @@ ExprResult
 Sema::ActOnCallExpr(Scope *S, Expr *Fn, SourceLocation LParenLoc,
                     MultiExprArg ArgExprs, SourceLocation RParenLoc,
                     Expr *ExecConfig, bool IsExecConfig) {
+//printf("[%s:%d] %p\n", __FUNCTION__, __LINE__, Fn);
+//Fn->dump();
+//for (auto aa: ArgExprs) {
+//printf("[%s:%d] AA\n", __FUNCTION__, __LINE__);
+//aa->dump();
+//}
   // Since this might be a postfix expression, get rid of ParenListExprs.
   ExprResult Result = MaybeConvertParenListExprToParenExpr(S, Fn);
   if (Result.isInvalid()) return ExprError();
@@ -4861,8 +4874,11 @@ Sema::ActOnCallExpr(Scope *S, Expr *Fn, SourceLocation LParenLoc,
     }
   }
 
-  return BuildResolvedCallExpr(Fn, NDecl, LParenLoc, ArgExprs, RParenLoc,
+  auto foo = BuildResolvedCallExpr(Fn, NDecl, LParenLoc, ArgExprs, RParenLoc,
                                ExecConfig, IsExecConfig);
+//printf("[%s:%d] CALLLLLLLL\n", __FUNCTION__, __LINE__);
+//foo.get()->dump();
+  return foo;
 }
 
 /// ActOnAsTypeExpr - create a new asType (bitcast) from the arguments.
@@ -9687,9 +9703,12 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
       return Context.UnknownAnyTy;
 
     if (PTy->getKind() == BuiltinType::BoundMember) {
-      Diag(OpLoc, diag::err_invalid_form_pointer_member_function)
-        << OrigOp.get()->getSourceRange();
-      return QualType();
+printf("[%s:%d] REMOVEDERRORCHECKFORBOUNDMEMBER\n", __FUNCTION__, __LINE__);
+OrigOp.get()->dump();
+      //Diag(OpLoc, diag::err_invalid_form_pointer_member_function)
+        //<< OrigOp.get()->getSourceRange();
+      //return QualType();
+  return Context.getPointerType(OrigOp.get()->getType());
     }
 
     OrigOp = CheckPlaceholderExpr(OrigOp.get());
@@ -10161,9 +10180,6 @@ LHSTy->dump();
               if (auto ff = dyn_cast<CXXMethodDecl>(dre->getDecl())) {
                    QualType origType = LHSTy->getAs<PointerType>()->getPointeeType();
                    dre->setType(origType);
-printf("[%s:%d]DRE\n", __FUNCTION__, __LINE__);
-dre->getType()->dump();
-dre->dump();
             NestedNameSpecifierLoc NNSloc;
             Expr *rhs = DeclRefExpr::Create(Context, NNSloc, OpLoc, ff, false, OpLoc, origType, VK_LValue, nullptr);
             RHS = new (Context) UnaryOperator(rhs, unop->getOpcode(), LHSTy, unop->getValueKind(), unop->getObjectKind(), OpLoc);
@@ -10566,6 +10582,7 @@ static ExprResult BuildOverloadedBinOp(Sema &S, Scope *Sc, SourceLocation OpLoc,
 ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
                             BinaryOperatorKind Opc,
                             Expr *LHSExpr, Expr *RHSExpr) {
+//printf("[%s:%d] Opc %d LHS %p RHS %p\n", __FUNCTION__, __LINE__, Opc, LHSExpr, RHSExpr);
   // We want to end up calling one of checkPseudoObjectAssignment
   // (if the LHS is a pseudo-object), BuildOverloadedBinOp (if
   // both expressions are overloadable or either is type-dependent),
@@ -10602,6 +10619,95 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
 
   // Handle pseudo-objects in the RHS.
   if (const BuiltinType *pty = RHSExpr->getType()->getAsPlaceholderType()) {
+//printf("[%s:%d] YY KIND %d ZZ %d\n", __FUNCTION__, __LINE__, pty->getKind(), BuiltinType::BoundMember);
+    if (Opc == BO_Assign && pty->getKind() == BuiltinType::BoundMember) {
+printf("[%s:%d] ASSIGN MEMBER\n", __FUNCTION__, __LINE__);
+RHSExpr->dump();
+LHSExpr->dump();
+printf("[%s:%d] aft\n", __FUNCTION__, __LINE__);
+#if 1 //jca
+{
+SourceLocation loc;
+  QualType ltype = LHSExpr->getType()->getCanonicalTypeInternal();
+  QualType rtype = RHSExpr->getType()->getCanonicalTypeInternal();
+  QualType Params[] = {ltype, rtype};
+  FunctionProtoType::ExtProtoInfo EPI;
+  IdentifierInfo *II = &Context.Idents.get("atomiccInterfaceName");
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+  FunctionDecl *FnDecl = FunctionDecl::Create(Context, Context.getTranslationUnitDecl(),
+      SourceLocation(), SourceLocation(), II,
+      Context.getFunctionType(Context.VoidTy, ArrayRef<QualType>(Params, 2), EPI),
+      nullptr, SC_Static, false, false);
+printf("[%s:%d]ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ\n", __FUNCTION__, __LINE__);
+FnDecl->dump();
+    NestedNameSpecifierLoc NNSloc;
+    Expr *Fn = DeclRefExpr::Create(Context, NNSloc, loc, FnDecl, false, loc, FnDecl->getType(), VK_LValue, nullptr);
+Fn->dump();
+  QualType OrigT = Context.getPointerType(Context.VoidTy);
+//Context.getIntPtrType();
+//RHSExpr->getType();
+  Expr *rhs = CStyleCastExpr::Create(Context, OrigT, VK_RValue, CK_IntegralToPointer, RHSExpr, nullptr,
+      Context.getTrivialTypeSourceInfo(OrigT, loc) , loc, loc);
+  //OrigT = LHSExpr->getType();
+  Expr *lhs = //CStyleCastExpr::Create(Context, OrigT, VK_RValue, CK_IntegralToPointer, LHSExpr, nullptr,
+      //Context.getTrivialTypeSourceInfo(OrigT, loc) , loc, loc);
+          //Actions.
+            BuildUnaryOp(getCurScope(), loc, UO_AddrOf, LHSExpr).get();
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+rhs->dump();
+lhs->dump();
+LHSExpr->dump();
+RHSExpr->dump();
+  Expr *Args[] = {lhs, rhs};
+
+  ExprResult Result = MaybeConvertParenListExprToParenExpr(S, Fn);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+  //Expr *Fn = Result.get();
+  //Expr *NakedFn = Fn->IgnoreParens();
+  //NamedDecl *NDecl = nullptr;
+  //if (UnaryOperator *UnOp = dyn_cast<UnaryOperator>(NakedFn))
+    //if (UnOp->getOpcode() == UO_AddrOf)
+      //NakedFn = UnOp->getSubExpr()->IgnoreParens();
+  //FunctionDecl *FDecl = dyn_cast_or_null<FunctionDecl>(NDecl);
+  //ExprResult Result = CallExprUnaryConversions(Fn);
+  //Fn = Result.get();
+  if (FnDecl && FnDecl->getDeclName().isIdentifier())
+  if (FnDecl->getName() == "methodToFunction") {
+    for (auto item: Args)
+      if (auto dre = dyn_cast_or_null<UnaryOperator>(item->IgnoreParenCasts()))
+      if (auto ee = dyn_cast<DeclRefExpr>(dre->getSubExpr()))
+      if (auto ff = dyn_cast<CXXMethodDecl>(ee->getDecl())) {
+          setAtomiccMethod(ff);
+//printf("[%s:%d] calledNAME %s\n", __FUNCTION__, __LINE__, FnDecl->getName().str().c_str());
+          //ff->dump();
+      }
+  }
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+  CallExpr *TheCall = new (Context) CallExpr(Context, Fn, Args, Context.VoidTy, VK_RValue, loc);
+  ExprResult Result2 = CorrectDelayedTyposInExpr(TheCall);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+  TheCall = dyn_cast<CallExpr>(Result2.get());
+TheCall->dump();
+  //Args = ArrayRef<Expr *>(TheCall->getArgs(), 2);
+  //const FunctionType *FuncT;
+  //if (const PointerType *PT = Fn->getType()->getAs<PointerType>()) {
+    //FuncT = PT->getPointeeType()->getAs<FunctionType>();
+  //}
+  //TheCall->setType(FuncT->getCallResultType(Context));
+  //TheCall->setValueKind(Expr::getValueKindForType(FuncT->getReturnType()));
+  //for (unsigned i = 0, e = Args.size(); i != e; i++) {
+      //Expr *Arg = Args[i];
+      //ExprResult ArgE = DefaultArgumentPromotion(Arg);
+      //Arg = ArgE.getAs<Expr>();
+      //TheCall->setArg(i, Arg);
+  //}
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+  return MaybeBindToTemporary(TheCall);
+}
+#endif
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+      return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
+    }
     // An overload in the RHS can potentially be resolved by the type
     // being assigned to.
     if (Opc == BO_Assign && pty->getKind() == BuiltinType::Overload) {
@@ -10619,6 +10725,7 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
         LHSExpr->getType()->isOverloadableType())
       return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
 
+printf("[%s:%d] JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n", __FUNCTION__, __LINE__);
     ExprResult resolvedRHS = CheckPlaceholderExpr(RHSExpr);
     if (!resolvedRHS.isUsable()) return ExprError();
     RHSExpr = resolvedRHS.get();
@@ -10795,6 +10902,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
     OK = Input.get()->getObjectKind();
     break;
   }
+//printf("[%s:%d] JJJJJJJJJJJJJJJJJJJJJJJ before unaryerr %d\n", __FUNCTION__, __LINE__, resultType.isNull() || Input.isInvalid());
   if (resultType.isNull() || Input.isInvalid())
     return ExprError();
 
@@ -10805,6 +10913,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   if (Opc != UO_AddrOf && Opc != UO_Deref)
     CheckArrayAccess(Input.get());
 
+//printf("[%s:%d] JJJJJJJJJJJJJJJJJJJJJJJ before unary\n", __FUNCTION__, __LINE__);
   return new (Context)
       UnaryOperator(Input.get(), Opc, resultType, VK, OK, OpLoc);
 }
@@ -14328,7 +14437,6 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
           DeclarationName::CXXDestructorName)
         PD = PDiag(diag::err_dtor_expr_without_call) << /*destructor*/ 0;
     }
-printf("[%s:%d] beforrr\n", __FUNCTION__, __LINE__);
     tryToRecoverWithCall(result, PD,
                          /*complain*/ 
 #if 0
@@ -14376,7 +14484,10 @@ printf("[%s:%d] afterrrrr\n", __FUNCTION__, __LINE__);
   // Everything else should be impossible.
 #define BUILTIN_TYPE(Id, SingletonId) \
   case BuiltinType::Id:
+#define DEPENDENT_TYPE(Id, SingletonId) \
+  case BuiltinType::Id:
 #define PLACEHOLDER_TYPE(Id, SingletonId)
+#define MEMBER_TYPE(Id, SingletonId)
 #include "clang/AST/BuiltinTypes.def"
     break;
   }

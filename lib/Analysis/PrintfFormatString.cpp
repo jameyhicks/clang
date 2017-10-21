@@ -617,6 +617,8 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
 #define SIGNED_TYPE(Id, SingletonId)
 #define UNSIGNED_TYPE(Id, SingletonId)
 #define FLOATING_TYPE(Id, SingletonId)
+#define DEPENDENT_TYPE(Id, SingletonId) \
+  case BuiltinType::Id:
 #define BUILTIN_TYPE(Id, SingletonId) \
   case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"

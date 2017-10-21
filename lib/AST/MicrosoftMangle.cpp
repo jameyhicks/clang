@@ -1571,6 +1571,7 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
   case BuiltinType::WChar_U: Out << "_W"; break;
 
 #define BUILTIN_TYPE(Id, SingletonId)
+#define DEPENDENT_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \
   case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"
@@ -1869,6 +1870,9 @@ void MicrosoftCXXNameMangler::mangleType(const TagDecl *TD) {
       Out << 'U';
       break;
     case TTK_Class:
+    case TTK_AInterface:
+    case TTK_AModule:
+    case TTK_AEModule:
       Out << 'V';
       break;
     case TTK_Enum:

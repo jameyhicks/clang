@@ -1116,6 +1116,7 @@ bool ResultBuilder::IsClassOrStruct(const NamedDecl *ND) const {
   // For purposes of this check, interfaces match too.
   if (const RecordDecl *RD = dyn_cast<RecordDecl>(ND))
     return RD->getTagKind() == TTK_Class ||
+    RD->getTagKind() == TTK_AInterface || RD->getTagKind() == TTK_AModule || RD->getTagKind() == TTK_AEModule ||
     RD->getTagKind() == TTK_Struct ||
     RD->getTagKind() == TTK_Interface;
   
@@ -1484,6 +1485,7 @@ static const char *GetCompletionTypeString(QualType T,
           switch (Tag->getTagKind()) {
           case TTK_Struct: return "struct <anonymous>";
           case TTK_Interface: return "__interface <anonymous>";
+          case TTK_AInterface: case TTK_AModule: case TTK_AEModule:
           case TTK_Class:  return "class <anonymous>";
           case TTK_Union:  return "union <anonymous>";
           case TTK_Enum:   return "enum <anonymous>";
@@ -3074,6 +3076,7 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
         switch (TD->getTagKind()) {
           case TTK_Interface:  // fall through
           case TTK_Struct: return CXCursor_StructDecl;
+          case TTK_AInterface: case TTK_AModule: case TTK_AEModule:
           case TTK_Class:  return CXCursor_ClassDecl;
           case TTK_Union:  return CXCursor_UnionDecl;
           case TTK_Enum:   return CXCursor_EnumDecl;
@@ -3770,7 +3773,7 @@ void Sema::CodeCompleteTag(Scope *S, unsigned TagSpec) {
     break;
     
   case DeclSpec::TST_struct:
-  case DeclSpec::TST_ainterface: case DeclSpec::TST_amodule:
+  case DeclSpec::TST_ainterface: case DeclSpec::TST_amodule: case DeclSpec::TST_aemodule:
   case DeclSpec::TST_class:
   case DeclSpec::TST_interface:
     Filter = &ResultBuilder::IsClassOrStruct;

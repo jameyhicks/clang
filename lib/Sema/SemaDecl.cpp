@@ -515,6 +515,7 @@ DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {
       case TTK_Struct: return DeclSpec::TST_struct;
       case TTK_Interface: return DeclSpec::TST_interface;
       case TTK_Union:  return DeclSpec::TST_union;
+      case TTK_AInterface: case TTK_AModule: case TTK_AEModule:
       case TTK_Class:  return DeclSpec::TST_class;
       case TTK_Enum:   return DeclSpec::TST_enum;
       }
@@ -673,6 +674,7 @@ static bool isTagTypeWithMissingTag(Sema &SemaRef, LookupResult &Result,
   if (TagDecl *Tag = R.getAsSingle<TagDecl>()) {
     StringRef FixItTagName;
     switch (Tag->getTagKind()) {
+      case TTK_AInterface: case TTK_AModule: case TTK_AEModule:
       case TTK_Class:
         FixItTagName = "class ";
         break;
@@ -3625,7 +3627,7 @@ void Sema::setTagNameForLinkagePurposes(TagDecl *TagFromDeclSpec,
 
 static unsigned GetDiagnosticTypeSpecifierID(DeclSpec::TST T) {
   switch (T) {
-  case DeclSpec::TST_ainterface: case DeclSpec::TST_amodule:
+  case DeclSpec::TST_ainterface: case DeclSpec::TST_amodule: case DeclSpec::TST_aemodule:
   case DeclSpec::TST_class:
     return 0;
   case DeclSpec::TST_struct:
@@ -3653,6 +3655,7 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   if (DS.getTypeSpecType() == DeclSpec::TST_class ||
       DS.getTypeSpecType() == DeclSpec::TST_ainterface ||
       DS.getTypeSpecType() == DeclSpec::TST_amodule ||
+      DS.getTypeSpecType() == DeclSpec::TST_aemodule ||
       DS.getTypeSpecType() == DeclSpec::TST_struct ||
       DS.getTypeSpecType() == DeclSpec::TST_interface ||
       DS.getTypeSpecType() == DeclSpec::TST_union ||
@@ -3865,6 +3868,7 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
     if (TypeSpecType == DeclSpec::TST_class ||
         TypeSpecType == DeclSpec::TST_ainterface ||
         TypeSpecType == DeclSpec::TST_amodule ||
+        TypeSpecType == DeclSpec::TST_aemodule ||
         TypeSpecType == DeclSpec::TST_struct ||
         TypeSpecType == DeclSpec::TST_interface ||
         TypeSpecType == DeclSpec::TST_union ||
@@ -4921,18 +4925,26 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
       bool vmethodFlag = false;
       if (CXXRecordDecl *cdecl = dyn_cast<CXXRecordDecl>(CC)) {
         for (auto item: cdecl->methods()) {
-          if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
+          //if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
+          if (item->getDeclName().isIdentifier()) {
+          if (isa<CXXConstructorDecl>(item)) {
+            std::string mname = item->getName();
+printf("[%s:%d] COOOOOOOOONNNNNNNNNNNNNNSSSSSSSTRRUCTOR %s\n", __FUNCTION__, __LINE__, mname.c_str());
+item->dump();
+          }
+          else {
             std::string mname = item->getName();
 //printf("[%s:%d] prev %s\n", __FUNCTION__, __LINE__, mname.c_str());
             if (mname == "VMETHODDECL")
                 vmethodFlag = true;
+          }
           }
         }
       }
       std::string mname = D.getName().Identifier->getName();
 printf("[%s:%d] before ActOnFunctionDeclarator: %s DC %p\n", __FUNCTION__, __LINE__, mname.c_str(), DC);
       if (mname != "VMETHODDECL") {
-      std::string readyString = vmethodFlag ? "__READY" : "__RDYGG";
+      std::string readyString = vmethodFlag ? "__READY" : "__RDY";
       NamedDecl *NewExtra = createGuardMethod(*this, DC, D.getLocStart(), mname + readyString, nullptr);
       }
     }
@@ -11280,7 +11292,7 @@ TypedefDecl *Sema::ParseTypedefDecl(Scope *S, Declarator &D, QualType T,
   case TST_struct:
   case TST_interface:
   case TST_union:
-  case TST_ainterface: case TST_amodule:
+  case TST_ainterface: case TST_amodule: case TST_aemodule:
   case TST_class: {
     TagDecl *tagFromDeclSpec = cast<TagDecl>(D.getDeclSpec().getRepAsDecl());
     setTagNameForLinkagePurposes(tagFromDeclSpec, NewTD);
@@ -11356,6 +11368,7 @@ static unsigned getRedeclDiagFromTagKind(TagTypeKind Tag) {
   switch (Tag) {
   case TTK_Struct: return 0;
   case TTK_Interface: return 1;
+  case TTK_AInterface: case TTK_AModule: case TTK_AEModule:
   case TTK_Class:  return 2;
   default: llvm_unreachable("Invalid tag kind for redecl diagnostic!");
   }
@@ -11367,7 +11380,8 @@ static unsigned getRedeclDiagFromTagKind(TagTypeKind Tag) {
 /// \returns true iff the tag kind is compatible.
 static bool isClassCompatTagKind(TagTypeKind Tag)
 {
-  return Tag == TTK_Struct || Tag == TTK_Class || Tag == TTK_Interface;
+  return Tag == TTK_Struct || Tag == TTK_Class || Tag == TTK_Interface ||
+         Tag == TTK_AInterface || Tag == TTK_AModule || Tag == TTK_AEModule;
 }
 
 /// \brief Determine whether a tag with a given kind is acceptable

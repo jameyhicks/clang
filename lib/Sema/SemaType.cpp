@@ -1341,7 +1341,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     Result = Context.IntTy;
     declarator.setInvalidType(true);
     break;
-  case DeclSpec::TST_ainterface: case DeclSpec::TST_amodule:
+  case DeclSpec::TST_ainterface: case DeclSpec::TST_amodule: case DeclSpec::TST_aemodule:
   case DeclSpec::TST_class:
   case DeclSpec::TST_enum:
   case DeclSpec::TST_union:
@@ -2620,6 +2620,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       case TTK_Enum: llvm_unreachable("unhandled tag kind");
       case TTK_Struct: Error = 1; /* Struct member */ break;
       case TTK_Union:  Error = 2; /* Union member */ break;
+      case TTK_AInterface: case TTK_AModule: case TTK_AEModule:
       case TTK_Class:  Error = 3; /* Class member */ break;
       case TTK_Interface: Error = 4; /* Interface member */ break;
       }
@@ -6608,6 +6609,7 @@ static unsigned getLiteralDiagFromTagKind(TagTypeKind Tag) {
   switch (Tag) {
   case TTK_Struct: return 0;
   case TTK_Interface: return 1;
+  case TTK_AInterface: case TTK_AModule: case TTK_AEModule:
   case TTK_Class:  return 2;
   default: llvm_unreachable("Invalid tag kind for literal type diagnostic!");
   }

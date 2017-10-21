@@ -49,6 +49,14 @@
 #define PLACEHOLDER_TYPE(Id, SingletonId) BUILTIN_TYPE(Id, SingletonId)
 #endif
 
+#ifndef MEMBER_TYPE
+#define MEMBER_TYPE(Id, SingletonId) BUILTIN_TYPE(Id, SingletonId)
+#endif
+
+#ifndef DEPENDENT_TYPE
+#define DEPENDENT_TYPE(Id, SingletonId) BUILTIN_TYPE(Id, SingletonId)
+#endif
+
 #ifndef SHARED_SINGLETON_TYPE
 #define SHARED_SINGLETON_TYPE(Expansion) Expansion
 #endif
@@ -172,7 +180,7 @@ BUILTIN_TYPE(OCLEvent, OCLEventTy)
 // totally unknown, e.g. 'T::foo'.  It is permitted for this to
 // appear in situations where the structure of the type is
 // theoretically deducible.
-BUILTIN_TYPE(Dependent, DependentTy)
+DEPENDENT_TYPE(Dependent, DependentTy)
 
 // The type of an unresolved overload set.  A placeholder type.
 // Expressions with this type have one of the following basic
@@ -194,7 +202,7 @@ PLACEHOLDER_TYPE(Overload, OverloadTy)
 // following basic forms:
 //   foo          # if an implicit access
 //   x->foo       # if only contains non-static members
-PLACEHOLDER_TYPE(BoundMember, BoundMemberTy)
+MEMBER_TYPE(BoundMember, BoundMemberTy)
 
 // The type of an expression which refers to a pseudo-object,
 // such as those introduced by Objective C's @property or
@@ -234,6 +242,8 @@ LAST_BUILTIN_TYPE(ARCUnbridgedCast)
 
 #undef SHARED_SINGLETON_TYPE
 #undef PLACEHOLDER_TYPE
+#undef MEMBER_TYPE
+#undef DEPENDENT_TYPE
 #undef FLOATING_TYPE
 #undef SIGNED_TYPE
 #undef UNSIGNED_TYPE

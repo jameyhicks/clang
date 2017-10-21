@@ -655,7 +655,11 @@ Expr::isModifiableLvalue(ASTContext &Ctx, SourceLocation *Loc) const {
   case Cl::CL_Void: return MLV_InvalidExpression;
   case Cl::CL_AddressableVoid: return MLV_IncompleteVoidType;
   case Cl::CL_DuplicateVectorComponents: return MLV_DuplicateVectorComponents;
-  case Cl::CL_MemberFunction: return MLV_MemberFunction;
+  case Cl::CL_MemberFunction:
+printf("[%s:%d] MEMBERFUN MOD LVAL\n", __FUNCTION__, __LINE__);
+this->dump();
+    break;
+    return MLV_MemberFunction;
   case Cl::CL_SubObjCPropertySetting: return MLV_SubObjCPropertySetting;
   case Cl::CL_ClassTemporary: return MLV_ClassTemporary;
   case Cl::CL_ArrayTemporary: return MLV_ArrayTemporary;
@@ -664,11 +668,16 @@ Expr::isModifiableLvalue(ASTContext &Ctx, SourceLocation *Loc) const {
     return VC.getModifiable() == Cl::CM_LValueCast ?
       MLV_LValueCast : MLV_InvalidExpression;
   }
-  assert(VC.getKind() == Cl::CL_LValue && "Unhandled kind");
+  assert(
+(VC.getKind() == Cl::CL_LValue || VC.getKind() == Cl::CL_MemberFunction)
+ && "Unhandled kind");
   switch (VC.getModifiable()) {
   case Cl::CM_Untested: llvm_unreachable("Did not test modifiability");
   case Cl::CM_Modifiable: return MLV_Valid;
-  case Cl::CM_RValue: llvm_unreachable("CM_RValue and CL_LValue don't match");
+  case Cl::CM_RValue:
+    if (VC.getKind() == Cl::CL_MemberFunction)
+      return MLV_Valid;
+    llvm_unreachable("CM_RValue and CL_LValue don't match");
   case Cl::CM_Function: return MLV_NotObjectType;
   case Cl::CM_LValueCast:
     llvm_unreachable("CM_LValueCast and CL_LValue don't match");

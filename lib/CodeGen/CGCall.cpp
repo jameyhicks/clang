@@ -515,6 +515,12 @@ CodeGenTypes::arrangeLLVMFunctionInfo(CanQualType resultType,
   // Compute ABI information.
   getABIInfo().computeInfo(*FI);
 
+#if 0
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+FI->getReturnType().dump();
+for (auto &I : FI->arguments())
+   I.type.dump();
+#endif
   // Loop over all of the computed argument and return value info.  If any of
   // them are direct or extend without a specified coerce type, specify the
   // default now.
@@ -522,10 +528,18 @@ CodeGenTypes::arrangeLLVMFunctionInfo(CanQualType resultType,
   if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr)
     retInfo.setCoerceToType(ConvertType(FI->getReturnType()));
 
-  for (auto &I : FI->arguments())
+//printf("[%s:%d] args\n", __FUNCTION__, __LINE__);
+//int jcai = 0;
+  for (auto &I : FI->arguments()) {
+//printf("[%s:%d] arg[%d]\n", __FUNCTION__, __LINE__, jcai++);
     if (I.info.canHaveCoerceToType() && I.info.getCoerceToType() == nullptr)
+//{
+//printf("[%s:%d]CONVERTTYPE\n", __FUNCTION__, __LINE__);
       I.info.setCoerceToType(ConvertType(I.type));
+//}
+  }
 
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   bool erased = FunctionsBeingProcessed.erase(FI); (void)erased;
   assert(erased && "Not in set?");
   

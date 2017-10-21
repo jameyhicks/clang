@@ -1327,7 +1327,10 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
   }
 
   if (LV.isSimple()) {
-    assert(!LV.getType()->isFunctionType());
+    //assert(!LV.getType()->isFunctionType());
+    if (LV.getType()->isFunctionType()) {
+printf("[%s:%d] isFunctionType\n", __FUNCTION__, __LINE__);
+}
 
     // Everything needs a load.
     return RValue::get(EmitLoadOfScalar(LV, Loc));
@@ -3239,7 +3242,8 @@ LValue CodeGenFunction::EmitCallExprLValue(const CallExpr *E) {
   if (!RV.isScalar())
     return MakeAddrLValue(RV.getAggregateAddr(), E->getType());
 
-  assert(E->getCallReturnType(getContext())->isReferenceType() &&
+  //assert(E->getCallReturnType(getContext())->isReferenceType() &&
+  if(!E->getCallReturnType(getContext())->isReferenceType()) printf("[%s:%d] %s\n", __FUNCTION__, __LINE__,
          "Can't have a scalar return unless the return type is a "
          "reference type!");
 
@@ -3357,7 +3361,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
                                  const Decl *TargetDecl, llvm::Value *Chain) {
   // Get the actual function type. The callee type will always be a pointer to
   // function type or a block pointer type.
-  assert(CalleeType->isFunctionPointerType() &&
+  //assert(CalleeType->isFunctionPointerType() &&
+  if(!CalleeType->isFunctionPointerType()) printf("[%s:%d] %s\n", __FUNCTION__, __LINE__,
          "Call must have function pointer type!");
 
   CalleeType = getContext().getCanonicalType(CalleeType);

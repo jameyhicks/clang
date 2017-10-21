@@ -1990,6 +1990,7 @@ class BuiltinType : public Type {
 public:
   enum Kind {
 #define BUILTIN_TYPE(Id, SingletonId) Id,
+#define DEPENDENT_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
 #include "clang/AST/BuiltinTypes.def"
   };
@@ -4151,6 +4152,9 @@ enum TagTypeKind {
   TTK_Union,
   /// \brief The "class" keyword.
   TTK_Class,
+  TTK_AInterface,
+  TTK_AModule,
+  TTK_AEModule,
   /// \brief The "enum" keyword.
   TTK_Enum
 };
@@ -4166,6 +4170,9 @@ enum ElaboratedTypeKeyword {
   ETK_Union,
   /// \brief The "class" keyword introduces the elaborated-type-specifier.
   ETK_Class,
+  ETK_AInterface,
+  ETK_AModule,
+  ETK_AEModule,
   /// \brief The "enum" keyword introduces the elaborated-type-specifier.
   ETK_Enum,
   /// \brief The "typename" keyword precedes the qualified type name, e.g.,

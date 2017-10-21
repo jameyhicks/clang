@@ -2021,6 +2021,23 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
 
 FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr)
 {
+    bool addMethod = true;
+    FunctionDecl *FD = nullptr;
+#if 1
+//printf("[%s:%d] start\n", __FUNCTION__, __LINE__);
+    for (auto item: DC->decls())
+        if (auto Method = dyn_cast<CXXMethodDecl>(item))
+        if (Method->getDeclName().isIdentifier()) {
+//Method->dump();
+            if (Method->getName() == mname) {
+                FD = Method;
+                addMethod = false;
+printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method, mname.c_str());
+                break;
+            }
+        }
+#endif
+    if (addMethod) {
     const char *Dummy = nullptr;
     unsigned DiagID;
     SourceLocation NoLoc;
@@ -2045,20 +2062,21 @@ FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation l
     auto New = Actions.ActOnFunctionDeclarator(Actions.getCurScope(), DFunc,
         DC, Actions.GetTypeForDeclarator(DFunc, Actions.getCurScope()),
         Previous, TemplateParams, AddToScope);
-    FunctionDecl *FD = New->getAsFunction();
+    FD = New->getAsFunction();
     FD->setIsUsed();
     FD->setAccess(AS_public);
     FD->setLexicalDeclContext(DC);
     //FD->addAttr(::new (FD->getASTContext()) TargetAttr(FD->getLocStart(), FD->getASTContext(), StringRef("atomicc_method"), 0));
     //FD->addAttr(::new (FD->getASTContext()) UsedAttr(FD->getLocStart(), FD->getASTContext(), 0));
     setAtomiccMethod(FD);
+    DC->addDecl(New);
+    }
     if (expr) {
         StmtResult retStmt = new (Actions.Context) ReturnStmt(loc, expr, nullptr);
         SmallVector<Stmt*, 32> Stmts;
         Stmts.push_back(retStmt.get());
         FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
     }
-    DC->addDecl(New);
     return FD;
 }
 /// ParseFunctionIfBlock - Parse a C++ function-if-block.
@@ -2099,7 +2117,7 @@ assert(false && "not open");
       SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
   }
   else {
-      createGuardMethod(Actions, Decl->getLexicalDeclContext(), loc, mname + "__RDYZZ", Rexp.get());
+      createGuardMethod(Actions, Decl->getLexicalDeclContext(), loc, mname + "__RDY", Rexp.get());
   }
   if (!T.consumeClose())
     {}

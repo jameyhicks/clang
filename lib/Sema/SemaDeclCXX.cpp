@@ -791,6 +791,7 @@ static unsigned getRecordDiagFromTagKind(TagTypeKind Tag) {
   switch (Tag) {
   case TTK_Struct: return 0;
   case TTK_Interface: return 1;
+  case TTK_AInterface: case TTK_AModule: case TTK_AEModule:
   case TTK_Class:  return 2;
   default: llvm_unreachable("Invalid tag kind for record diagnostic!");
   }
@@ -1394,7 +1395,10 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     }
 
     return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual,
-                                          Class->getTagKind() == TTK_Class,
+                                          Class->getTagKind() == TTK_Class
+                                          || Class->getTagKind() == TTK_AInterface
+                                          || Class->getTagKind() == TTK_AModule
+                                          || Class->getTagKind() == TTK_AEModule,
                                           Access, TInfo, EllipsisLoc);
   }
 
@@ -1468,7 +1472,10 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
 
   // Create the base specifier.
   return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual,
-                                        Class->getTagKind() == TTK_Class,
+                                        Class->getTagKind() == TTK_Class
+                                        || Class->getTagKind() == TTK_AInterface
+                                        || Class->getTagKind() == TTK_AModule
+                                        || Class->getTagKind() == TTK_AEModule,
                                         Access, TInfo, EllipsisLoc);
 }
 

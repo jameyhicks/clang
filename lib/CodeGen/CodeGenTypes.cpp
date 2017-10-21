@@ -331,7 +331,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     llvm_unreachable("Non-canonical or dependent types aren't possible.");
 
   case Type::Builtin: {
+printf("[%s:%d] type %d BoundMember %d\n", __FUNCTION__, __LINE__, cast<BuiltinType>(Ty)->getKind(), BuiltinType::BoundMember);
     switch (cast<BuiltinType>(Ty)->getKind()) {
+    case BuiltinType::Dependent: // atomicc
+    case BuiltinType::BoundMember: // atomicc
     case BuiltinType::Void:
     case BuiltinType::ObjCId:
     case BuiltinType::ObjCClass:
@@ -402,8 +405,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       ResultType = CGM.getOpenCLRuntime().convertOpenCLSpecificType(Ty);
       break;
     
-    case BuiltinType::Dependent:
+    //case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)
+#define DEPENDENT_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \
     case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"

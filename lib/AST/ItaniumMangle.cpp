@@ -2019,11 +2019,13 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   case BuiltinType::NullPtr: Out << "Dn"; break;
 
 #define BUILTIN_TYPE(Id, SingletonId)
+#define DEPENDENT_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \
   case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"
-  case BuiltinType::Dependent:
     llvm_unreachable("mangling a placeholder type");
+  case BuiltinType::Dependent: Out << "9dependent"; break;
+  case BuiltinType::BoundMember: Out << "12bound_member"; break;
   case BuiltinType::ObjCId: Out << "11objc_object"; break;
   case BuiltinType::ObjCClass: Out << "10objc_class"; break;
   case BuiltinType::ObjCSel: Out << "13objc_selector"; break;
@@ -2453,6 +2455,9 @@ void CXXNameMangler::mangleType(const DependentNameType *T) {
       break;
     case ETK_Struct:
     case ETK_Class:
+    case ETK_AInterface:
+    case ETK_AModule:
+    case ETK_AEModule:
     case ETK_Interface:
       Out << "Ts";
       break;

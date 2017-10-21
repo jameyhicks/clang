@@ -937,6 +937,7 @@ void IndexingContext::getEntityInfo(const NamedDecl *D,
       EntityInfo.kind = CXIdxEntity_Struct; break;
     case TTK_Union:
       EntityInfo.kind = CXIdxEntity_Union; break;
+    case TTK_AInterface: case TTK_AModule: case TTK_AEModule:
     case TTK_Class:
       EntityInfo.kind = CXIdxEntity_CXXClass;
       EntityInfo.lang = CXIdxEntityLang_CXX;

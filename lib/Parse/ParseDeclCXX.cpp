@@ -28,6 +28,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "clang/Sema/Lookup.h" // LookupResult for adding 'init()'
 using namespace clang;
+void setAtomiccMethod(NamedDecl *methodItem);
 FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
 
 /// ParseNamespace - We know that the current token is a namespace keyword. This
@@ -1190,6 +1191,108 @@ bool Parser::isValidAfterTypeSpecifier(bool CouldBeBitfield) {
 ///       struct-or-union:
 ///         'struct'
 ///         'union'
+static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc)
+{
+    if (auto rec = dyn_cast<CXXRecordDecl>(field)) {
+        for (auto ritem: rec->fields()) {
+            std::string fname = ritem->getName();
+            QualType cc = ritem->getType();
+            if (auto bar = dyn_cast<TemplateSpecializationType>(cc)) {
+                TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
+                if (auto acl = dyn_cast<ClassTemplateDecl>(fofo)) {
+                    CXXRecordDecl *rec = acl->getTemplatedDecl();
+                    hoistInterface(Actions, parent, rec, interfaceName + fname + "_", loc);
+                }
+            }
+            hoistInterface(Actions, parent, ritem, interfaceName + fname + "_", loc);
+        }
+    if (rec->getTagKind() == ETK_AInterface) {
+        for (auto ritem: rec->methods()) {
+            if (auto Method = dyn_cast<CXXMethodDecl>(ritem))
+            if (Method->getDeclName().isIdentifier()) {
+                FunctionDecl *FD = nullptr;
+                bool addMethod = true;
+                std::string mname = interfaceName + ritem->getName().str();
+                //printf("[%s:%d]HMETH %s\n", __FUNCTION__, __LINE__, mname.c_str());
+                DeclContext *DC = parent;
+                IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
+                const DeclarationNameInfo nName(DeclarationName(&funcName), loc);
+#if 0
+    for (auto item: DC->decls())
+        if (auto Method = dyn_cast<CXXMethodDecl>(item))
+        if (Method->getDeclName().isIdentifier()) {
+            if (Method->getName() == mname) {
+                FD = Method;
+                addMethod = false;
+printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method, mname.c_str());
+                break;
+            }
+        }
+#endif
+    if (addMethod) {
+                const char *Dummy = nullptr;
+                unsigned DiagID;
+                SourceLocation NoLoc;
+#if 1
+                FD = CXXMethodDecl::Create(
+                   ritem->getASTContext(), parent, loc,
+                   nName, ritem->getType(), ritem->getTypeSourceInfo(),
+                   ritem->getStorageClass(), ritem->isInlined(),
+                   ritem->isConstexpr(), loc);
+#else
+    AttributeFactory attrFactory;
+    ParsedAttributes parsedAttrs(attrFactory);
+    Declarator DFunc(DSBool, Declarator::MemberContext);
+    DFunc.AddTypeInfo(DeclaratorChunk::getFunction( true, false, NoLoc,
+        nullptr, 0, NoLoc, NoLoc, 0, true, NoLoc, NoLoc, NoLoc, NoLoc, NoLoc, EST_None, NoLoc,
+        nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DFunc), parsedAttrs, loc);
+    DFunc.setFunctionDefinitionKind(expr ? FDK_Declaration : FDK_Definition);
+    DFunc.SetIdentifier(&funcName, loc);
+    LookupResult Previous(Actions, Actions.GetNameForDeclarator(DFunc),
+        Sema::LookupOrdinaryName, Sema::ForRedeclaration);
+    bool AddToScope = true;
+    MultiTemplateParamsArg TemplateParams(nullptr, (size_t)0);
+    auto New = Actions.ActOnFunctionDeclarator(Actions.getCurScope(), DFunc,
+        DC, Actions.GetTypeForDeclarator(DFunc, Actions.getCurScope()),
+        Previous, TemplateParams, AddToScope);
+    FD = New->getAsFunction();
+#endif
+    }
+                setAtomiccMethod(FD);
+                DC->addDecl(FD);
+                FD->setIsUsed();
+                FD->setAccess(AS_public);
+                FD->setLexicalDeclContext(DC);
+                SmallVector<Stmt*, 32> Stmts;
+                FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
+                FD->setParams(Method->parameters());
+            }
+        }
+    }
+    }
+}
+static void checkInterface(Sema &Actions, CXXRecordDecl *topRecord, SourceLocation loc)
+{
+    std::string mname = topRecord->getName();
+    for (auto bitem: topRecord->bases()) {
+        QualType foo = bitem.getType();
+        if (auto bar = dyn_cast<TemplateSpecializationType>(foo)) {
+            TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
+            if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
+                hoistInterface(Actions, topRecord, acl->getTemplatedDecl(), "", loc);
+        }
+    }
+    for (auto field: topRecord->fields()) {
+        std::string fname = field->getName();
+        QualType ftype = field->getType();
+        if (auto bar = dyn_cast<TemplateSpecializationType>(ftype)) {
+            TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
+            if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
+                hoistInterface(Actions, topRecord, acl->getTemplatedDecl(), fname + "_", loc);
+        }
+        hoistInterface(Actions, topRecord, field, fname + "_", loc);
+    }
+}
 void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                                  SourceLocation StartLoc, DeclSpec &DS,
                                  const ParsedTemplateInfo &TemplateInfo,
@@ -1248,9 +1351,10 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   while(myattr) {
       if (myattr->getName()->getName() == "atomicc_interface")
           TagType = DeclSpec::TST_ainterface;
-      else if (myattr->getName()->getName() == "atomicc_module"
-       || myattr->getName()->getName() == "atomicc_emodule")
+      else if (myattr->getName()->getName() == "atomicc_module")
           TagType = DeclSpec::TST_amodule;
+      else if (myattr->getName()->getName() == "atomicc_emodule")
+          TagType = DeclSpec::TST_aemodule;
       myattr = myattr->getNext();
   }
 
@@ -1736,6 +1840,39 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                                   TagOrTempResult.get());
     else
       ParseStructUnionBody(StartLoc, TagType, TagOrTempResult.get());
+    if(TagType == DeclSpec::TST_amodule && Name) {
+printf("[%s:%d] INMODULEEEEEEEEEEEEEEEEE %d %s tempkind %d act %d\n", __FUNCTION__, __LINE__, TagType, Name->getName().str().c_str(), TemplateInfo.Kind, TemplateInfo.Kind == ParsedTemplateInfo::NonTemplate || TemplateInfo.Kind == ParsedTemplateInfo::Template);
+        Decl * iinfo = TagOrTempResult.get();
+        if (TemplateInfo.Kind == ParsedTemplateInfo::Template) {
+            auto tinfo = dyn_cast<ClassTemplateDecl>(iinfo);
+//printf("[%s:%d] TEMPLATE %p\n", __FUNCTION__, __LINE__, tinfo);
+            iinfo = tinfo->getTemplatedDecl();
+        }
+        if (auto trec = dyn_cast<CXXRecordDecl>(iinfo)) {
+            std::map<std::string, int> guardMap;
+            checkInterface(Actions, trec, Tok.getLocation());
+            for (auto mitem: trec->methods()) {
+                if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
+                if (Method->getDeclName().isIdentifier()) {
+                    std::string mname = mitem->getName();
+                    printf("[%s:%d]TTTMETHOD %s\n", __FUNCTION__, __LINE__, mname.c_str());
+                    if (Method->hasAttrs())
+                    for (auto attr: Method->getAttrs()) {
+printf("[%s:%d] attr %s\n", __FUNCTION__, __LINE__, attr->getSpelling());
+                    if (!strcmp(attr->getSpelling(), "target"))
+                        guardMap[mname] = 1;
+                    }
+                }
+            }
+            for (auto FI : guardMap) {
+                 int tag = FI.second;
+                 if (!tag)
+                     continue;
+                 printf("[%s:%d]TTTOO %s\n", __FUNCTION__, __LINE__, FI.first.c_str());
+            }
+            //FunctionDecl *FD = createGuardMethod(Actions, Actions.CurContext, loc, mname + "__RDY", nullptr);
+        }
+    }
   }
 
   const char *PrevSpec = nullptr;
@@ -2803,6 +2940,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
          TagType == DeclSpec::TST_union  ||
          TagType == DeclSpec::TST_ainterface ||
          TagType == DeclSpec::TST_amodule ||
+         TagType == DeclSpec::TST_aemodule ||
          TagType == DeclSpec::TST_class) && "Invalid TagType!");
 
   PrettyDeclStackTraceEntry CrashInfo(Actions, TagDecl, RecordLoc,
@@ -3043,8 +3181,8 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
       ParseCXXClassMemberDeclaration(CurAS, AccessAttrs.getList());
     }
 
+    SourceLocation loc = Tok.getLocation();
     if(TagType == DeclSpec::TST_ainterface) {
-      SourceLocation loc = Tok.getLocation();
       for (auto item: Actions.CurContext->decls())
           if (auto Method = dyn_cast<CXXMethodDecl>(item)) {
               std::string mname = Method->getName();

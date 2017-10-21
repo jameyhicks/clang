@@ -11536,6 +11536,11 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   // Determine whether this is a call to a pointer-to-member function.
   if (BinaryOperator *op = dyn_cast<BinaryOperator>(NakedMemExpr)) {
     assert(op->getType() == Context.BoundMemberTy);
+    if (op->getOpcode() == BO_Assign) {
+printf("[%s:%d] function assign op %d\n", __FUNCTION__, __LINE__, op->getOpcode());
+op->dump();
+    }
+    else
     assert(op->getOpcode() == BO_PtrMemD || op->getOpcode() == BO_PtrMemI);
 
     QualType fnType =
