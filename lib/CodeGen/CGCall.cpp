@@ -528,16 +528,9 @@ for (auto &I : FI->arguments())
   if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr)
     retInfo.setCoerceToType(ConvertType(FI->getReturnType()));
 
-//printf("[%s:%d] args\n", __FUNCTION__, __LINE__);
-//int jcai = 0;
-  for (auto &I : FI->arguments()) {
-//printf("[%s:%d] arg[%d]\n", __FUNCTION__, __LINE__, jcai++);
+  for (auto &I : FI->arguments())
     if (I.info.canHaveCoerceToType() && I.info.getCoerceToType() == nullptr)
-//{
-//printf("[%s:%d]CONVERTTYPE\n", __FUNCTION__, __LINE__);
       I.info.setCoerceToType(ConvertType(I.type));
-//}
-  }
 
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   bool erased = FunctionsBeingProcessed.erase(FI); (void)erased;
@@ -2825,6 +2818,10 @@ void CodeGenFunction::EmitCallArgs(CallArgList &Args,
                                    CallExpr::const_arg_iterator ArgEnd,
                                    const FunctionDecl *CalleeDecl,
                                    unsigned ParamsToSkip) {
+#if 0
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+if (CalleeDecl) CalleeDecl->dump();
+#endif
   // We *have* to evaluate arguments from right to left in the MS C++ ABI,
   // because arguments are destroyed left to right in the callee.
   if (CGM.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
@@ -3083,6 +3080,10 @@ llvm::CallSite
 CodeGenFunction::EmitCallOrInvoke(llvm::Value *Callee,
                                   ArrayRef<llvm::Value *> Args,
                                   const Twine &Name) {
+#if 0
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+if (Callee) Callee->dump();
+#endif
   llvm::BasicBlock *InvokeDest = getInvokeDest();
 
   llvm::Instruction *Inst;
@@ -3123,6 +3124,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  const CallArgList &CallArgs,
                                  const Decl *TargetDecl,
                                  llvm::Instruction **callOrInvoke) {
+#if 0
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+if (Callee) Callee->dump();
+#endif
   // FIXME: We no longer need the types from CallArgs; lift up and simplify.
 
   // Handle struct-return functions by passing a pointer to the

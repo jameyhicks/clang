@@ -655,11 +655,7 @@ Expr::isModifiableLvalue(ASTContext &Ctx, SourceLocation *Loc) const {
   case Cl::CL_Void: return MLV_InvalidExpression;
   case Cl::CL_AddressableVoid: return MLV_IncompleteVoidType;
   case Cl::CL_DuplicateVectorComponents: return MLV_DuplicateVectorComponents;
-  case Cl::CL_MemberFunction:
-printf("[%s:%d] MEMBERFUN MOD LVAL\n", __FUNCTION__, __LINE__);
-this->dump();
-    break;
-    return MLV_MemberFunction;
+  case Cl::CL_MemberFunction: return MLV_MemberFunction;
   case Cl::CL_SubObjCPropertySetting: return MLV_SubObjCPropertySetting;
   case Cl::CL_ClassTemporary: return MLV_ClassTemporary;
   case Cl::CL_ArrayTemporary: return MLV_ArrayTemporary;

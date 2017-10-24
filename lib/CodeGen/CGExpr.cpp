@@ -1327,10 +1327,7 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
   }
 
   if (LV.isSimple()) {
-    //assert(!LV.getType()->isFunctionType());
-    if (LV.getType()->isFunctionType()) {
-printf("[%s:%d] isFunctionType\n", __FUNCTION__, __LINE__);
-}
+    assert(!LV.getType()->isFunctionType());
 
     // Everything needs a load.
     return RValue::get(EmitLoadOfScalar(LV, Loc));
@@ -3109,6 +3106,10 @@ RValue CodeGenFunction::EmitRValueForField(LValue LV,
 
 RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
                                      ReturnValueSlot ReturnValue) {
+#if 0
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+E->dump();
+#endif
   // Builtins never have block type.
   if (E->getCallee()->getType()->isBlockPointerType())
     return EmitBlockCallExpr(E, ReturnValue);
@@ -3359,6 +3360,11 @@ LValue CodeGenFunction::EmitStmtExprLValue(const StmtExpr *E) {
 RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
                                  const CallExpr *E, ReturnValueSlot ReturnValue,
                                  const Decl *TargetDecl, llvm::Value *Chain) {
+#if 0
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+E->dump();
+Callee->dump();
+#endif
   // Get the actual function type. The callee type will always be a pointer to
   // function type or a block pointer type.
   //assert(CalleeType->isFunctionPointerType() &&

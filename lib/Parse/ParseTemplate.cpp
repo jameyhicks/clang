@@ -1370,9 +1370,6 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
 
   Actions.ActOnStartOfFunctionDef(getCurScope(), FunD);
 
-  if (Tok.is(tok::kw_if)) {
-printf("[%s:%d] RRRRRRMMMMMMMMMMMMMMMMMMMMMMMM\n", __FUNCTION__, __LINE__);
-  }
   if (Tok.is(tok::kw_try)) {
     ParseFunctionTryBlock(LPT.D, FnScope);
   } else {

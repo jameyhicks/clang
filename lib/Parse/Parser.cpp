@@ -1072,8 +1072,6 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
       Actions.ActOnStartOfFunctionTemplateDef(getCurScope(),
                                               *TemplateInfo.TemplateParams, D)
     : Actions.ActOnStartOfFunctionDef(getCurScope(), D);
-//printf("[%s:%d] BBBBBBBBBBBBBBBBBBBBBBBBBBBB\n", __FUNCTION__, __LINE__);
-//llvm::outs() << Res;
 
   // Break out of the ParsingDeclarator context before we parse the body.
   D.complete(Res);

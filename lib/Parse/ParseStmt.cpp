@@ -2066,8 +2066,6 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
     FD->setIsUsed();
     FD->setAccess(AS_public);
     FD->setLexicalDeclContext(DC);
-    //FD->addAttr(::new (FD->getASTContext()) TargetAttr(FD->getLocStart(), FD->getASTContext(), StringRef("atomicc_method"), 0));
-    //FD->addAttr(::new (FD->getASTContext()) UsedAttr(FD->getLocStart(), FD->getASTContext(), 0));
     setAtomiccMethod(FD);
     DC->addDecl(New);
     }

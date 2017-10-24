@@ -27,6 +27,7 @@
 #include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/ADT/SmallString.h"
 #include "clang/Sema/Lookup.h" // LookupResult for adding 'init()'
+#include "clang/AST/Stmt.h"   // ReturnStmt
 using namespace clang;
 void setAtomiccMethod(NamedDecl *methodItem);
 FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
@@ -1263,8 +1264,13 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
                 FD->setIsUsed();
                 FD->setAccess(AS_public);
                 FD->setLexicalDeclContext(DC);
-                SmallVector<Stmt*, 32> Stmts;
-                FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
+                if (mname.length() > 5 && mname.substr(mname.length()-5) == "__RDY") {
+                    SmallVector<Stmt*, 32> Stmts;
+                    StmtResult retStmt = new (Actions.Context) ReturnStmt(loc,
+                        Actions.ActOnCXXBoolLiteral(loc, tok::kw_true).get(), nullptr);
+                    Stmts.push_back(retStmt.get());
+                    FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
+                }
                 FD->setParams(Method->parameters());
             }
         }
@@ -3187,7 +3193,12 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
           if (auto Method = dyn_cast<CXXMethodDecl>(item)) {
               std::string mname = Method->getName();
               if (mname != "VMETHODDECL" && (mname.length() < 5 || mname.substr(mname.length()-5) != "__RDY")) {
-                  FunctionDecl *FD = createGuardMethod(Actions, Actions.CurContext, loc, mname + "__RDY", nullptr);
+                  FunctionDecl *FD = createGuardMethod(Actions, Actions.CurContext, loc, mname + "__RDY",
+Actions.ActOnCXXBoolLiteral(loc, tok::kw_true).get()
+ );
+printf("[%s:%d] IIIIIIIIIIIIIINNNNNNNNNNNTTTTER %s\n", __FUNCTION__, __LINE__, mname.c_str());
+Method->dump();
+FD->dump();
               }
           }
       for (auto item: Actions.CurContext->decls())
