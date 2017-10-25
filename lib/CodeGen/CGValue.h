@@ -300,8 +300,7 @@ public:
 
     LValue R;
     R.LVType = Simple;
-    //assert(address->getType()->isPointerTy());
-    if(!address->getType()->isPointerTy()) printf("[%s:%d] NOTPOINTERTYPE\n", __FUNCTION__, __LINE__);
+    assert(address->getType()->isPointerTy());
     R.V = address;
     R.Initialize(type, qs, alignment, TBAAInfo);
     return R;

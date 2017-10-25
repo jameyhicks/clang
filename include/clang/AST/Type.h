@@ -1990,7 +1990,6 @@ class BuiltinType : public Type {
 public:
   enum Kind {
 #define BUILTIN_TYPE(Id, SingletonId) Id,
-#define DEPENDENT_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
 #include "clang/AST/BuiltinTypes.def"
   };
@@ -5534,9 +5533,6 @@ inline bool Type::canDecayToPointerType() const {
 
 inline bool Type::hasPointerRepresentation() const {
   return (isPointerType() || isReferenceType() || isBlockPointerType() ||
-#if 1 //jca
-          isMemberPointerType() ||
-#endif
           isObjCObjectPointerType() || isNullPtrType());
 }
 

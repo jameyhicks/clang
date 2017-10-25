@@ -1482,8 +1482,6 @@ QualType ASTNodeImporter::VisitType(const Type *T) {
 QualType ASTNodeImporter::VisitBuiltinType(const BuiltinType *T) {
   switch (T->getKind()) {
 #define SHARED_SINGLETON_TYPE(Expansion)
-#define DEPENDENT_TYPE(Id, SingletonId) \
-  case BuiltinType::Id: return Importer.getToContext().SingletonId;
 #define BUILTIN_TYPE(Id, SingletonId) \
   case BuiltinType::Id: return Importer.getToContext().SingletonId;
 #include "clang/AST/BuiltinTypes.def"

@@ -3243,8 +3243,7 @@ LValue CodeGenFunction::EmitCallExprLValue(const CallExpr *E) {
   if (!RV.isScalar())
     return MakeAddrLValue(RV.getAggregateAddr(), E->getType());
 
-  //assert(E->getCallReturnType(getContext())->isReferenceType() &&
-  if(!E->getCallReturnType(getContext())->isReferenceType()) printf("[%s:%d] %s\n", __FUNCTION__, __LINE__,
+  assert(E->getCallReturnType(getContext())->isReferenceType() &&
          "Can't have a scalar return unless the return type is a "
          "reference type!");
 
@@ -3367,8 +3366,7 @@ Callee->dump();
 #endif
   // Get the actual function type. The callee type will always be a pointer to
   // function type or a block pointer type.
-  //assert(CalleeType->isFunctionPointerType() &&
-  if(!CalleeType->isFunctionPointerType()) printf("[%s:%d] %s\n", __FUNCTION__, __LINE__,
+  assert(CalleeType->isFunctionPointerType() &&
          "Call must have function pointer type!");
 
   CalleeType = getContext().getCanonicalType(CalleeType);

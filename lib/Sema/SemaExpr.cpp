@@ -1801,13 +1801,10 @@ Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
   // dependent name.
   DeclContext *DC = (SS.isEmpty() && !CallsUndergoingInstantiation.empty())
     ? CurContext : nullptr;
-//printf("[%s:%d] ssemp %d undergoingempty %d\n", __FUNCTION__, __LINE__, SS.isEmpty(), CallsUndergoingInstantiation.empty());
   while (DC) {
-//printf("[%s:%d] While DC %p isaRecord %d\n", __FUNCTION__, __LINE__, DC, isa<CXXRecordDecl>(DC));
     if (isa<CXXRecordDecl>(DC)) {
       LookupQualifiedName(R, DC);
 
-//printf("[%s:%d] R.emp %d\n", __FUNCTION__, __LINE__, R.empty());
       if (!R.empty()) {
         // Don't give errors about ambiguities in this lookup.
         R.suppressDiagnostics();
@@ -4600,9 +4597,7 @@ static bool isPlaceholderToRemoveAsArg(QualType type) {
   switch (placeholder->getKind()) {
   // Ignore all the non-placeholder types.
 #define PLACEHOLDER_TYPE(ID, SINGLETON_ID)
-#define MEMBER_TYPE(ID, SINGLETON_ID)
 #define BUILTIN_TYPE(ID, SINGLETON_ID) case BuiltinType::ID:
-#define DEPENDENT_TYPE(ID, SINGLETON_ID) case BuiltinType::ID:
 #include "clang/AST/BuiltinTypes.def"
     return false;
 
@@ -4874,9 +4869,8 @@ aa->dump();
     }
   }
 
-  auto foo = BuildResolvedCallExpr(Fn, NDecl, LParenLoc, ArgExprs, RParenLoc,
+  return BuildResolvedCallExpr(Fn, NDecl, LParenLoc, ArgExprs, RParenLoc,
                                ExecConfig, IsExecConfig);
-  return foo;
 }
 
 /// ActOnAsTypeExpr - create a new asType (bitcast) from the arguments.
@@ -9690,10 +9684,8 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
       return Context.UnknownAnyTy;
 
     if (PTy->getKind() == BuiltinType::BoundMember) {
-printf("[%s:%d] REMOVEDERRORCHECKFORBOUNDMEMBER\n", __FUNCTION__, __LINE__);
-OrigOp.get()->dump();
-      //Diag(OpLoc, diag::err_invalid_form_pointer_member_function)
-        //<< OrigOp.get()->getSourceRange();
+      Diag(OpLoc, diag::err_invalid_form_pointer_member_function)
+        << OrigOp.get()->getSourceRange();
       return QualType();
     }
 
@@ -10632,17 +10624,19 @@ std::string RHSstr = methString(getLangOpts(), RHSExpr);
       RHSExpr = SLr; //ImplicitCastExpr::Create(Context, ccharp, CK_ArrayToPointerDecay, SLr, nullptr, VK_RValue);
 printf("[%s:%d] aft '%s' rhs '%s'\n", __FUNCTION__, __LINE__, LHSstr.c_str(), RHSstr.c_str());
     SourceLocation loc;
-    //QualType Params[] = {ccharp, ccharp};
+    QualType ArgTypes[] = {ccharp, ccharp};
     FunctionProtoType::ExtProtoInfo EPI;
     IdentifierInfo *II = &Context.Idents.get("atomiccInterfaceName");
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 ccharp->dump();
+#if 0
     SmallVector<QualType, 8> ArgTypes;
     ArgTypes.reserve(2);
     ArgTypes.push_back(ccharp);
     ArgTypes.push_back(ccharp);
-    auto FnType = Context.getFunctionType(Context.VoidTy, ArgTypes,
-//ArrayRef<QualType>(Params, 2), 
+#endif
+    auto FnType = Context.getFunctionType(Context.VoidTy,// ArgTypes,
+ArrayRef<QualType>(ArgTypes, 2), 
 EPI);
 FnType->dump();
     FunctionDecl *FnDecl = FunctionDecl::Create(Context, Context.getTranslationUnitDecl(),
@@ -10652,9 +10646,7 @@ FnDecl->dump();
     Expr *Fn = DeclRefExpr::Create(Context, NNSloc, OpLoc, FnDecl, false, OpLoc, FnDecl->getType(), VK_LValue, nullptr);
     Fn = ImplicitCastExpr::Create(Context, FnType, CK_ArrayToPointerDecay, Fn, nullptr, VK_RValue);
   SmallVector<ParmVarDecl *, 16> Params;
-  Params.reserve(2);
-    //Params.push_back(ReadDeclAs<ParmVarDecl>(Record, Idx));
-    //Params.push_back(ReadDeclAs<ParmVarDecl>(Record, Idx));
+  //Params.reserve(2);
     ParmVarDecl *Parm =
         ParmVarDecl::Create(Context, FnDecl, SourceLocation(),
                                 SourceLocation(), nullptr, ccharp,
@@ -10665,11 +10657,11 @@ FnDecl->dump();
 Fn->dump();
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     Expr *nArgs[] = {LHSExpr, RHSExpr};
-    MultiExprArg Args(nArgs, 2);
+    //MultiExprArg Args(nArgs, 2);
 
     ExprResult Result = MaybeConvertParenListExprToParenExpr(S, Fn);
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    CallExpr *TheCall = new (Context) CallExpr(Context, Fn, Args, Context.VoidTy, VK_RValue, OpLoc);
+    CallExpr *TheCall = new (Context) CallExpr(Context, Fn, nArgs, Context.VoidTy, VK_RValue, OpLoc);
     ExprResult Result2 = CorrectDelayedTyposInExpr(TheCall);
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     TheCall = dyn_cast<CallExpr>(Result2.get());
@@ -14405,14 +14397,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
         PD = PDiag(diag::err_dtor_expr_without_call) << /*destructor*/ 0;
     }
     tryToRecoverWithCall(result, PD,
-                         /*complain*/ 
-#if 1
-true
-#else
-false
-#endif
-);
-printf("[%s:%d] afterrrrr\n", __FUNCTION__, __LINE__);
+                         /*complain*/ true);
     return result;
   }
 
@@ -14451,10 +14436,7 @@ printf("[%s:%d] afterrrrr\n", __FUNCTION__, __LINE__);
   // Everything else should be impossible.
 #define BUILTIN_TYPE(Id, SingletonId) \
   case BuiltinType::Id:
-#define DEPENDENT_TYPE(Id, SingletonId) \
-  case BuiltinType::Id:
 #define PLACEHOLDER_TYPE(Id, SingletonId)
-#define MEMBER_TYPE(Id, SingletonId)
 #include "clang/AST/BuiltinTypes.def"
     break;
   }

@@ -664,16 +664,11 @@ Expr::isModifiableLvalue(ASTContext &Ctx, SourceLocation *Loc) const {
     return VC.getModifiable() == Cl::CM_LValueCast ?
       MLV_LValueCast : MLV_InvalidExpression;
   }
-  assert(
-(VC.getKind() == Cl::CL_LValue || VC.getKind() == Cl::CL_MemberFunction)
- && "Unhandled kind");
+  assert(VC.getKind() == Cl::CL_LValue && "Unhandled kind");
   switch (VC.getModifiable()) {
   case Cl::CM_Untested: llvm_unreachable("Did not test modifiability");
   case Cl::CM_Modifiable: return MLV_Valid;
-  case Cl::CM_RValue:
-    if (VC.getKind() == Cl::CL_MemberFunction)
-      return MLV_Valid;
-    llvm_unreachable("CM_RValue and CL_LValue don't match");
+  case Cl::CM_RValue: llvm_unreachable("CM_RValue and CL_LValue don't match");
   case Cl::CM_Function: return MLV_NotObjectType;
   case Cl::CM_LValueCast:
     llvm_unreachable("CM_LValueCast and CL_LValue don't match");

@@ -3416,7 +3416,6 @@ bool Type::canHaveNullability() const {
 #define UNSIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define FLOATING_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define BUILTIN_TYPE(Id, SingletonId)
-#define DEPENDENT_TYPE(Id, SingletonId)
 #include "clang/AST/BuiltinTypes.def"
       return false;
 
