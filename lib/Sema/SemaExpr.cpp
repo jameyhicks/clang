@@ -4730,14 +4730,6 @@ ExprResult
 Sema::ActOnCallExpr(Scope *S, Expr *Fn, SourceLocation LParenLoc,
                     MultiExprArg ArgExprs, SourceLocation RParenLoc,
                     Expr *ExecConfig, bool IsExecConfig) {
-#if 0
-printf("[%s:%d] %p\n", __FUNCTION__, __LINE__, Fn);
-Fn->dump();
-for (auto aa: ArgExprs) {
-printf("[%s:%d] AA\n", __FUNCTION__, __LINE__);
-aa->dump();
-}
-#endif
   // Since this might be a postfix expression, get rid of ParenListExprs.
   ExprResult Result = MaybeConvertParenListExprToParenExpr(S, Fn);
   if (Result.isInvalid()) return ExprError();

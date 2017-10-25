@@ -515,12 +515,6 @@ CodeGenTypes::arrangeLLVMFunctionInfo(CanQualType resultType,
   // Compute ABI information.
   getABIInfo().computeInfo(*FI);
 
-#if 0
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-FI->getReturnType().dump();
-for (auto &I : FI->arguments())
-   I.type.dump();
-#endif
   // Loop over all of the computed argument and return value info.  If any of
   // them are direct or extend without a specified coerce type, specify the
   // default now.
@@ -532,7 +526,6 @@ for (auto &I : FI->arguments())
     if (I.info.canHaveCoerceToType() && I.info.getCoerceToType() == nullptr)
       I.info.setCoerceToType(ConvertType(I.type));
 
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   bool erased = FunctionsBeingProcessed.erase(FI); (void)erased;
   assert(erased && "Not in set?");
   
@@ -2818,10 +2811,6 @@ void CodeGenFunction::EmitCallArgs(CallArgList &Args,
                                    CallExpr::const_arg_iterator ArgEnd,
                                    const FunctionDecl *CalleeDecl,
                                    unsigned ParamsToSkip) {
-#if 0
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-if (CalleeDecl) CalleeDecl->dump();
-#endif
   // We *have* to evaluate arguments from right to left in the MS C++ ABI,
   // because arguments are destroyed left to right in the callee.
   if (CGM.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
@@ -3080,10 +3069,6 @@ llvm::CallSite
 CodeGenFunction::EmitCallOrInvoke(llvm::Value *Callee,
                                   ArrayRef<llvm::Value *> Args,
                                   const Twine &Name) {
-#if 0
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-if (Callee) Callee->dump();
-#endif
   llvm::BasicBlock *InvokeDest = getInvokeDest();
 
   llvm::Instruction *Inst;
@@ -3124,10 +3109,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  const CallArgList &CallArgs,
                                  const Decl *TargetDecl,
                                  llvm::Instruction **callOrInvoke) {
-#if 0
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-if (Callee) Callee->dump();
-#endif
   // FIXME: We no longer need the types from CallArgs; lift up and simplify.
 
   // Handle struct-return functions by passing a pointer to the
