@@ -10553,7 +10553,9 @@ static std::string methString(const LangOptions &Opt, Expr *expr)
 {
     std::string retVal;
     if (auto item = dyn_cast<CXXDependentScopeMemberExpr>(expr)) {
-        retVal =  methString(Opt, item->getBase()) + ".";
+        std::string base =  methString(Opt, item->getBase());
+        if (base != "")
+            retVal = base + ".";
         retVal +=  item->getMemberNameInfo().getName().getAsIdentifierInfo()->getName().str();
     }
     if (auto item = dyn_cast<MemberExpr>(expr)) {
@@ -10563,6 +10565,7 @@ static std::string methString(const LangOptions &Opt, Expr *expr)
     }
     return retVal;
 }
+static FunctionDecl *AIFCDecl;
 ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
                             BinaryOperatorKind Opc,
                             Expr *LHSExpr, Expr *RHSExpr) {
@@ -10603,41 +10606,40 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
   // Handle pseudo-objects in the RHS.
   if (const BuiltinType *pty = RHSExpr->getType()->getAsPlaceholderType()) {
     if (Opc == BO_Assign && pty->getKind() == BuiltinType::BoundMember) {
-printf("[%s:%d]ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ\n", __FUNCTION__, __LINE__);
 printf("[%s:%d] ASSIGN MEMBER\n", __FUNCTION__, __LINE__);
-      QualType ccharp = Context.getPointerType(Context.CharTy.withConst());
-      std::string LHSstr = methString(getLangOpts(), LHSExpr);
-      std::string RHSstr = methString(getLangOpts(), RHSExpr);
-      LHSExpr = StringLiteral::Create(Context, LHSstr, StringLiteral::Ascii, /*Pascal*/ false,
-          Context.getConstantArrayType(Context.CharTy.withConst(), llvm::APInt(32, LHSstr.length()), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc);
-      RHSExpr = StringLiteral::Create(Context, RHSstr, StringLiteral::Ascii, /*Pascal*/ false,
-          Context.getConstantArrayType(Context.CharTy.withConst(), llvm::APInt(32, RHSstr.length()), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc);
-      SourceLocation loc;
-      QualType ArgTypes[] = {ccharp, ccharp};
-      FunctionProtoType::ExtProtoInfo EPI;
-      IdentifierInfo *II = &Context.Idents.get("atomiccInterfaceName");
-      auto FnType = Context.getFunctionType(Context.VoidTy, ArrayRef<QualType>(ArgTypes, 2), EPI);
-FnType->dump();
-      FunctionDecl *FnDecl = FunctionDecl::Create(Context, Context.getTranslationUnitDecl(),
-          SourceLocation(), SourceLocation(), II, FnType, nullptr, SC_Extern, false, false);
-FnDecl->dump();
+      if (!AIFCDecl) {
+          QualType ccharp = Context.getPointerType(Context.CharTy.withConst());
+          FunctionProtoType::ExtProtoInfo EPI;
+          IdentifierInfo *II = &Context.Idents.get("atomiccInterfaceName");
+          QualType ArgTypes[] = {ccharp, ccharp};
+          auto FnType = Context.getFunctionType(Context.VoidTy, ArrayRef<QualType>(ArgTypes, 2), EPI);
+          AIFCDecl = FunctionDecl::Create(Context, Context.getTranslationUnitDecl(),
+              SourceLocation(), SourceLocation(), II, FnType, nullptr, SC_Extern, false, false);
+          SmallVector<ParmVarDecl *, 16> Params;
+          ParmVarDecl *Parm = ParmVarDecl::Create(Context, AIFCDecl, OpLoc,
+              OpLoc, nullptr, ccharp, /*TInfo=*/nullptr, SC_None, nullptr);
+          Params.push_back(Parm);
+          Params.push_back(Parm);
+          AIFCDecl->setParams(Params);
+AIFCDecl->dump();
+      }
+
+      std::string lStr = methString(getLangOpts(), LHSExpr);
+      std::string rStr = methString(getLangOpts(), RHSExpr);
+      LHSExpr = StringLiteral::Create(Context, lStr, StringLiteral::Ascii, /*Pascal*/ false,
+          Context.getConstantArrayType(Context.CharTy.withConst(),
+          llvm::APInt(32, lStr.length()), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc);
+      RHSExpr = StringLiteral::Create(Context, rStr, StringLiteral::Ascii, /*Pascal*/ false,
+          Context.getConstantArrayType(Context.CharTy.withConst(),
+          llvm::APInt(32, rStr.length()), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc);
       NestedNameSpecifierLoc NNSloc;
-      Expr *Fn = DeclRefExpr::Create(Context, NNSloc, OpLoc, FnDecl, false, OpLoc, FnDecl->getType(), VK_LValue, nullptr);
-      Fn = ImplicitCastExpr::Create(Context, FnType, CK_ArrayToPointerDecay, Fn, nullptr, VK_RValue);
-      SmallVector<ParmVarDecl *, 16> Params;
-      ParmVarDecl *Parm =
-          ParmVarDecl::Create(Context, FnDecl, loc,
-              loc, nullptr, ccharp, /*TInfo=*/nullptr, SC_None, nullptr);
-      Params.push_back(Parm);
-      Params.push_back(Parm);
-      FnDecl->setParams(Params);
+      Expr *Fn = DeclRefExpr::Create(Context, NNSloc, OpLoc, AIFCDecl, false,
+          OpLoc, AIFCDecl->getType(), VK_LValue, nullptr);
+      Fn = ImplicitCastExpr::Create(Context, AIFCDecl->getType(),
+          CK_ArrayToPointerDecay, Fn, nullptr, VK_RValue);
       Expr *Args[] = {LHSExpr, RHSExpr};
-      ExprResult Result = MaybeConvertParenListExprToParenExpr(S, Fn);
       CallExpr *TheCall = new (Context) CallExpr(Context, Fn, Args, Context.VoidTy, VK_RValue, OpLoc);
-      ExprResult Result2 = CorrectDelayedTyposInExpr(TheCall);
-      TheCall = dyn_cast<CallExpr>(Result2.get());
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-Fn->dump();
 TheCall->dump();
       return MaybeBindToTemporary(TheCall);
     }

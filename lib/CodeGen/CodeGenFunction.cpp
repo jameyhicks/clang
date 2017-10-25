@@ -790,14 +790,14 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
 
 void CodeGenFunction::EmitFunctionBody(FunctionArgList &Args,
                                        const Stmt *Body) {
-fprintf(stderr, "[%s:%d] FFFFFFFFFFFFFFFFFFFFFFFFFF start\n", __FUNCTION__, __LINE__);
-Body->dump();
+//fprintf(stderr, "[%s:%d] FFFFFFFFFFFFFFFFFFFFFFFFFF start\n", __FUNCTION__, __LINE__);
+//Body->dump();
   incrementProfileCounter(Body);
   if (const CompoundStmt *S = dyn_cast<CompoundStmt>(Body))
     EmitCompoundStmtWithoutScope(*S);
   else
     EmitStmt(Body);
-fprintf(stderr, "[%s:%d] FFFFFFFFFFFFFFFFFFFFFFFFFF end\n", __FUNCTION__, __LINE__);
+//fprintf(stderr, "[%s:%d] FFFFFFFFFFFFFFFFFFFFFFFFFF end\n", __FUNCTION__, __LINE__);
 }
 
 /// When instrumenting to collect profile data, the counts for some blocks
@@ -845,9 +845,9 @@ static void TryMarkNoThrow(llvm::Function *F) {
 void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
                                    const CGFunctionInfo &FnInfo) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
-printf("[%s:%d] GGGGGGGGGGGGGGGGGGG\n", __FUNCTION__, __LINE__);
-Fn->dump();
-if (FD->getBody()) FD->getBody()->dump();
+//printf("[%s:%d] GGGGGGGGGGGGGGGGGGG\n", __FUNCTION__, __LINE__);
+//Fn->dump();
+//if (FD->getBody()) FD->getBody()->dump();
 
   // Check if we should generate debug info for this function.
   if (FD->hasAttr<NoDebugAttr>())
