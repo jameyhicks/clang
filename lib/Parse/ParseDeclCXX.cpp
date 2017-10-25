@@ -1200,14 +1200,12 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
             QualType cc = ritem->getType();
             if (auto bar = dyn_cast<TemplateSpecializationType>(cc)) {
                 TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
-                if (auto acl = dyn_cast<ClassTemplateDecl>(fofo)) {
-                    CXXRecordDecl *rec = acl->getTemplatedDecl();
-                    hoistInterface(Actions, parent, rec, interfaceName + fname + "_", loc);
-                }
+                if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
+                    hoistInterface(Actions, parent, acl->getTemplatedDecl(), interfaceName + fname + "_", loc);
             }
             hoistInterface(Actions, parent, ritem, interfaceName + fname + "_", loc);
         }
-    if (rec->getTagKind() == ETK_AInterface) {
+    if (rec->getTagKind() == TTK_AInterface) {
         for (auto ritem: rec->methods()) {
             if (auto Method = dyn_cast<CXXMethodDecl>(ritem))
             if (Method->getDeclName().isIdentifier()) {
@@ -1219,46 +1217,24 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
                 IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
                 const DeclarationNameInfo nName(DeclarationName(&funcName), loc);
 #if 0
-    for (auto item: DC->decls())
-        if (auto Method = dyn_cast<CXXMethodDecl>(item))
-        if (Method->getDeclName().isIdentifier()) {
-            if (Method->getName() == mname) {
-                FD = Method;
-                addMethod = false;
+                for (auto item: DC->decls())
+                    if (auto Method = dyn_cast<CXXMethodDecl>(item))
+                    if (Method->getDeclName().isIdentifier()) {
+                        if (Method->getName() == mname) {
+                            FD = Method;
+                            addMethod = false;
 printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method, mname.c_str());
-                break;
-            }
-        }
+                            break;
+                        }
+                    }
 #endif
-    if (addMethod) {
-                const char *Dummy = nullptr;
-                unsigned DiagID;
+              if (addMethod) {
                 SourceLocation NoLoc;
-#if 1
                 FD = CXXMethodDecl::Create(
                    ritem->getASTContext(), parent, loc,
                    nName, ritem->getType(), ritem->getTypeSourceInfo(),
                    ritem->getStorageClass(), ritem->isInlined(),
                    ritem->isConstexpr(), loc);
-#else
-    AttributeFactory attrFactory;
-    ParsedAttributes parsedAttrs(attrFactory);
-    Declarator DFunc(DSBool, Declarator::MemberContext);
-    DFunc.AddTypeInfo(DeclaratorChunk::getFunction( true, false, NoLoc,
-        nullptr, 0, NoLoc, NoLoc, 0, true, NoLoc, NoLoc, NoLoc, NoLoc, NoLoc, EST_None, NoLoc,
-        nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DFunc), parsedAttrs, loc);
-    DFunc.setFunctionDefinitionKind(expr ? FDK_Declaration : FDK_Definition);
-    DFunc.SetIdentifier(&funcName, loc);
-    LookupResult Previous(Actions, Actions.GetNameForDeclarator(DFunc),
-        Sema::LookupOrdinaryName, Sema::ForRedeclaration);
-    bool AddToScope = true;
-    MultiTemplateParamsArg TemplateParams(nullptr, (size_t)0);
-    auto New = Actions.ActOnFunctionDeclarator(Actions.getCurScope(), DFunc,
-        DC, Actions.GetTypeForDeclarator(DFunc, Actions.getCurScope()),
-        Previous, TemplateParams, AddToScope);
-    FD = New->getAsFunction();
-#endif
-    }
                 setAtomiccMethod(FD);
                 DC->addDecl(FD);
                 FD->setIsUsed();
@@ -1272,6 +1248,7 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
                     FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
                 }
                 FD->setParams(Method->parameters());
+              }
             }
         }
     }
