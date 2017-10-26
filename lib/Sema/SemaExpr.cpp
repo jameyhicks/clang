@@ -10610,10 +10610,15 @@ printf("[%s:%d] ASSIGN MEMBER\n", __FUNCTION__, __LINE__);
       if (!AIFCDecl) {
           QualType ccharp = Context.getPointerType(Context.CharTy.withConst());
           FunctionProtoType::ExtProtoInfo EPI;
+          DeclContext *Parent = Context.getTranslationUnitDecl();
+          LinkageSpecDecl *CLinkageDecl = LinkageSpecDecl::Create(Context, Parent, OpLoc, OpLoc, LinkageSpecDecl::lang_c, false);
+          CLinkageDecl->setImplicit();
+          Parent->addDecl(CLinkageDecl);
+          Parent = CLinkageDecl;
           IdentifierInfo *II = &Context.Idents.get("atomiccInterfaceName");
           QualType ArgTypes[] = {ccharp, ccharp};
           auto FnType = Context.getFunctionType(Context.VoidTy, ArrayRef<QualType>(ArgTypes, 2), EPI);
-          AIFCDecl = FunctionDecl::Create(Context, Context.getTranslationUnitDecl(),
+          AIFCDecl = FunctionDecl::Create(Context, Parent,
               SourceLocation(), SourceLocation(), II, FnType, nullptr, SC_Extern, false, false);
           SmallVector<ParmVarDecl *, 16> Params;
           ParmVarDecl *Parm = ParmVarDecl::Create(Context, AIFCDecl, OpLoc,
@@ -10628,10 +10633,10 @@ AIFCDecl->dump();
       std::string rStr = methString(getLangOpts(), RHSExpr);
       LHSExpr = StringLiteral::Create(Context, lStr, StringLiteral::Ascii, /*Pascal*/ false,
           Context.getConstantArrayType(Context.CharTy.withConst(),
-          llvm::APInt(32, lStr.length()), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc);
+          llvm::APInt(32, lStr.length() + 1), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc);
       RHSExpr = StringLiteral::Create(Context, rStr, StringLiteral::Ascii, /*Pascal*/ false,
           Context.getConstantArrayType(Context.CharTy.withConst(),
-          llvm::APInt(32, rStr.length()), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc);
+          llvm::APInt(32, rStr.length() + 1), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc);
       NestedNameSpecifierLoc NNSloc;
       Expr *Fn = DeclRefExpr::Create(Context, NNSloc, OpLoc, AIFCDecl, false,
           OpLoc, AIFCDecl->getType(), VK_LValue, nullptr);
