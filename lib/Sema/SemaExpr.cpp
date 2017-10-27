@@ -10616,16 +10616,19 @@ printf("[%s:%d] ASSIGN MEMBER\n", __FUNCTION__, __LINE__);
           Parent->addDecl(CLinkageDecl);
           Parent = CLinkageDecl;
           IdentifierInfo *II = &Context.Idents.get("atomiccInterfaceName");
-          QualType ArgTypes[] = {ccharp, ccharp};
-          auto FnType = Context.getFunctionType(Context.VoidTy, ArrayRef<QualType>(ArgTypes, 2), EPI);
+          QualType ArgTypes[] = {ccharp, ccharp, ccharp};
+          auto FnType = Context.getFunctionType(Context.VoidTy, ArrayRef<QualType>(ArgTypes, 3), EPI);
           AIFCDecl = FunctionDecl::Create(Context, Parent,
-              SourceLocation(), SourceLocation(), II, FnType, nullptr, SC_Extern, false, false);
+              SourceLocation(), SourceLocation(), II, FnType, nullptr, SC_Extern, true, false);
+AIFCDecl->setHasInheritedPrototype(true);
           SmallVector<ParmVarDecl *, 16> Params;
           ParmVarDecl *Parm = ParmVarDecl::Create(Context, AIFCDecl, OpLoc,
               OpLoc, nullptr, ccharp, /*TInfo=*/nullptr, SC_None, nullptr);
           Params.push_back(Parm);
           Params.push_back(Parm);
+          Params.push_back(Parm);
           AIFCDecl->setParams(Params);
+printf("[%s:%d] HASPROROROR %d\n", __FUNCTION__, __LINE__, AIFCDecl->hasPrototype());
 AIFCDecl->dump();
       }
 
@@ -10642,9 +10645,11 @@ AIFCDecl->dump();
           OpLoc, AIFCDecl->getType(), VK_LValue, nullptr);
       Fn = ImplicitCastExpr::Create(Context, AIFCDecl->getType(),
           CK_ArrayToPointerDecay, Fn, nullptr, VK_RValue);
-      Expr *Args[] = {LHSExpr, RHSExpr};
+      //Expr *intPlaceholder = IntegerLiteral::Create(Context, llvm::APInt(32, 0), Context.IntTy, OpLoc);
+//intPlaceholder->dump();
+      Expr *Args[] = {LHSExpr, RHSExpr, RHSExpr};
       CallExpr *TheCall = new (Context) CallExpr(Context, Fn, Args, Context.VoidTy, VK_RValue, OpLoc);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+printf("[%s:%d] NUM %d\n", __FUNCTION__, __LINE__, TheCall->getNumArgs());
 TheCall->dump();
       return MaybeBindToTemporary(TheCall);
     }
