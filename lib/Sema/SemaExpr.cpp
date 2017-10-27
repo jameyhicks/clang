@@ -10616,19 +10616,19 @@ printf("[%s:%d] ASSIGN MEMBER\n", __FUNCTION__, __LINE__);
           Parent->addDecl(CLinkageDecl);
           Parent = CLinkageDecl;
           IdentifierInfo *II = &Context.Idents.get("atomiccInterfaceName");
-          QualType ArgTypes[] = {ccharp, ccharp, ccharp};
+          DeclarationNameInfo NameInfo(II, OpLoc);
+          QualType ArgTypes[] = {ccharp, ccharp, Context.LongTy};
           auto FnType = Context.getFunctionType(Context.VoidTy, ArrayRef<QualType>(ArgTypes, 3), EPI);
-          AIFCDecl = FunctionDecl::Create(Context, Parent,
-              SourceLocation(), SourceLocation(), II, FnType, nullptr, SC_Extern, true, false);
-AIFCDecl->setHasInheritedPrototype(true);
+          AIFCDecl = FunctionDecl::Create(Context, Parent, OpLoc,
+              NameInfo, FnType, nullptr, SC_Extern, false, true, false);
           SmallVector<ParmVarDecl *, 16> Params;
           ParmVarDecl *Parm = ParmVarDecl::Create(Context, AIFCDecl, OpLoc,
               OpLoc, nullptr, ccharp, /*TInfo=*/nullptr, SC_None, nullptr);
           Params.push_back(Parm);
           Params.push_back(Parm);
-          Params.push_back(Parm);
+          Params.push_back(ParmVarDecl::Create(Context, AIFCDecl, OpLoc,
+              OpLoc, nullptr, Context.LongTy, /*TInfo=*/nullptr, SC_None, nullptr));
           AIFCDecl->setParams(Params);
-printf("[%s:%d] HASPROROROR %d\n", __FUNCTION__, __LINE__, AIFCDecl->hasPrototype());
 AIFCDecl->dump();
       }
 
@@ -10645,11 +10645,10 @@ AIFCDecl->dump();
           OpLoc, AIFCDecl->getType(), VK_LValue, nullptr);
       Fn = ImplicitCastExpr::Create(Context, AIFCDecl->getType(),
           CK_ArrayToPointerDecay, Fn, nullptr, VK_RValue);
-      //Expr *intPlaceholder = IntegerLiteral::Create(Context, llvm::APInt(32, 0), Context.IntTy, OpLoc);
-//intPlaceholder->dump();
-      Expr *Args[] = {LHSExpr, RHSExpr, RHSExpr};
+      Expr *intPlaceholder = IntegerLiteral::Create(Context, llvm::APInt(32, 0), Context.IntTy, OpLoc);
+      Expr *Args[] = {LHSExpr, RHSExpr, intPlaceholder};
       CallExpr *TheCall = new (Context) CallExpr(Context, Fn, Args, Context.VoidTy, VK_RValue, OpLoc);
-printf("[%s:%d] NUM %d\n", __FUNCTION__, __LINE__, TheCall->getNumArgs());
+printf("[%s:%d] NUM %d isproto %d\n", __FUNCTION__, __LINE__, TheCall->getNumArgs(), AIFCDecl->hasPrototype());
 TheCall->dump();
       return MaybeBindToTemporary(TheCall);
     }
