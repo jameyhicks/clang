@@ -10555,7 +10555,7 @@ static std::string methString(const LangOptions &Opt, Expr *expr)
     if (auto item = dyn_cast<CXXDependentScopeMemberExpr>(expr)) {
         std::string base =  methString(Opt, item->getBase());
         if (base != "")
-            retVal = base + ".";
+            retVal = base + "_";
         retVal +=  item->getMemberNameInfo().getName().getAsIdentifierInfo()->getName().str();
     }
     if (auto item = dyn_cast<MemberExpr>(expr)) {
