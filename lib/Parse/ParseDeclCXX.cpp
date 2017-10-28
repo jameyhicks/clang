@@ -30,6 +30,7 @@
 #include "clang/AST/Stmt.h"   // ReturnStmt
 using namespace clang;
 void setAtomiccMethod(NamedDecl *methodItem);
+bool endswith(std::string str, std::string suffix);
 FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
 
 /// ParseNamespace - We know that the current token is a namespace keyword. This
@@ -1212,7 +1213,7 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
                 FunctionDecl *FD = nullptr;
                 bool addMethod = true;
                 std::string mname = interfaceName + ritem->getName().str();
-                //printf("[%s:%d]HMETH %s\n", __FUNCTION__, __LINE__, mname.c_str());
+                printf("[%s:%d]HMETH %s\n", __FUNCTION__, __LINE__, mname.c_str());
                 DeclContext *DC = parent;
                 IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
                 const DeclarationNameInfo nName(DeclarationName(&funcName), loc);
@@ -1240,13 +1241,19 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
                 FD->setIsUsed();
                 FD->setAccess(AS_public);
                 FD->setLexicalDeclContext(DC);
-                if (mname.length() > 5 && mname.substr(mname.length()-5) == "__RDY") {
-                    SmallVector<Stmt*, 32> Stmts;
+                SmallVector<Stmt*, 32> Stmts;
+                if (endswith(mname, "__RDY")) {
                     StmtResult retStmt = new (Actions.Context) ReturnStmt(loc,
                         Actions.ActOnCXXBoolLiteral(loc, tok::kw_true).get(), nullptr);
                     Stmts.push_back(retStmt.get());
-                    FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
                 }
+                else if (!FD->getReturnType()->isVoidType()) {
+                    StmtResult retStmt = new (Actions.Context) ReturnStmt(loc,
+                        IntegerLiteral::Create(Actions.Context, llvm::APInt(32, 0), Actions.Context.IntTy, loc),
+                        nullptr);
+                    Stmts.push_back(retStmt.get());
+                }
+                FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
                 FD->setParams(Method->parameters());
               }
             }
@@ -1832,28 +1839,19 @@ printf("[%s:%d] INMODULEEEEEEEEEEEEEEEEE %d %s tempkind %d act %d\n", __FUNCTION
             iinfo = tinfo->getTemplatedDecl();
         }
         if (auto trec = dyn_cast<CXXRecordDecl>(iinfo)) {
-            std::map<std::string, int> guardMap;
             checkInterface(Actions, trec, Tok.getLocation());
             for (auto mitem: trec->methods()) {
                 if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
                 if (Method->getDeclName().isIdentifier()) {
                     std::string mname = mitem->getName();
                     printf("[%s:%d]TTTMETHOD %s\n", __FUNCTION__, __LINE__, mname.c_str());
-                    if (Method->hasAttrs())
-                    for (auto attr: Method->getAttrs()) {
-printf("[%s:%d] attr %s\n", __FUNCTION__, __LINE__, attr->getSpelling());
-                    if (!strcmp(attr->getSpelling(), "target"))
-                        guardMap[mname] = 1;
-                    }
+                    //setAtomiccMethod(Method);
+                    Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+                    if (!endswith(mname, "__RDY"))
+                        createGuardMethod(Actions, Method->getLexicalDeclContext(), StartLoc, mname + "__RDY",
+                            Actions.ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
                 }
             }
-            for (auto FI : guardMap) {
-                 int tag = FI.second;
-                 if (!tag)
-                     continue;
-                 printf("[%s:%d]TTTOO %s\n", __FUNCTION__, __LINE__, FI.first.c_str());
-            }
-            //FunctionDecl *FD = createGuardMethod(Actions, Actions.CurContext, loc, mname + "__RDY", nullptr);
         }
     }
   }
@@ -3169,10 +3167,9 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
       for (auto item: Actions.CurContext->decls())
           if (auto Method = dyn_cast<CXXMethodDecl>(item)) {
               std::string mname = Method->getName();
-              if (mname != "VMETHODDECL" && (mname.length() < 5 || mname.substr(mname.length()-5) != "__RDY")) {
+              if (mname != "VMETHODDECL" && !endswith(mname, "__RDY")) {
                   FunctionDecl *FD = createGuardMethod(Actions, Actions.CurContext, loc, mname + "__RDY",
-Actions.ActOnCXXBoolLiteral(loc, tok::kw_true).get()
- );
+                      Actions.ActOnCXXBoolLiteral(loc, tok::kw_true).get());
 printf("[%s:%d] IIIIIIIIIIIIIINNNNNNNNNNNTTTTER %s\n", __FUNCTION__, __LINE__, mname.c_str());
 Method->dump();
 FD->dump();
