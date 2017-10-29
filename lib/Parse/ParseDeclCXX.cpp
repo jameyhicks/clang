@@ -1844,9 +1844,9 @@ printf("[%s:%d] INMODULEEEEEEEEEEEEEEEEE %d %s tempkind %d act %d\n", __FUNCTION
                 if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
                 if (Method->getDeclName().isIdentifier()) {
                     std::string mname = mitem->getName();
-                    printf("[%s:%d]TTTMETHOD %s\n", __FUNCTION__, __LINE__, mname.c_str());
-                    //setAtomiccMethod(Method);
+                    Method->addAttr(::new (Method->getASTContext()) TargetAttr(Method->getLocStart(), Method->getASTContext(), StringRef("atomicc_method"), 0));
                     Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+                    printf("[%s:%d]TTTMETHOD %s\n", __FUNCTION__, __LINE__, mname.c_str());
                     if (!endswith(mname, "__RDY"))
                         createGuardMethod(Actions, Method->getLexicalDeclContext(), StartLoc, mname + "__RDY",
                             Actions.ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
@@ -3171,15 +3171,15 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
                   FunctionDecl *FD = createGuardMethod(Actions, Actions.CurContext, loc, mname + "__RDY",
                       Actions.ActOnCXXBoolLiteral(loc, tok::kw_true).get());
 printf("[%s:%d] IIIIIIIIIIIIIINNNNNNNNNNNTTTTER %s\n", __FUNCTION__, __LINE__, mname.c_str());
-Method->dump();
-FD->dump();
+//Method->dump();
+//FD->dump();
               }
           }
       for (auto item: Actions.CurContext->decls())
           if (auto Method = dyn_cast<CXXMethodDecl>(item)) {
               std::string mname = Method->getName();
 printf("[%s:%d] name %s\n", __FUNCTION__, __LINE__, mname.c_str());
-Method->dump();
+//Method->dump();
           }
     }
     T.consumeClose();

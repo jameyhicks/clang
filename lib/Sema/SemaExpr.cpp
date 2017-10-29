@@ -10565,7 +10565,62 @@ static std::string methString(const LangOptions &Opt, Expr *expr)
     }
     return retVal;
 }
-static FunctionDecl *AIFCDecl;
+static QualType ccharp;
+static FunctionDecl *getAIFC(Sema *s, SourceLocation OpLoc)
+{
+    static FunctionDecl *AIFCDecl;
+    if (!AIFCDecl) {
+        ccharp = s->Context.getPointerType(s->Context.CharTy.withConst());
+        FunctionProtoType::ExtProtoInfo EPI;
+        DeclContext *Parent = s->Context.getTranslationUnitDecl();
+        LinkageSpecDecl *CLinkageDecl = LinkageSpecDecl::Create(s->Context, Parent, OpLoc, OpLoc, LinkageSpecDecl::lang_c, false);
+        CLinkageDecl->setImplicit();
+        Parent->addDecl(CLinkageDecl);
+        Parent = CLinkageDecl;
+        IdentifierInfo *II = &s->Context.Idents.get("atomiccInterfaceName");
+        DeclarationNameInfo NameInfo(II, OpLoc);
+        QualType ArgTypes[] = {ccharp, ccharp, s->Context.LongTy};
+        auto FnType = s->Context.getFunctionType(s->Context.VoidTy, ArrayRef<QualType>(ArgTypes, 3), EPI);
+        AIFCDecl = FunctionDecl::Create(s->Context, Parent, OpLoc,
+            NameInfo, FnType, nullptr, SC_Extern, false, true, false);
+        SmallVector<ParmVarDecl *, 16> Params;
+        ParmVarDecl *Parm = ParmVarDecl::Create(s->Context, AIFCDecl, OpLoc,
+            OpLoc, nullptr, ccharp, /*TInfo=*/nullptr, SC_None, nullptr);
+        Params.push_back(Parm);
+        Params.push_back(Parm);
+        Params.push_back(ParmVarDecl::Create(s->Context, AIFCDecl, OpLoc,
+            OpLoc, nullptr, s->Context.LongTy, /*TInfo=*/nullptr, SC_None, nullptr));
+        AIFCDecl->setParams(Params);
+AIFCDecl->dump();
+    }
+    return AIFCDecl;
+}
+static CallExpr *getAssignCall(Sema *s, SourceLocation OpLoc, Expr *LHSExpr, Expr *RHSExpr)
+{
+    FunctionDecl *AIFCDecl = getAIFC(s, OpLoc);
+    std::string lStr = methString(s->getLangOpts(), LHSExpr);
+    std::string rStr = methString(s->getLangOpts(), RHSExpr);
+    LHSExpr = s->ImpCastExprToType(StringLiteral::Create(s->Context, lStr, StringLiteral::Ascii, /*Pascal*/ false,
+            s->Context.getConstantArrayType(s->Context.CharTy.withConst(),
+            llvm::APInt(32, lStr.length() + 1), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc),
+            ccharp, CK_ArrayToPointerDecay).get();
+    RHSExpr = s->ImpCastExprToType(StringLiteral::Create(s->Context, rStr, StringLiteral::Ascii, /*Pascal*/ false,
+            s->Context.getConstantArrayType(s->Context.CharTy.withConst(),
+            llvm::APInt(32, rStr.length() + 1), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc),
+            ccharp, CK_ArrayToPointerDecay).get();
+    NestedNameSpecifierLoc NNSloc;
+    Expr *Fn = DeclRefExpr::Create(s->Context, NNSloc, OpLoc, AIFCDecl, false,
+        OpLoc, AIFCDecl->getType(), VK_LValue, nullptr);
+    //Fn = ImplicitCastExpr::Create(s->Context, s->Context.getPointerType(AIFCDecl->getType()), CK_FunctionToPointerDecay , Fn, nullptr, VK_RValue);
+    Fn = s->ImpCastExprToType(Fn, s->Context.getPointerType(AIFCDecl->getType()), CK_FunctionToPointerDecay).get();
+    Expr *intPlaceholder = IntegerLiteral::Create(s->Context,
+        llvm::APInt(s->Context.getIntWidth(s->Context.LongTy), 0), s->Context.LongTy, OpLoc);
+    Expr *Args[] = {LHSExpr, RHSExpr, intPlaceholder};
+    CallExpr *TheCall = new (s->Context) CallExpr(s->Context, Fn, Args, s->Context.VoidTy, VK_RValue, OpLoc);
+printf("[%s:%d] NUM %d isproto %d\n", __FUNCTION__, __LINE__, TheCall->getNumArgs(), AIFCDecl->hasPrototype());
+TheCall->dump();
+    return TheCall;
+}
 ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
                             BinaryOperatorKind Opc,
                             Expr *LHSExpr, Expr *RHSExpr) {
@@ -10577,6 +10632,12 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
 
   // Handle pseudo-objects in the LHS.
   if (const BuiltinType *pty = LHSExpr->getType()->getAsPlaceholderType()) {
+printf("[%s:%d] BEFOREASS PLACEH pty %d bmem %d\n", __FUNCTION__, __LINE__, pty->getKind(), BuiltinType::BoundMember);
+    if (Opc == BO_Assign && pty->getKind() == BuiltinType::BoundMember) {
+printf("[%s:%d] ASSIGN MEMBER1\n", __FUNCTION__, __LINE__);
+      CallExpr *TheCall = getAssignCall(this, OpLoc, LHSExpr, RHSExpr);
+      return MaybeBindToTemporary(TheCall);
+    }
     // Assignments with a pseudo-object l-value need special analysis.
     if (pty->getKind() == BuiltinType::PseudoObject &&
         BinaryOperator::isAssignmentOp(Opc))
@@ -10605,51 +10666,10 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
 
   // Handle pseudo-objects in the RHS.
   if (const BuiltinType *pty = RHSExpr->getType()->getAsPlaceholderType()) {
+printf("[%s:%d] BEFOREASS CHECK2\n", __FUNCTION__, __LINE__);
     if (Opc == BO_Assign && pty->getKind() == BuiltinType::BoundMember) {
-printf("[%s:%d] ASSIGN MEMBER\n", __FUNCTION__, __LINE__);
-      if (!AIFCDecl) {
-          QualType ccharp = Context.getPointerType(Context.CharTy.withConst());
-          FunctionProtoType::ExtProtoInfo EPI;
-          DeclContext *Parent = Context.getTranslationUnitDecl();
-          LinkageSpecDecl *CLinkageDecl = LinkageSpecDecl::Create(Context, Parent, OpLoc, OpLoc, LinkageSpecDecl::lang_c, false);
-          CLinkageDecl->setImplicit();
-          Parent->addDecl(CLinkageDecl);
-          Parent = CLinkageDecl;
-          IdentifierInfo *II = &Context.Idents.get("atomiccInterfaceName");
-          DeclarationNameInfo NameInfo(II, OpLoc);
-          QualType ArgTypes[] = {ccharp, ccharp, Context.LongTy};
-          auto FnType = Context.getFunctionType(Context.VoidTy, ArrayRef<QualType>(ArgTypes, 3), EPI);
-          AIFCDecl = FunctionDecl::Create(Context, Parent, OpLoc,
-              NameInfo, FnType, nullptr, SC_Extern, false, true, false);
-          SmallVector<ParmVarDecl *, 16> Params;
-          ParmVarDecl *Parm = ParmVarDecl::Create(Context, AIFCDecl, OpLoc,
-              OpLoc, nullptr, ccharp, /*TInfo=*/nullptr, SC_None, nullptr);
-          Params.push_back(Parm);
-          Params.push_back(Parm);
-          Params.push_back(ParmVarDecl::Create(Context, AIFCDecl, OpLoc,
-              OpLoc, nullptr, Context.LongTy, /*TInfo=*/nullptr, SC_None, nullptr));
-          AIFCDecl->setParams(Params);
-AIFCDecl->dump();
-      }
-
-      std::string lStr = methString(getLangOpts(), LHSExpr);
-      std::string rStr = methString(getLangOpts(), RHSExpr);
-      LHSExpr = StringLiteral::Create(Context, lStr, StringLiteral::Ascii, /*Pascal*/ false,
-          Context.getConstantArrayType(Context.CharTy.withConst(),
-          llvm::APInt(32, lStr.length() + 1), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc);
-      RHSExpr = StringLiteral::Create(Context, rStr, StringLiteral::Ascii, /*Pascal*/ false,
-          Context.getConstantArrayType(Context.CharTy.withConst(),
-          llvm::APInt(32, rStr.length() + 1), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc);
-      NestedNameSpecifierLoc NNSloc;
-      Expr *Fn = DeclRefExpr::Create(Context, NNSloc, OpLoc, AIFCDecl, false,
-          OpLoc, AIFCDecl->getType(), VK_LValue, nullptr);
-      Fn = ImplicitCastExpr::Create(Context, AIFCDecl->getType(),
-          CK_ArrayToPointerDecay, Fn, nullptr, VK_RValue);
-      Expr *intPlaceholder = IntegerLiteral::Create(Context, llvm::APInt(32, 0), Context.IntTy, OpLoc);
-      Expr *Args[] = {LHSExpr, RHSExpr, intPlaceholder};
-      CallExpr *TheCall = new (Context) CallExpr(Context, Fn, Args, Context.VoidTy, VK_RValue, OpLoc);
-printf("[%s:%d] NUM %d isproto %d\n", __FUNCTION__, __LINE__, TheCall->getNumArgs(), AIFCDecl->hasPrototype());
-TheCall->dump();
+printf("[%s:%d] ASSIGN MEMBER2\n", __FUNCTION__, __LINE__);
+      CallExpr *TheCall = getAssignCall(this, OpLoc, LHSExpr, RHSExpr);
       return MaybeBindToTemporary(TheCall);
     }
     // An overload in the RHS can potentially be resolved by the type
