@@ -1196,15 +1196,17 @@ bool Parser::isValidAfterTypeSpecifier(bool CouldBeBitfield) {
 static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc)
 {
     if (auto rec = dyn_cast<CXXRecordDecl>(field)) {
-        for (auto ritem: rec->fields()) {
-            std::string fname = ritem->getName();
-            QualType cc = ritem->getType();
-            if (auto bar = dyn_cast<TemplateSpecializationType>(cc)) {
+        for (auto fitem: rec->fields()) {
+            std::string fname = fitem->getName();
+            QualType fieldType = fitem->getType();
+            if (auto bar = dyn_cast<TemplateSpecializationType>(fieldType)) {
                 TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
                 if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
                     hoistInterface(Actions, parent, acl->getTemplatedDecl(), interfaceName + fname + "_", loc);
             }
-            hoistInterface(Actions, parent, ritem, interfaceName + fname + "_", loc);
+            if (auto frec = dyn_cast<RecordType>(fieldType))
+                hoistInterface(Actions, parent, frec->getDecl(), interfaceName + fname + "_", loc);
+            hoistInterface(Actions, parent, fitem, interfaceName + fname + "_", loc);
         }
     if (rec->getTagKind() == TTK_AInterface) {
         for (auto ritem: rec->methods()) {
@@ -1266,6 +1268,8 @@ static void checkInterface(Sema &Actions, CXXRecordDecl *topRecord, SourceLocati
     std::string mname = topRecord->getName();
     for (auto bitem: topRecord->bases()) {
         QualType foo = bitem.getType();
+        if (auto rec = dyn_cast<RecordType>(foo))
+            hoistInterface(Actions, topRecord, rec->getDecl(), "", loc);
         if (auto bar = dyn_cast<TemplateSpecializationType>(foo)) {
             TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
             if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
@@ -3178,7 +3182,7 @@ printf("[%s:%d] IIIIIIIIIIIIIINNNNNNNNNNNTTTTER %s\n", __FUNCTION__, __LINE__, m
       for (auto item: Actions.CurContext->decls())
           if (auto Method = dyn_cast<CXXMethodDecl>(item)) {
               std::string mname = Method->getName();
-printf("[%s:%d] name %s\n", __FUNCTION__, __LINE__, mname.c_str());
+printf("[%s:%d] interface method name %s\n", __FUNCTION__, __LINE__, mname.c_str());
 //Method->dump();
           }
     }
