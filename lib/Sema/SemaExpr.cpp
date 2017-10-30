@@ -10559,8 +10559,11 @@ static std::string methString(const LangOptions &Opt, Expr *expr)
         retVal +=  item->getMemberNameInfo().getName().getAsIdentifierInfo()->getName().str();
     }
     if (auto item = dyn_cast<MemberExpr>(expr)) {
+        std::string base =  methString(Opt, item->getBase());
+        if (base != "")
+            retVal = base + "_";
         if (auto method = item->getMemberDecl()) {
-            retVal = method->getName();
+            retVal += method->getName();
         }
     }
     return retVal;
