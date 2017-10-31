@@ -4904,7 +4904,6 @@ ExprResult Sema::ActOnConvertVectorExpr(Expr *E, ParsedType ParsedDestTy,
 /// block-pointer type.
 ///
 /// \param NDecl the declaration being called, if available
-void setAtomiccMethod(NamedDecl *methodItem);
 ExprResult
 Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
                             SourceLocation LParenLoc,
@@ -10124,46 +10123,6 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
 
   switch (Opc) {
   case BO_Assign:
-    if (LHS.get()->isModifiableLvalue(Context, &OpLoc) == Expr::MLV_MemberFunction) {
-      if (auto mExpr = dyn_cast<MemberExpr>(LHS.get()))
-      if (auto vdecl = dyn_cast<CXXMethodDecl>(mExpr->getMemberDecl())) {
-          const CXXRecordDecl *RD = vdecl->getParent();
-          Expr *base = mExpr->getBase();
-          FieldDecl *thisp = NULL;
-          std::string mname = vdecl->getName();
-printf("[%s:%d] JJMETHODMEMBER arrow %d impl %d mname %s\n", __FUNCTION__, __LINE__, mExpr->isArrow(), mExpr->isImplicitAccess(), mname.c_str());
-          for (auto fitem: RD->fields()) {
-              std::string fname = fitem->getName();
-              if (fname == "p")
-                  thisp = fitem;
-              else if (fname == mname + "p") {
-                  printf("[%s:%d] JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJfield %s\n", __FUNCTION__, __LINE__, fname.c_str());
-                  fitem->dump();
-              MemberExpr *lhs = new (Context) MemberExpr(base, true, OpLoc, fitem, OpLoc, fitem->getType(), VK_LValue, OK_Ordinary);
-              MarkMemberReferenced(lhs);
-              LHS = lhs;
-              QualType LHSTy = LHS.get()->getType();
-LHSTy->dump();
-              RHS.get()->setType(LHSTy);
-              if (auto unop = dyn_cast<UnaryOperator>(RHS.get()))
-              if (auto dre = dyn_cast<DeclRefExpr>(unop->getSubExpr()))
-              if (auto ff = dyn_cast<CXXMethodDecl>(dre->getDecl())) {
-                   QualType origType = LHSTy->getAs<PointerType>()->getPointeeType();
-                   dre->setType(origType);
-            NestedNameSpecifierLoc NNSloc;
-            Expr *rhs = DeclRefExpr::Create(Context, NNSloc, OpLoc, ff, false, OpLoc, origType, VK_LValue, nullptr);
-            RHS = new (Context) UnaryOperator(rhs, unop->getOpcode(), LHSTy, unop->getValueKind(), unop->getObjectKind(), OpLoc);
-printf("[%s:%d] NEWRHS\n", __FUNCTION__, __LINE__);
-RHS.get()->dump();
-            //if (paramIndex > 1)
-                //rhs = CStyleCastExpr::Create(Context, fitem->getType(), VK_RValue, CK_IntegralToPointer, rhs, nullptr, fitem->getTypeSourceInfo(), loc, loc);
-              }
-              }
-          }
-      LHS.get()->dump();
-      RHS.get()->dump();
-      }
-    }
     ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType());
     if (getLangOpts().CPlusPlus &&
         LHS.get()->getObjectKind() != OK_ObjCProperty) {
@@ -10614,7 +10573,6 @@ static CallExpr *getAssignCall(Sema *s, SourceLocation OpLoc, Expr *LHSExpr, Exp
     NestedNameSpecifierLoc NNSloc;
     Expr *Fn = DeclRefExpr::Create(s->Context, NNSloc, OpLoc, AIFCDecl, false,
         OpLoc, AIFCDecl->getType(), VK_LValue, nullptr);
-    //Fn = ImplicitCastExpr::Create(s->Context, s->Context.getPointerType(AIFCDecl->getType()), CK_FunctionToPointerDecay , Fn, nullptr, VK_RValue);
     Fn = s->ImpCastExprToType(Fn, s->Context.getPointerType(AIFCDecl->getType()), CK_FunctionToPointerDecay).get();
     Expr *intPlaceholder = IntegerLiteral::Create(s->Context,
         llvm::APInt(s->Context.getIntWidth(s->Context.LongTy), 0), s->Context.LongTy, OpLoc);
