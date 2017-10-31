@@ -29,9 +29,22 @@
 #include "clang/Sema/Lookup.h" // LookupResult for adding 'init()'
 #include "clang/AST/Stmt.h"   // ReturnStmt
 using namespace clang;
-void setAtomiccMethod(NamedDecl *methodItem);
 bool endswith(std::string str, std::string suffix);
 FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
+
+void setAtomiccMethod(NamedDecl *methodItem)
+{
+  if (auto newFD = dyn_cast<FunctionDecl>(methodItem)) {
+      if (newFD->getName() == "VMETHODDECL")
+          return;
+      const FunctionProtoType *FPT = newFD->getType()->castAs<FunctionProtoType>();
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
+      newFD->setType(newFD->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
+      newFD->addAttr(::new (newFD->getASTContext()) TargetAttr(newFD->getLocStart(), newFD->getASTContext(), StringRef("atomicc_method"), 0));
+      newFD->addAttr(::new (newFD->getASTContext()) UsedAttr(newFD->getLocStart(), newFD->getASTContext(), 0));
+  }
+}
 
 /// ParseNamespace - We know that the current token is a namespace keyword. This
 /// may either be a top level namespace or a block-level namespace alias. If
@@ -1257,6 +1270,7 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
                 }
                 FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
                 FD->setParams(Method->parameters());
+                //Actions.ActOnFinishInlineMethodDef(FD);
               }
             }
         }
@@ -1851,9 +1865,12 @@ printf("[%s:%d] INMODULEEEEEEEEEEEEEEEEE %d %s tempkind %d act %d\n", __FUNCTION
                     Method->addAttr(::new (Method->getASTContext()) TargetAttr(Method->getLocStart(), Method->getASTContext(), StringRef("atomicc_method"), 0));
                     Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
                     printf("[%s:%d]TTTMETHOD %s\n", __FUNCTION__, __LINE__, mname.c_str());
-                    if (!endswith(mname, "__RDY"))
-                        createGuardMethod(Actions, Method->getLexicalDeclContext(), StartLoc, mname + "__RDY",
-                            Actions.ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
+                    if (!endswith(mname, "__RDY")) {
+                        FunctionDecl *FD = createGuardMethod(Actions, Method->getLexicalDeclContext(),
+                            StartLoc, mname + "__RDY", Actions.ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
+                        //if (auto meth = dyn_cast_or_null<CXXMethodDecl>(FD))
+                            //Actions.ActOnFinishInlineMethodDef(meth);
+                    }
                 }
             }
         }
@@ -3173,7 +3190,8 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
               std::string mname = Method->getName();
               if (mname != "VMETHODDECL" && !endswith(mname, "__RDY")) {
                   FunctionDecl *FD = createGuardMethod(Actions, Actions.CurContext, loc, mname + "__RDY",
-                      Actions.ActOnCXXBoolLiteral(loc, tok::kw_true).get());
+                      nullptr //Actions.ActOnCXXBoolLiteral(loc, tok::kw_true).get()
+);
 printf("[%s:%d] IIIIIIIIIIIIIINNNNNNNNNNNTTTTER %s\n", __FUNCTION__, __LINE__, mname.c_str());
 //Method->dump();
 //FD->dump();

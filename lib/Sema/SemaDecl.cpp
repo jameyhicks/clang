@@ -50,7 +50,6 @@
 #include <functional>
 using namespace clang;
 using namespace sema;
-FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
 
 Sema::DeclGroupPtrTy Sema::ConvertDeclToDeclGroup(Decl *Ptr, Decl *OwnedType) {
   if (OwnedType) {
@@ -4717,20 +4716,6 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
   return false;
 }
 
-void setAtomiccMethod(NamedDecl *methodItem)
-{
-  if (auto newFD = dyn_cast<FunctionDecl>(methodItem)) {
-      if (newFD->getName() == "VMETHODDECL")
-          return;
-      const FunctionProtoType *FPT = newFD->getType()->castAs<FunctionProtoType>();
-      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-      EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
-      newFD->setType(newFD->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
-      newFD->addAttr(::new (newFD->getASTContext()) TargetAttr(newFD->getLocStart(), newFD->getASTContext(), StringRef("atomicc_method"), 0));
-      newFD->addAttr(::new (newFD->getASTContext()) UsedAttr(newFD->getLocStart(), newFD->getASTContext(), 0));
-  }
-}
-
 NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
                                   MultiTemplateParamsArg TemplateParamLists) {
   // TODO: consider using NameInfo for diagnostic.
@@ -4920,40 +4905,9 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
 
     New = ActOnTypedefDeclarator(S, D, DC, TInfo, Previous);
   } else if (R->isFunctionType()) {
-    if (auto CC = dyn_cast<TagDecl>(DC))
-    if (CC->hasAttr<AtomiccInterfaceAttr>()) {
-      bool vmethodFlag = false;
-      if (CXXRecordDecl *cdecl = dyn_cast<CXXRecordDecl>(CC)) {
-        for (auto item: cdecl->methods()) {
-          //if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
-          if (item->getDeclName().isIdentifier()) {
-          if (isa<CXXConstructorDecl>(item)) {
-            std::string mname = item->getName();
-printf("[%s:%d] COOOOOOOOONNNNNNNNNNNNNNSSSSSSSTRRUCTOR %s\n", __FUNCTION__, __LINE__, mname.c_str());
-item->dump();
-          }
-          else {
-            std::string mname = item->getName();
-//printf("[%s:%d] prev %s\n", __FUNCTION__, __LINE__, mname.c_str());
-            if (mname == "VMETHODDECL")
-                vmethodFlag = true;
-          }
-          }
-        }
-      }
-      std::string mname = D.getName().Identifier->getName();
-printf("[%s:%d] before ActOnFunctionDeclarator: %s DC %p\n", __FUNCTION__, __LINE__, mname.c_str(), DC);
-      if (mname != "VMETHODDECL") {
-      std::string readyString = vmethodFlag ? "__READY" : "__RDY";
-      NamedDecl *NewExtra = createGuardMethod(*this, DC, D.getLocStart(), mname + readyString, nullptr);
-      }
-    }
     New = ActOnFunctionDeclarator(S, D, DC, TInfo, Previous,
                                   TemplateParamLists,
                                   AddToScope);
-    if (auto CC = dyn_cast<TagDecl>(DC))
-    if (CC->hasAttr<AtomiccInterfaceAttr>())
-      setAtomiccMethod(New);
   } else {
     New = ActOnVariableDeclarator(S, D, DC, TInfo, Previous, TemplateParamLists,
                                   AddToScope);
@@ -12454,35 +12408,6 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
   AdjustDeclIfTemplate(TagD);
   TagDecl *Tag = cast<TagDecl>(TagD);
   Tag->setRBraceLoc(RBraceLoc);
-  if (Tag->hasAttr<AtomiccInterfaceAttr>())
-  if (CXXRecordDecl *cdecl = dyn_cast<CXXRecordDecl>(Tag)) {
-    TypeSourceInfo *TSInfo = NULL;
-    for (auto bitem: cdecl->bases())
-        TSInfo = bitem.getTypeSourceInfo();
-    for (auto item: cdecl->methods()) {
-//printf("[%s:%d] method %p isid %d constr %d\n", __FUNCTION__, __LINE__, item, item->getDeclName().isIdentifier(), isa<CXXConstructorDecl>(item));
-      SourceLocation loc = item->getLocation();
-      if (item->getDeclName().isIdentifier() && !isa<CXXConstructorDecl>(item)) {
-        std::string mname = item->getName();
-        if (mname == "VMETHODDECL")
-            continue;
-        item->setIsUsed();
-        item->addAttr(UsedAttr::CreateImplicit(Context));
-        QualType retType = item->getReturnType();
-        NestedNameSpecifierLoc NNSloc;
-        std::vector<Stmt *> compoundList;
-        QualType ThisTy = Context.getPointerType(Context.getTypeDeclType(cdecl));
-        Expr *baseExpr = new (Context) CXXThisExpr(loc, ThisTy, /*isImplicit=*/true);
-        //if (!item->hasBody())
-            //item->setBody(new (Context) CompoundStmt(Context, llvm::makeArrayRef(compoundList), loc, loc));
-//item->dump();
-        if (item->hasBody())
-            Consumer.HandleInlineMethodDefinition(item);
-      }
-    }
-    //for (auto item: cdecl->fields()) { item->dump(); }
-    //for (auto item: cdecl->ctors()) { //CXXConstructorDecl //}
-  }
 
   // Make sure we "complete" the definition even it is invalid.
   if (Tag->isBeingDefined()) {

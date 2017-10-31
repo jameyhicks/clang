@@ -2068,12 +2068,12 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
     FD->setLexicalDeclContext(DC);
     setAtomiccMethod(FD);
     DC->addDecl(New);
-    }
     if (expr) {
         StmtResult retStmt = new (Actions.Context) ReturnStmt(loc, expr, nullptr);
         SmallVector<Stmt*, 32> Stmts;
         Stmts.push_back(retStmt.get());
         FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
+    }
     }
     return FD;
 }
