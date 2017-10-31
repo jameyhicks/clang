@@ -3168,27 +3168,6 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
       ParseCXXClassMemberDeclaration(CurAS, AccessAttrs.getList());
     }
 
-    SourceLocation loc = Tok.getLocation();
-    if(TagType == DeclSpec::TST_ainterface) {
-      for (auto item: Actions.CurContext->decls())
-          if (auto Method = dyn_cast<CXXMethodDecl>(item)) {
-              std::string mname = Method->getName();
-              if (mname != "VMETHODDECL" && !endswith(mname, "__RDY")) {
-                  FunctionDecl *FD = createGuardMethod(Actions, Actions.CurContext, loc, mname + "__RDY",
-                      nullptr //Actions.ActOnCXXBoolLiteral(loc, tok::kw_true).get()
-);
-printf("[%s:%d] IIIIIIIIIIIIIINNNNNNNNNNNTTTTER %s\n", __FUNCTION__, __LINE__, mname.c_str());
-//Method->dump();
-//FD->dump();
-              }
-          }
-      for (auto item: Actions.CurContext->decls())
-          if (auto Method = dyn_cast<CXXMethodDecl>(item)) {
-              std::string mname = Method->getName();
-printf("[%s:%d] interface method name %s\n", __FUNCTION__, __LINE__, mname.c_str());
-//Method->dump();
-          }
-    }
     T.consumeClose();
   } else {
     SkipUntil(tok::r_brace);
