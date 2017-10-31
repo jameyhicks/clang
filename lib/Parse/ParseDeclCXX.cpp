@@ -32,20 +32,6 @@ using namespace clang;
 bool endswith(std::string str, std::string suffix);
 FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
 
-void setAtomiccMethod(NamedDecl *methodItem)
-{
-  if (auto newFD = dyn_cast<FunctionDecl>(methodItem)) {
-      if (newFD->getName() == "VMETHODDECL")
-          return;
-      const FunctionProtoType *FPT = newFD->getType()->castAs<FunctionProtoType>();
-      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-      EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
-      newFD->setType(newFD->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
-      newFD->addAttr(::new (newFD->getASTContext()) TargetAttr(newFD->getLocStart(), newFD->getASTContext(), StringRef("atomicc_method"), 0));
-      newFD->addAttr(::new (newFD->getASTContext()) UsedAttr(newFD->getLocStart(), newFD->getASTContext(), 0));
-  }
-}
-
 /// ParseNamespace - We know that the current token is a namespace keyword. This
 /// may either be a top level namespace or a block-level namespace alias. If
 /// there was an inline keyword, it has already been parsed.
@@ -1251,7 +1237,6 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
                    nName, ritem->getType(), ritem->getTypeSourceInfo(),
                    ritem->getStorageClass(), ritem->isInlined(),
                    ritem->isConstexpr(), loc);
-                setAtomiccMethod(FD);
                 DC->addDecl(FD);
                 FD->setIsUsed();
                 FD->setAccess(AS_public);

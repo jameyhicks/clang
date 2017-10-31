@@ -27,7 +27,6 @@
 #include "clang/Sema/Lookup.h" // LookupResult for adding 'xxx__RDY()'
 #include "clang/AST/Stmt.h"    // CompoundStmt
 using namespace clang;
-void setAtomiccMethod(NamedDecl *methodItem);
 
 //===----------------------------------------------------------------------===//
 // C99 6.8: Statements and Blocks.
@@ -2066,7 +2065,6 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
     FD->setIsUsed();
     FD->setAccess(AS_public);
     FD->setLexicalDeclContext(DC);
-    setAtomiccMethod(FD);
     DC->addDecl(New);
     if (expr) {
         StmtResult retStmt = new (Actions.Context) ReturnStmt(loc, expr, nullptr);
