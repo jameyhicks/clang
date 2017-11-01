@@ -43,6 +43,78 @@
 #include <set>
 
 using namespace clang;
+bool endswith(std::string str, std::string suffix);
+FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
+static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc)
+{
+    if (auto rec = dyn_cast<CXXRecordDecl>(field)) {
+        for (auto fitem: rec->fields()) {
+            std::string fname = fitem->getName();
+            QualType fieldType = fitem->getType();
+            if (auto bar = dyn_cast<TemplateSpecializationType>(fieldType)) {
+                TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
+                if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
+                    hoistInterface(Actions, parent, acl->getTemplatedDecl(), interfaceName + fname + "_", loc);
+            }
+            if (auto frec = dyn_cast<RecordType>(fieldType))
+                hoistInterface(Actions, parent, frec->getDecl(), interfaceName + fname + "_", loc);
+            hoistInterface(Actions, parent, fitem, interfaceName + fname + "_", loc);
+        }
+    if (rec->getTagKind() == TTK_AInterface) {
+        for (auto ritem: rec->methods()) {
+            if (auto Method = dyn_cast<CXXMethodDecl>(ritem))
+            if (Method->getDeclName().isIdentifier()) {
+                FunctionDecl *FD = nullptr;
+                bool addMethod = true;
+                std::string mname = interfaceName + ritem->getName().str();
+                printf("[%s:%d]HMETH %s\n", __FUNCTION__, __LINE__, mname.c_str());
+                DeclContext *DC = parent;
+                IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
+                const DeclarationNameInfo nName(DeclarationName(&funcName), loc);
+#if 0
+                for (auto item: DC->decls())
+                    if (auto Method = dyn_cast<CXXMethodDecl>(item))
+                    if (Method->getDeclName().isIdentifier()) {
+                        if (Method->getName() == mname) {
+                            FD = Method;
+                            addMethod = false;
+printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method, mname.c_str());
+                            break;
+                        }
+                    }
+#endif
+              if (addMethod) {
+                SourceLocation NoLoc;
+                FD = CXXMethodDecl::Create(
+                   ritem->getASTContext(), parent, loc,
+                   nName, ritem->getType(), ritem->getTypeSourceInfo(),
+                   ritem->getStorageClass(), ritem->isInlined(),
+                   ritem->isConstexpr(), loc);
+                DC->addDecl(FD);
+                FD->setIsUsed();
+                FD->setAccess(AS_public);
+                FD->setLexicalDeclContext(DC);
+                SmallVector<Stmt*, 32> Stmts;
+                if (endswith(mname, "__RDY")) {
+                    StmtResult retStmt = new (Actions.Context) ReturnStmt(loc,
+                        Actions.ActOnCXXBoolLiteral(loc, tok::kw_true).get(), nullptr);
+                    Stmts.push_back(retStmt.get());
+                }
+                else if (!FD->getReturnType()->isVoidType()) {
+                    StmtResult retStmt = new (Actions.Context) ReturnStmt(loc,
+                        IntegerLiteral::Create(Actions.Context, llvm::APInt(32, 0), Actions.Context.IntTy, loc),
+                        nullptr);
+                    Stmts.push_back(retStmt.get());
+                }
+                FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
+                FD->setParams(Method->parameters());
+                //Actions.ActOnFinishInlineMethodDef(FD);
+              }
+            }
+        }
+    }
+    }
+}
 
 //===----------------------------------------------------------------------===//
 // CheckDefaultArgumentVisitor
@@ -5027,15 +5099,45 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   DeclareInheritingConstructors(Record);
 
   checkClassLevelDLLAttribute(Record);
-#if 1 //jca
-  for (auto *M : Record->methods()) {
-    if (const auto *TD = M->getAttr<TargetAttr>()) {
-        StringRef FeaturesStr = TD->getFeatures();
-        CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(M);
-        MarkFunctionReferenced(M->getLocation(), MD, true);
-    }
+  if(Record->getTagKind() == TTK_AModule && Record->getIdentifier()) {
+      auto StartLoc = Record->getLocStart();
+      auto trec = dyn_cast<CXXRecordDecl>(Record);
+      std::string mname = Record->getName();
+      for (auto bitem: Record->bases()) {
+          if (auto rec = dyn_cast<RecordType>(bitem.getType()))
+              hoistInterface(*this, trec, rec->getDecl(), "", StartLoc);
+          if (auto bar = dyn_cast<TemplateSpecializationType>(bitem.getType())) {
+              TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
+              if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
+                  hoistInterface(*this, trec, acl->getTemplatedDecl(), "", StartLoc);
+          }
+      }
+      for (auto field: Record->fields()) {
+          std::string fname = field->getName();
+          if (auto bar = dyn_cast<TemplateSpecializationType>(field->getType())) {
+              TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
+              if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
+                  hoistInterface(*this, trec, acl->getTemplatedDecl(), fname + "_", StartLoc);
+          }
+          hoistInterface(*this, trec, field, fname + "_", StartLoc);
+      }
+      for (auto mitem: Record->methods()) {
+          if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
+          if (Method->getDeclName().isIdentifier()) {
+              std::string mname = mitem->getName();
+              printf("[%s:%d]TTTMETHOD MARKKKKKKKKKK %s %p\n", __FUNCTION__, __LINE__, mname.c_str(), Method);
+              Method->addAttr(::new (Method->getASTContext()) TargetAttr(Method->getLocStart(), Method->getASTContext(), StringRef("atomicc_method"), 0));
+              Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+              if (!endswith(mname, "__RDY")) {
+                  FunctionDecl *FD = createGuardMethod(*this, Method->getLexicalDeclContext(),
+                      StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
+                  //if (auto meth = dyn_cast_or_null<CXXMethodDecl>(FD))
+                      //ActOnFinishInlineMethodDef(meth);
+              }
+              MarkFunctionReferenced(Method->getLocation(), Method, true);
+          }
+      }
   }
-#endif
 }
 
 /// Look up the special member function that would be called by a special
