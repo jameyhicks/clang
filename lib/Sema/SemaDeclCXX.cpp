@@ -51,9 +51,8 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
         for (auto fitem: rec->fields()) {
             std::string fname = fitem->getName();
             QualType fieldType = fitem->getType();
-            if (auto bar = dyn_cast<TemplateSpecializationType>(fieldType)) {
-                TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
-                if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
+            if (auto stype = dyn_cast<TemplateSpecializationType>(fieldType)) {
+                if (auto acl = dyn_cast<ClassTemplateDecl>(stype->getTemplateName().getAsTemplateDecl()))
                     hoistInterface(Actions, parent, acl->getTemplatedDecl(), interfaceName + fname + "_", loc);
             }
             if (auto frec = dyn_cast<RecordType>(fieldType))
@@ -94,6 +93,7 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
                 FD->setIsUsed();
                 FD->setAccess(AS_public);
                 FD->setLexicalDeclContext(DC);
+                //FD->addAttr(::new (ritem->getASTContext()) TargetAttr(loc, ritem->getASTContext(), StringRef("atomicc_method"), 0));
                 SmallVector<Stmt*, 32> Stmts;
                 if (endswith(mname, "__RDY")) {
                     StmtResult retStmt = new (Actions.Context) ReturnStmt(loc,
@@ -5106,26 +5106,22 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
       for (auto bitem: Record->bases()) {
           if (auto rec = dyn_cast<RecordType>(bitem.getType()))
               hoistInterface(*this, trec, rec->getDecl(), "", StartLoc);
-          if (auto bar = dyn_cast<TemplateSpecializationType>(bitem.getType())) {
-              TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
-              if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
+          if (auto stype = dyn_cast<TemplateSpecializationType>(bitem.getType()))
+              if (auto acl = dyn_cast<ClassTemplateDecl>(stype->getTemplateName().getAsTemplateDecl()))
                   hoistInterface(*this, trec, acl->getTemplatedDecl(), "", StartLoc);
-          }
       }
       for (auto field: Record->fields()) {
           std::string fname = field->getName();
-          if (auto bar = dyn_cast<TemplateSpecializationType>(field->getType())) {
-              TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
-              if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
+          if (auto stype = dyn_cast<TemplateSpecializationType>(field->getType()))
+              if (auto acl = dyn_cast<ClassTemplateDecl>(stype->getTemplateName().getAsTemplateDecl()))
                   hoistInterface(*this, trec, acl->getTemplatedDecl(), fname + "_", StartLoc);
-          }
           hoistInterface(*this, trec, field, fname + "_", StartLoc);
       }
       for (auto mitem: Record->methods()) {
           if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
           if (Method->getDeclName().isIdentifier()) {
               std::string mname = mitem->getName();
-              printf("[%s:%d]TTTMETHOD MARKKKKKKKKKK %s %p\n", __FUNCTION__, __LINE__, mname.c_str(), Method);
+              printf("[%s:%d]TTTMETHOD %s %p\n", __FUNCTION__, __LINE__, mname.c_str(), Method);
               Method->addAttr(::new (Method->getASTContext()) TargetAttr(Method->getLocStart(), Method->getASTContext(), StringRef("atomicc_method"), 0));
               Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
               if (!endswith(mname, "__RDY")) {
