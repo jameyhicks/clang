@@ -1262,30 +1262,6 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
     }
     }
 }
-static void checkInterface(Sema &Actions, CXXRecordDecl *topRecord, SourceLocation loc)
-{
-    std::string mname = topRecord->getName();
-    for (auto bitem: topRecord->bases()) {
-        QualType foo = bitem.getType();
-        if (auto rec = dyn_cast<RecordType>(foo))
-            hoistInterface(Actions, topRecord, rec->getDecl(), "", loc);
-        if (auto bar = dyn_cast<TemplateSpecializationType>(foo)) {
-            TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
-            if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
-                hoistInterface(Actions, topRecord, acl->getTemplatedDecl(), "", loc);
-        }
-    }
-    for (auto field: topRecord->fields()) {
-        std::string fname = field->getName();
-        QualType ftype = field->getType();
-        if (auto bar = dyn_cast<TemplateSpecializationType>(ftype)) {
-            TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
-            if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
-                hoistInterface(Actions, topRecord, acl->getTemplatedDecl(), fname + "_", loc);
-        }
-        hoistInterface(Actions, topRecord, field, fname + "_", loc);
-    }
-}
 void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                                  SourceLocation StartLoc, DeclSpec &DS,
                                  const ParsedTemplateInfo &TemplateInfo,
@@ -1842,14 +1818,32 @@ printf("[%s:%d] INMODULEEEEEEEEEEEEEEEEE %d %s tempkind %d act %d\n", __FUNCTION
             iinfo = tinfo->getTemplatedDecl();
         }
         if (auto trec = dyn_cast<CXXRecordDecl>(iinfo)) {
-            checkInterface(Actions, trec, Tok.getLocation());
+            std::string mname = trec->getName();
+            for (auto bitem: trec->bases()) {
+                if (auto rec = dyn_cast<RecordType>(bitem.getType()))
+                    hoistInterface(Actions, trec, rec->getDecl(), "", StartLoc);
+                if (auto bar = dyn_cast<TemplateSpecializationType>(bitem.getType())) {
+                    TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
+                    if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
+                        hoistInterface(Actions, trec, acl->getTemplatedDecl(), "", StartLoc);
+                }
+            }
+            for (auto field: trec->fields()) {
+                std::string fname = field->getName();
+                if (auto bar = dyn_cast<TemplateSpecializationType>(field->getType())) {
+                    TemplateDecl *fofo = bar->getTemplateName().getAsTemplateDecl();
+                    if (auto acl = dyn_cast<ClassTemplateDecl>(fofo))
+                        hoistInterface(Actions, trec, acl->getTemplatedDecl(), fname + "_", StartLoc);
+                }
+                hoistInterface(Actions, trec, field, fname + "_", StartLoc);
+            }
             for (auto mitem: trec->methods()) {
                 if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
                 if (Method->getDeclName().isIdentifier()) {
                     std::string mname = mitem->getName();
+                    printf("[%s:%d]TTTMETHOD %s\n", __FUNCTION__, __LINE__, mname.c_str());
                     Method->addAttr(::new (Method->getASTContext()) TargetAttr(Method->getLocStart(), Method->getASTContext(), StringRef("atomicc_method"), 0));
                     Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
-                    printf("[%s:%d]TTTMETHOD %s\n", __FUNCTION__, __LINE__, mname.c_str());
                     if (!endswith(mname, "__RDY")) {
                         FunctionDecl *FD = createGuardMethod(Actions, Method->getLexicalDeclContext(),
                             StartLoc, mname + "__RDY", Actions.ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
