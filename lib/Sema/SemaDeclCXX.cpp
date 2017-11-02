@@ -45,7 +45,7 @@
 using namespace clang;
 bool endswith(std::string str, std::string suffix);
 FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
-static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc)
+static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc, bool finalize)
 {
     if (auto rec = dyn_cast<CXXRecordDecl>(field)) {
         for (auto fitem: rec->fields()) {
@@ -53,11 +53,11 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
             QualType fieldType = fitem->getType();
             if (auto stype = dyn_cast<TemplateSpecializationType>(fieldType)) {
                 if (auto acl = dyn_cast<ClassTemplateDecl>(stype->getTemplateName().getAsTemplateDecl()))
-                    hoistInterface(Actions, parent, acl->getTemplatedDecl(), interfaceName + fname + "_", loc);
+                    hoistInterface(Actions, parent, acl->getTemplatedDecl(), interfaceName + fname + "_", loc, finalize);
             }
             if (auto frec = dyn_cast<RecordType>(fieldType))
-                hoistInterface(Actions, parent, frec->getDecl(), interfaceName + fname + "_", loc);
-            hoistInterface(Actions, parent, fitem, interfaceName + fname + "_", loc);
+                hoistInterface(Actions, parent, frec->getDecl(), interfaceName + fname + "_", loc, finalize);
+            hoistInterface(Actions, parent, fitem, interfaceName + fname + "_", loc, finalize);
         }
     if (rec->getTagKind() == TTK_AInterface) {
         for (auto ritem: rec->methods()) {
@@ -108,7 +108,8 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
                 }
                 FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
                 FD->setParams(Method->parameters());
-                //Actions.ActOnFinishInlineMethodDef(FD);
+                if (finalize)
+                     Actions.ActOnFinishInlineMethodDef(cast<CXXMethodDecl>(FD));
               }
             }
         }
@@ -5099,23 +5100,40 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   DeclareInheritingConstructors(Record);
 
   checkClassLevelDLLAttribute(Record);
-  if(Record->getTagKind() == TTK_AModule && Record->getIdentifier()) {
+  if(Record->getTagKind() == TTK_AInterface && Record->getIdentifier()) {
+      auto StartLoc = Record->getLocStart();
+      for (auto mitem: Record->methods()) {
+          if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
+          if (Method->getDeclName().isIdentifier()) {
+              std::string mname = mitem->getName();
+              printf("[%s:%d]GMETHOD %s %p\n", __FUNCTION__, __LINE__, mname.c_str(), Method);
+              if (!endswith(mname, "__RDY")) {
+                  FunctionDecl *FD = createGuardMethod(*this, Method->getLexicalDeclContext(),
+                      StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
+                  //if (auto meth = dyn_cast_or_null<CXXMethodDecl>(FD))
+                      //ActOnFinishInlineMethodDef(meth);
+              }
+          }
+      }
+  }
+  else if(Record->getTagKind() == TTK_AModule && Record->getIdentifier()) {
       auto StartLoc = Record->getLocStart();
       auto trec = dyn_cast<CXXRecordDecl>(Record);
       std::string mname = Record->getName();
+      auto finalize = !isa<ClassTemplateSpecializationDecl>(trec);
       for (auto bitem: Record->bases()) {
           if (auto rec = dyn_cast<RecordType>(bitem.getType()))
-              hoistInterface(*this, trec, rec->getDecl(), "", StartLoc);
+              hoistInterface(*this, trec, rec->getDecl(), "", StartLoc, finalize);
           if (auto stype = dyn_cast<TemplateSpecializationType>(bitem.getType()))
               if (auto acl = dyn_cast<ClassTemplateDecl>(stype->getTemplateName().getAsTemplateDecl()))
-                  hoistInterface(*this, trec, acl->getTemplatedDecl(), "", StartLoc);
+                  hoistInterface(*this, trec, acl->getTemplatedDecl(), "", StartLoc, finalize);
       }
       for (auto field: Record->fields()) {
           std::string fname = field->getName();
           if (auto stype = dyn_cast<TemplateSpecializationType>(field->getType()))
               if (auto acl = dyn_cast<ClassTemplateDecl>(stype->getTemplateName().getAsTemplateDecl()))
-                  hoistInterface(*this, trec, acl->getTemplatedDecl(), fname + "_", StartLoc);
-          hoistInterface(*this, trec, field, fname + "_", StartLoc);
+                  hoistInterface(*this, trec, acl->getTemplatedDecl(), fname + "_", StartLoc, finalize);
+          hoistInterface(*this, trec, field, fname + "_", StartLoc, finalize);
       }
       for (auto mitem: Record->methods()) {
           if (auto Method = dyn_cast<CXXMethodDecl>(mitem))

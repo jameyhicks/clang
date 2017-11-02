@@ -10553,7 +10553,6 @@ static FunctionDecl *getAIFC(Sema *s, SourceLocation OpLoc)
         Params.push_back(ParmVarDecl::Create(s->Context, AIFCDecl, OpLoc,
             OpLoc, nullptr, s->Context.LongTy, /*TInfo=*/nullptr, SC_None, nullptr));
         AIFCDecl->setParams(Params);
-AIFCDecl->dump();
     }
     return AIFCDecl;
 }
@@ -10578,8 +10577,8 @@ static CallExpr *getAssignCall(Sema *s, SourceLocation OpLoc, Expr *LHSExpr, Exp
         llvm::APInt(s->Context.getIntWidth(s->Context.LongTy), 0), s->Context.LongTy, OpLoc);
     Expr *Args[] = {LHSExpr, RHSExpr, intPlaceholder};
     CallExpr *TheCall = new (s->Context) CallExpr(s->Context, Fn, Args, s->Context.VoidTy, VK_RValue, OpLoc);
-printf("[%s:%d] NUM %d isproto %d\n", __FUNCTION__, __LINE__, TheCall->getNumArgs(), AIFCDecl->hasPrototype());
-TheCall->dump();
+//printf("[%s:%d] NUM %d isproto %d\n", __FUNCTION__, __LINE__, TheCall->getNumArgs(), AIFCDecl->hasPrototype());
+//TheCall->dump();
     return TheCall;
 }
 ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,

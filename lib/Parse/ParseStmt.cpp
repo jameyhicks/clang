@@ -2031,7 +2031,7 @@ FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation l
             if (Method->getName() == mname) {
                 FD = Method;
                 addMethod = false;
-printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method, mname.c_str());
+printf("[%s:%d] FD %p Method %p mname %s NOTADDED\n", __FUNCTION__, __LINE__, FD, Method, mname.c_str());
                 break;
             }
         }
