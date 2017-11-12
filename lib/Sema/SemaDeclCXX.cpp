@@ -44,7 +44,7 @@
 
 using namespace clang;
 bool endswith(std::string str, std::string suffix);
-FunctionDecl *createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
+void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
 static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc, bool finalize)
 {
     if (auto rec = dyn_cast<CXXRecordDecl>(field)) {
@@ -95,19 +95,39 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
                 FD->setLexicalDeclContext(DC);
                 //FD->addAttr(::new (ritem->getASTContext()) TargetAttr(loc, ritem->getASTContext(), StringRef("atomicc_method"), 0));
                 SmallVector<Stmt*, 32> Stmts;
-                if (endswith(mname, "__RDY")) {
-                    StmtResult retStmt = new (Actions.Context) ReturnStmt(loc,
-                        Actions.ActOnCXXBoolLiteral(loc, tok::kw_true).get(), nullptr);
-                    Stmts.push_back(retStmt.get());
+                SmallVector<Expr *, 16> Args;
+                SmallVector<ParmVarDecl*, 16> Params;
+                for (auto ipar: Method->params()) {
+                    ParmVarDecl *PD = ParmVarDecl::Create(Actions.Context, FD, loc, loc, ipar->getIdentifier(),
+                        ipar->getType(), ipar->getTypeSourceInfo(), SC_None, ipar->getDefaultArg());
+                    PD->markUsed(Actions.Context);
+                    Params.push_back(PD);
+                    QualType ptype = PD->getType();
+                    if (ptype->isReferenceType())
+                        ptype = ptype->getPointeeType();
+                    ExprResult aitem = ImplicitCastExpr::Create(Actions.Context, ptype, CK_LValueToRValue, 
+                            DeclRefExpr::Create(Actions.Context, NestedNameSpecifierLoc(),
+                                loc, PD, false, loc, ptype, VK_LValue, nullptr),
+                        nullptr, VK_RValue);
+                    Args.push_back(aitem.get());
                 }
-                else if (!FD->getReturnType()->isVoidType()) {
-                    StmtResult retStmt = new (Actions.Context) ReturnStmt(loc,
-                        IntegerLiteral::Create(Actions.Context, llvm::APInt(32, 0), Actions.Context.IntTy, loc),
-                        nullptr);
-                    Stmts.push_back(retStmt.get());
-                }
+                FD->setParams(Params);
+                QualType ResultType = FD->getReturnType();
+                CXXMethodDecl *method = cast<CXXMethodDecl>(FD);
+                QualType ThisTy = method->getThisType(Actions.Context);
+                assert(!ThisTy.isNull() && "didn't correctly pre-flight capture of 'this'");
+                Expr *thisp = new (Actions.Context) CXXThisExpr(loc, ThisTy, /*isImplicit=*/ true);
+                Qualifiers baseQuals = ThisTy->castAs<PointerType>()->getPointeeType().getQualifiers();
+                MemberExpr *ME = new (Actions.Context) MemberExpr( thisp, /*IsArrow=*/true, loc, FD, loc,
+                    Actions.Context.BoundMemberTy, VK_RValue, OK_Ordinary);
+                Actions.MarkMemberReferenced(ME);
+                ResultType = ResultType.getNonLValueExprType(Actions.Context);
+                Stmt *call = new (Actions.Context) CXXMemberCallExpr(Actions.Context,
+                    ME, Args, ResultType, Expr::getValueKindForType(ResultType), loc);
+                if (!FD->getReturnType()->isVoidType())
+                    call = new (Actions.Context) ReturnStmt(loc, cast<Expr>(call), nullptr);
+                Stmts.push_back(call);
                 FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
-                FD->setParams(Method->parameters());
                 if (finalize)
                      Actions.ActOnFinishInlineMethodDef(cast<CXXMethodDecl>(FD));
               }
@@ -5107,12 +5127,9 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
           if (Method->getDeclName().isIdentifier()) {
               std::string mname = mitem->getName();
               printf("[%s:%d]GMETHOD %s %p\n", __FUNCTION__, __LINE__, mname.c_str(), Method);
-              if (!endswith(mname, "__RDY")) {
-                  FunctionDecl *FD = createGuardMethod(*this, Method->getLexicalDeclContext(),
+              if (!endswith(mname, "__RDY"))
+                  createGuardMethod(*this, Method->getLexicalDeclContext(),
                       StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
-                  //if (auto meth = dyn_cast_or_null<CXXMethodDecl>(FD))
-                      //ActOnFinishInlineMethodDef(meth);
-              }
           }
       }
   }
@@ -5142,12 +5159,9 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
               printf("[%s:%d]TTTMETHOD %s %p\n", __FUNCTION__, __LINE__, mname.c_str(), Method);
               Method->addAttr(::new (Method->getASTContext()) TargetAttr(Method->getLocStart(), Method->getASTContext(), StringRef("atomicc_method"), 0));
               Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
-              if (!endswith(mname, "__RDY")) {
-                  FunctionDecl *FD = createGuardMethod(*this, Method->getLexicalDeclContext(),
+              if (!endswith(mname, "__RDY"))
+                  createGuardMethod(*this, Method->getLexicalDeclContext(),
                       StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
-                  //if (auto meth = dyn_cast_or_null<CXXMethodDecl>(FD))
-                      //ActOnFinishInlineMethodDef(meth);
-              }
               MarkFunctionReferenced(Method->getLocation(), Method, true);
           }
       }
