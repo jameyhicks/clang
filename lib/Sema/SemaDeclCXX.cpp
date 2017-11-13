@@ -64,14 +64,10 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
             if (auto Method = dyn_cast<CXXMethodDecl>(ritem))
             if (Method->getDeclName().isIdentifier()) {
                 FunctionDecl *FD = nullptr;
-                bool addMethod = true;
                 std::string mname = interfaceName + ritem->getName().str();
                 printf("[%s:%d]HMETH %s\n", __FUNCTION__, __LINE__, mname.c_str());
-                DeclContext *DC = parent;
-                IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
-                const DeclarationNameInfo nName(DeclarationName(&funcName), loc);
 #if 0
-                for (auto item: DC->decls())
+                for (auto item: parent->decls())
                     if (auto Method = dyn_cast<CXXMethodDecl>(item))
                     if (Method->getDeclName().isIdentifier()) {
                         if (Method->getName() == mname) {
@@ -82,23 +78,24 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
                         }
                     }
 #endif
-              if (addMethod) {
+                IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
+                const DeclarationNameInfo nName(DeclarationName(&funcName), loc);
                 SourceLocation NoLoc;
                 FD = CXXMethodDecl::Create(
                    ritem->getASTContext(), parent, loc,
                    nName, ritem->getType(), ritem->getTypeSourceInfo(),
                    ritem->getStorageClass(), ritem->isInlined(),
                    ritem->isConstexpr(), loc);
-                DC->addDecl(FD);
+                parent->addDecl(FD);
                 FD->setIsUsed();
                 FD->setAccess(AS_public);
-                FD->setLexicalDeclContext(DC);
-                //FD->addAttr(::new (ritem->getASTContext()) TargetAttr(loc, ritem->getASTContext(), StringRef("atomicc_method"), 0));
-                SmallVector<Stmt*, 32> Stmts;
+                FD->setLexicalDeclContext(parent);
                 SmallVector<Expr *, 16> Args;
                 SmallVector<ParmVarDecl*, 16> Params;
                 for (auto ipar: Method->params()) {
-                    ParmVarDecl *PD = ParmVarDecl::Create(Actions.Context, FD, loc, loc, ipar->getIdentifier(),
+                    IdentifierInfo &pname = Actions.Context.Idents.get(
+                        mname + "_" + ipar->getIdentifier()->getName().str());
+                    ParmVarDecl *PD = ParmVarDecl::Create(Actions.Context, FD, loc, loc, &pname,
                         ipar->getType(), ipar->getTypeSourceInfo(), SC_None, ipar->getDefaultArg());
                     PD->markUsed(Actions.Context);
                     Params.push_back(PD);
@@ -112,25 +109,23 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
                     Args.push_back(aitem.get());
                 }
                 FD->setParams(Params);
-                QualType ResultType = FD->getReturnType();
                 CXXMethodDecl *method = cast<CXXMethodDecl>(FD);
-                QualType ThisTy = method->getThisType(Actions.Context);
-                assert(!ThisTy.isNull() && "didn't correctly pre-flight capture of 'this'");
-                Expr *thisp = new (Actions.Context) CXXThisExpr(loc, ThisTy, /*isImplicit=*/ true);
-                Qualifiers baseQuals = ThisTy->castAs<PointerType>()->getPointeeType().getQualifiers();
-                MemberExpr *ME = new (Actions.Context) MemberExpr( thisp, /*IsArrow=*/true, loc, FD, loc,
+                MemberExpr *ME = new (Actions.Context) MemberExpr(
+                    new (Actions.Context) CXXThisExpr(loc,
+                         method->getThisType(Actions.Context), /*isImplicit=*/ true),
+                    /*IsArrow=*/true, loc, FD, loc,
                     Actions.Context.BoundMemberTy, VK_RValue, OK_Ordinary);
                 Actions.MarkMemberReferenced(ME);
-                ResultType = ResultType.getNonLValueExprType(Actions.Context);
+                QualType ResultType = FD->getReturnType().getNonLValueExprType(Actions.Context);
                 Stmt *call = new (Actions.Context) CXXMemberCallExpr(Actions.Context,
                     ME, Args, ResultType, Expr::getValueKindForType(ResultType), loc);
                 if (!FD->getReturnType()->isVoidType())
                     call = new (Actions.Context) ReturnStmt(loc, cast<Expr>(call), nullptr);
+                SmallVector<Stmt*, 32> Stmts;
                 Stmts.push_back(call);
                 FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
                 if (finalize)
                      Actions.ActOnFinishInlineMethodDef(cast<CXXMethodDecl>(FD));
-              }
             }
         }
     }
