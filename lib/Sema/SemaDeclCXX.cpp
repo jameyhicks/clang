@@ -5115,7 +5115,7 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   DeclareInheritingConstructors(Record);
 
   checkClassLevelDLLAttribute(Record);
-  if(Record->getTagKind() == TTK_AInterface && Record->getIdentifier()) {
+  if(Record->getTagKind() == TTK_AInterface) {
       auto StartLoc = Record->getLocStart();
       for (auto mitem: Record->methods()) {
           if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
@@ -5128,7 +5128,7 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
           }
       }
   }
-  else if(Record->getTagKind() == TTK_AModule && Record->getIdentifier()) {
+  else if(Record->getTagKind() == TTK_AModule) {
       auto StartLoc = Record->getLocStart();
       auto trec = dyn_cast<CXXRecordDecl>(Record);
       std::string mname = Record->getName();
@@ -5152,11 +5152,7 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
           if (Method->getDeclName().isIdentifier()) {
               std::string mname = mitem->getName();
               printf("[%s:%d]TTTMETHOD %s %p\n", __FUNCTION__, __LINE__, mname.c_str(), Method);
-              Method->addAttr(::new (Method->getASTContext()) TargetAttr(Method->getLocStart(), Method->getASTContext(), StringRef("atomicc_method"), 0));
               Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
-              if (!endswith(mname, "__RDY"))
-                  createGuardMethod(*this, Method->getLexicalDeclContext(),
-                      StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
               MarkFunctionReferenced(Method->getLocation(), Method, true);
           }
       }

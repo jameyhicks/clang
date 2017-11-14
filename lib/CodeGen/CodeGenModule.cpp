@@ -1666,19 +1666,7 @@ llvm::Constant *CodeGenModule::GetAddrOfFunction(GlobalDecl GD,
     Ty = getTypes().ConvertType(cast<ValueDecl>(GD.getDecl())->getType());
   
   StringRef MangledName = getMangledName(GD);
-  llvm::Constant *C =
-      GetOrCreateLLVMFunction(MangledName, Ty, GD, ForVTable, DontDefer);
-  if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(GD.getDecl()))
-  if (!MD->doesThisDeclarationHaveABody() && !isa<CXXConstructorDecl>(MD))
-  if (auto *F = dyn_cast<llvm::Function>(C))
-  if (const auto *TD = GD.getDecl()->getAttr<TargetAttr>()) {
-      //StringRef FeaturesStr = TD->getFeatures();
-      auto AI = ++F->arg_begin(), AE = F->arg_end();
-      auto DI = MD->param_begin();
-      for (; AI != AE; AI++, DI++)
-          AI->setName((*DI)->getName());
-  }
-  return C;
+  return GetOrCreateLLVMFunction(MangledName, Ty, GD, ForVTable, DontDefer);
 }
 
 /// CreateRuntimeFunction - Create a new runtime function with the specified
