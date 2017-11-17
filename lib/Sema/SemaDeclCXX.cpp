@@ -53,11 +53,11 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
             QualType fieldType = fitem->getType();
             if (auto stype = dyn_cast<TemplateSpecializationType>(fieldType)) {
                 if (auto acl = dyn_cast<ClassTemplateDecl>(stype->getTemplateName().getAsTemplateDecl()))
-                    hoistInterface(Actions, parent, acl->getTemplatedDecl(), interfaceName + fname + "_", loc, finalize);
+                    hoistInterface(Actions, parent, acl->getTemplatedDecl(), interfaceName + fname + "$", loc, finalize);
             }
             if (auto frec = dyn_cast<RecordType>(fieldType))
-                hoistInterface(Actions, parent, frec->getDecl(), interfaceName + fname + "_", loc, finalize);
-            hoistInterface(Actions, parent, fitem, interfaceName + fname + "_", loc, finalize);
+                hoistInterface(Actions, parent, frec->getDecl(), interfaceName + fname + "$", loc, finalize);
+            hoistInterface(Actions, parent, fitem, interfaceName + fname + "$", loc, finalize);
         }
     if (rec->getTagKind() == TTK_AInterface) {
         for (auto ritem: rec->methods()) {
@@ -5144,8 +5144,8 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
           std::string fname = field->getName();
           if (auto stype = dyn_cast<TemplateSpecializationType>(field->getType()))
               if (auto acl = dyn_cast<ClassTemplateDecl>(stype->getTemplateName().getAsTemplateDecl()))
-                  hoistInterface(*this, trec, acl->getTemplatedDecl(), fname + "_", StartLoc, finalize);
-          hoistInterface(*this, trec, field, fname + "_", StartLoc, finalize);
+                  hoistInterface(*this, trec, acl->getTemplatedDecl(), fname + "$", StartLoc, finalize);
+          hoistInterface(*this, trec, field, fname + "$", StartLoc, finalize);
       }
       for (auto mitem: Record->methods()) {
           if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
