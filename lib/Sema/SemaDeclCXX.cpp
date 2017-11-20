@@ -5128,7 +5128,7 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
           }
       }
   }
-  else if(Record->getTagKind() == TTK_AModule) {
+  else if(Record->getTagKind() == TTK_AModule || Record->getTagKind() == TTK_AEModule) {
       auto StartLoc = Record->getLocStart();
       auto trec = dyn_cast<CXXRecordDecl>(Record);
       std::string mname = Record->getName();
