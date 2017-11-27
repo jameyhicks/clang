@@ -94,7 +94,7 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
                 SmallVector<ParmVarDecl*, 16> Params;
                 for (auto ipar: Method->params()) {
                     IdentifierInfo &pname = Actions.Context.Idents.get(
-                        mname + "_" + ipar->getIdentifier()->getName().str());
+                        interfaceName + ipar->getIdentifier()->getName().str());
                     ParmVarDecl *PD = ParmVarDecl::Create(Actions.Context, FD, loc, loc, &pname,
                         ipar->getType(), ipar->getTypeSourceInfo(), SC_None, ipar->getDefaultArg());
                     PD->markUsed(Actions.Context);
@@ -5115,6 +5115,8 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   DeclareInheritingConstructors(Record);
 
   checkClassLevelDLLAttribute(Record);
+  //if (!Record->isDependentType()) 
+  {
   if(Record->getTagKind() == TTK_AInterface) {
       auto StartLoc = Record->getLocStart();
       for (auto mitem: Record->methods()) {
@@ -5125,13 +5127,21 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
               if (!endswith(mname, "__RDY"))
                   createGuardMethod(*this, Method->getLexicalDeclContext(),
                       StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
+              if (!Record->isDependentType())
+                for (auto ipar: Method->params()) {
+                    IdentifierInfo &pname = Method->getASTContext().Idents.get(
+                        mname + "_" + ipar->getIdentifier()->getName().str());
+                    ipar->setDeclName(DeclarationName(&pname));
+                }
+              Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+              MarkFunctionReferenced(Method->getLocation(), Method, true);
           }
       }
   }
   else if(Record->getTagKind() == TTK_AModule || Record->getTagKind() == TTK_AEModule) {
       auto StartLoc = Record->getLocStart();
       auto trec = dyn_cast<CXXRecordDecl>(Record);
-      std::string mname = Record->getName();
+      std::string recname = Record->getName();
       auto finalize = !isa<ClassTemplateSpecializationDecl>(trec);
       for (auto bitem: Record->bases()) {
           if (auto rec = dyn_cast<RecordType>(bitem.getType()))
@@ -5151,11 +5161,12 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
           if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
           if (Method->getDeclName().isIdentifier()) {
               std::string mname = mitem->getName();
-              printf("[%s:%d]TTTMETHOD %s %p\n", __FUNCTION__, __LINE__, mname.c_str(), Method);
+              printf("[%s:%d]TTTMETHOD %s meth %s %p\n", __FUNCTION__, __LINE__, recname.c_str(), mname.c_str(), Method);
               Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
               MarkFunctionReferenced(Method->getLocation(), Method, true);
           }
       }
+  }
   }
 }
 

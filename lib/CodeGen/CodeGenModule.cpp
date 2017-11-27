@@ -1588,6 +1588,16 @@ CodeGenModule::GetOrCreateLLVMFunction(StringRef MangledName,
   llvm::Function *F = llvm::Function::Create(FTy,
                                              llvm::Function::ExternalLinkage,
                                              MangledName, &getModule());
+  if (const FunctionDecl *FD = cast_or_null<FunctionDecl>(D))
+  if (FD->getDeclName().isIdentifier())
+  if (auto rec = dyn_cast<CXXRecordDecl>(FD->getLexicalDeclContext())) {
+    auto FI = F->arg_begin(), FE = F->arg_end();
+    auto DI = FD->param_begin(), DE = FD->param_end();
+    FI++;
+    for (; FI != FE && DI != DE; FI++, DI++)
+      if (FI->getName() == "")
+        FI->setName((*DI)->getName());
+  }
   assert(F->getName() == MangledName && "name was uniqued!");
   if (D)
     SetFunctionAttributes(GD, F, IsIncompleteFunction, IsThunk);
