@@ -10508,21 +10508,26 @@ static ExprResult BuildOverloadedBinOp(Sema &S, Scope *Sc, SourceLocation OpLoc,
   return S.CreateOverloadedBinOp(OpLoc, Opc, Functions, LHS, RHS);
 }
 
-static std::string methString(const LangOptions &Opt, Expr *expr)
+static std::string methString(Sema *s, const LangOptions &Opt, Expr *expr)
 {
     std::string retVal;
     if (auto item = dyn_cast<CXXDependentScopeMemberExpr>(expr)) {
-        std::string base =  methString(Opt, item->getBase());
+        std::string base =  methString(s, Opt, item->getBase());
         if (base != "")
             retVal = base + "$";
         retVal +=  item->getMemberNameInfo().getName().getAsIdentifierInfo()->getName().str();
     }
     if (auto item = dyn_cast<MemberExpr>(expr)) {
-        std::string base =  methString(Opt, item->getBase());
+        std::string base =  methString(s, Opt, item->getBase());
         if (base != "")
             retVal = base + "$";
-        if (auto method = item->getMemberDecl()) {
-            retVal += method->getName();
+        if (auto meth = item->getMemberDecl()) {
+            retVal += meth->getName();
+            if (auto Method = dyn_cast<FunctionDecl>(meth)) {
+printf("[%s:%d]METHOD %s\n", __FUNCTION__, __LINE__, Method->getName().str().c_str());
+            Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+            s->MarkFunctionReferenced(Method->getLocation(), Method, true);
+            }
         }
     }
     return retVal;
@@ -10559,8 +10564,8 @@ static FunctionDecl *getAIFC(Sema *s, SourceLocation OpLoc)
 static CallExpr *getAssignCall(Sema *s, SourceLocation OpLoc, Expr *LHSExpr, Expr *RHSExpr)
 {
     FunctionDecl *AIFCDecl = getAIFC(s, OpLoc);
-    std::string lStr = methString(s->getLangOpts(), LHSExpr);
-    std::string rStr = methString(s->getLangOpts(), RHSExpr);
+    std::string lStr = methString(s, s->getLangOpts(), LHSExpr);
+    std::string rStr = methString(s, s->getLangOpts(), RHSExpr);
     LHSExpr = s->ImpCastExprToType(StringLiteral::Create(s->Context, lStr, StringLiteral::Ascii, /*Pascal*/ false,
             s->Context.getConstantArrayType(s->Context.CharTy.withConst(),
             llvm::APInt(32, lStr.length() + 1), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc),
@@ -10577,6 +10582,7 @@ static CallExpr *getAssignCall(Sema *s, SourceLocation OpLoc, Expr *LHSExpr, Exp
         llvm::APInt(s->Context.getIntWidth(s->Context.LongTy), 0), s->Context.LongTy, OpLoc);
     Expr *Args[] = {LHSExpr, RHSExpr, intPlaceholder};
     CallExpr *TheCall = new (s->Context) CallExpr(s->Context, Fn, Args, s->Context.VoidTy, VK_RValue, OpLoc);
+printf("[%s:%d] IFCASSIGN %s = %s\n", __FUNCTION__, __LINE__, lStr.c_str(), rStr.c_str());
 //printf("[%s:%d] NUM %d isproto %d\n", __FUNCTION__, __LINE__, TheCall->getNumArgs(), AIFCDecl->hasPrototype());
 //TheCall->dump();
     return TheCall;

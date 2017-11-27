@@ -47,6 +47,7 @@ bool endswith(std::string str, std::string suffix);
 void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
 static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc, bool finalize)
 {
+    std::string pname = parent->getName();
     if (auto rec = dyn_cast<CXXRecordDecl>(field)) {
         for (auto fitem: rec->fields()) {
             std::string fname = fitem->getName();
@@ -60,12 +61,14 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
             hoistInterface(Actions, parent, fitem, interfaceName + fname + "$", loc, finalize);
         }
     if (rec->getTagKind() == TTK_AInterface) {
+        std::string recname = rec->getName();
         for (auto ritem: rec->methods()) {
             if (auto Method = dyn_cast<CXXMethodDecl>(ritem))
             if (Method->getDeclName().isIdentifier()) {
                 FunctionDecl *FD = nullptr;
                 std::string mname = interfaceName + ritem->getName().str();
-                printf("[%s:%d]HMETH %s\n", __FUNCTION__, __LINE__, mname.c_str());
+                Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+                Actions.MarkFunctionReferenced(Method->getLocation(), Method, true);
 #if 0
                 for (auto item: parent->decls())
                     if (auto Method = dyn_cast<CXXMethodDecl>(item))
@@ -109,6 +112,10 @@ printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method,
                     Args.push_back(aitem.get());
                 }
                 FD->setParams(Params);
+                FD->addAttr(::new (FD->getASTContext()) UsedAttr(FD->getLocStart(), FD->getASTContext(), 0));
+                Actions.MarkFunctionReferenced(FD->getLocation(), FD, true);
+                printf("[%s:%d] %p rec %s orig %s; %p pname %s HMETH %s\n", __FUNCTION__, __LINE__, Method, recname.c_str(), Method->getName().str().c_str(), FD, pname.c_str(), mname.c_str());
+
                 CXXMethodDecl *method = cast<CXXMethodDecl>(FD);
                 MemberExpr *ME = new (Actions.Context) MemberExpr(
                     new (Actions.Context) CXXThisExpr(loc,
@@ -5133,6 +5140,10 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
                         mname + "_" + ipar->getIdentifier()->getName().str());
                     ipar->setDeclName(DeclarationName(&pname));
                 }
+              const FunctionProtoType *FPT = Method->getType()->castAs<FunctionProtoType>();
+              FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+              EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
+              Method->setType(Method->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
               Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
               MarkFunctionReferenced(Method->getLocation(), Method, true);
           }
@@ -5161,9 +5172,12 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
           if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
           if (Method->getDeclName().isIdentifier()) {
               std::string mname = mitem->getName();
-              printf("[%s:%d]TTTMETHOD %s meth %s %p\n", __FUNCTION__, __LINE__, recname.c_str(), mname.c_str(), Method);
+              printf("[%s:%d]TTTMETHOD %p %s meth %s %p\n", __FUNCTION__, __LINE__, Method, recname.c_str(), mname.c_str(), Method);
+              if (auto *FT = dyn_cast<FunctionProtoType>(Method->getType()))
+              if (1 || FT->getCallConv() == CC_X86VectorCall) {
               Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
               MarkFunctionReferenced(Method->getLocation(), Method, true);
+              }
           }
       }
   }
