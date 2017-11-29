@@ -69,18 +69,6 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
                 std::string mname = interfaceName + ritem->getName().str();
                 Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
                 Actions.MarkFunctionReferenced(Method->getLocation(), Method, true);
-#if 0
-                for (auto item: parent->decls())
-                    if (auto Method = dyn_cast<CXXMethodDecl>(item))
-                    if (Method->getDeclName().isIdentifier()) {
-                        if (Method->getName() == mname) {
-                            FD = Method;
-                            addMethod = false;
-printf("[%s:%d] FD %p Method %p mname %s\n", __FUNCTION__, __LINE__, FD, Method, mname.c_str());
-                            break;
-                        }
-                    }
-#endif
                 IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
                 const DeclarationNameInfo nName(DeclarationName(&funcName), loc);
                 SourceLocation NoLoc;
@@ -5122,8 +5110,6 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   DeclareInheritingConstructors(Record);
 
   checkClassLevelDLLAttribute(Record);
-  //if (!Record->isDependentType()) 
-  {
   if(Record->getTagKind() == TTK_AInterface) {
       auto StartLoc = Record->getLocStart();
       for (auto mitem: Record->methods()) {
@@ -5148,8 +5134,8 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
               FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
               EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
               Method->setType(Method->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
-              Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
-              MarkFunctionReferenced(Method->getLocation(), Method, true);
+              //Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+              //MarkFunctionReferenced(Method->getLocation(), Method, true);
               if (!Record->isDependentType()) {
                 for (auto ipar: Method->params()) {
                     IdentifierInfo &pname = Method->getASTContext().Idents.get(
@@ -5157,23 +5143,6 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
                     ipar->setDeclName(DeclarationName(&pname));
                 }
               }
-#if 0
-#include "clang/AST/Mangle.h" ////////////////jca MangleContext
-{
-            if (Method->getDeclName().isIdentifier())
-        if (CXXRecordDecl *Record = dyn_cast_or_null<CXXRecordDecl>(Method->getParent())) { 
-SmallString<256> Buffer;
-llvm::raw_svector_ostream Out(Buffer);
-auto manContext = Method->getASTContext().createMangleContext();
-manContext->mangleName(Method, Out);
-printf("[%s:%d] INTERFACE %s::%s -> %s isdef %d depend %d\n", __FUNCTION__, __LINE__, Record->getName().str().c_str(), Method->getName().str().c_str(), Out.str().str().c_str(), Method->isDefined(), Record->isDependentType());
-}
-#if 0
-                DeclGroupRef DG(Method);
-                Consumer.HandleTopLevelDecl(DG);
-#endif
-}
-#endif
           }
       }
   }
@@ -5208,7 +5177,6 @@ printf("[%s:%d] INTERFACE %s::%s -> %s isdef %d depend %d\n", __FUNCTION__, __LI
               }
           }
       }
-  }
   }
 }
 
