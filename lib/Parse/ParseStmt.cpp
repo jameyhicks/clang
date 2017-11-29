@@ -2059,8 +2059,8 @@ void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::
         SmallVector<Stmt*, 32> Stmts;
         Stmts.push_back(retStmt.get());
         FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
+        Actions.ActOnFinishInlineMethodDef(cast<CXXMethodDecl>(FD));
     }
-    Actions.ActOnFinishInlineMethodDef(cast<CXXMethodDecl>(FD));
 printf("[%s:%d] adding Method %p mname %s\n", __FUNCTION__, __LINE__, FD, mname.c_str());
 }
 /// ParseFunctionIfBlock - Parse a C++ function-if-block.

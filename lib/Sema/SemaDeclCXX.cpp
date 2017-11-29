@@ -5131,21 +5131,49 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
           if (Method->getDeclName().isIdentifier()) {
               std::string mname = mitem->getName();
               printf("[%s:%d]GMETHOD %s %p\n", __FUNCTION__, __LINE__, mname.c_str(), Method);
-              if (!endswith(mname, "__RDY"))
+              if (!endswith(mname, "__RDY")) {
                   createGuardMethod(*this, Method->getLexicalDeclContext(),
                       StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
-              if (!Record->isDependentType())
-                for (auto ipar: Method->params()) {
-                    IdentifierInfo &pname = Method->getASTContext().Idents.get(
-                        mname + "_" + ipar->getIdentifier()->getName().str());
-                    ipar->setDeclName(DeclarationName(&pname));
-                }
+                  SmallVector<Stmt*, 32> Stmts;
+                  if (!Method->getReturnType()->isVoidType()) {
+                      StmtResult retStmt = new (Context) ReturnStmt(StartLoc,
+                          IntegerLiteral::Create(Context, llvm::APInt(32, 0), Context.IntTy, StartLoc),
+                          nullptr);
+                      Stmts.push_back(retStmt.get());
+                  }
+                  Method->setBody(new (Context) class CompoundStmt(Context, Stmts, StartLoc, StartLoc));
+                  ActOnFinishInlineMethodDef(Method);
+              }
               const FunctionProtoType *FPT = Method->getType()->castAs<FunctionProtoType>();
               FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
               EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
               Method->setType(Method->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
               Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
               MarkFunctionReferenced(Method->getLocation(), Method, true);
+              if (!Record->isDependentType()) {
+                for (auto ipar: Method->params()) {
+                    IdentifierInfo &pname = Method->getASTContext().Idents.get(
+                        mname + "_" + ipar->getIdentifier()->getName().str());
+                    ipar->setDeclName(DeclarationName(&pname));
+                }
+              }
+#if 0
+#include "clang/AST/Mangle.h" ////////////////jca MangleContext
+{
+            if (Method->getDeclName().isIdentifier())
+        if (CXXRecordDecl *Record = dyn_cast_or_null<CXXRecordDecl>(Method->getParent())) { 
+SmallString<256> Buffer;
+llvm::raw_svector_ostream Out(Buffer);
+auto manContext = Method->getASTContext().createMangleContext();
+manContext->mangleName(Method, Out);
+printf("[%s:%d] INTERFACE %s::%s -> %s isdef %d depend %d\n", __FUNCTION__, __LINE__, Record->getName().str().c_str(), Method->getName().str().c_str(), Out.str().str().c_str(), Method->isDefined(), Record->isDependentType());
+}
+#if 0
+                DeclGroupRef DG(Method);
+                Consumer.HandleTopLevelDecl(DG);
+#endif
+}
+#endif
           }
       }
   }
@@ -5174,7 +5202,7 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
               std::string mname = mitem->getName();
               printf("[%s:%d]TTTMETHOD %p %s meth %s %p\n", __FUNCTION__, __LINE__, Method, recname.c_str(), mname.c_str(), Method);
               if (auto *FT = dyn_cast<FunctionProtoType>(Method->getType()))
-              if (1 || FT->getCallConv() == CC_X86VectorCall) {
+              if (FT->getCallConv() == CC_X86VectorCall) {
               Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
               MarkFunctionReferenced(Method->getLocation(), Method, true);
               }
