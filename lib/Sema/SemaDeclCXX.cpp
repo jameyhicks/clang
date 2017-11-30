@@ -5134,8 +5134,8 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
               FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
               EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
               Method->setType(Method->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
-              //Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
-              //MarkFunctionReferenced(Method->getLocation(), Method, true);
+              Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+              MarkFunctionReferenced(Method->getLocation(), Method, true);
               if (!Record->isDependentType()) {
                 for (auto ipar: Method->params()) {
                     IdentifierInfo &pname = Method->getASTContext().Idents.get(
