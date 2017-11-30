@@ -5170,11 +5170,10 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
           if (Method->getDeclName().isIdentifier()) {
               std::string mname = mitem->getName();
               printf("[%s:%d]TTTMETHOD %p %s meth %s %p\n", __FUNCTION__, __LINE__, Method, recname.c_str(), mname.c_str(), Method);
-              if (auto *FT = dyn_cast<FunctionProtoType>(Method->getType()))
-              if (FT->getCallConv() == CC_X86VectorCall) {
+              // We need to generate all methods in a module, since we don't know
+              // until runtime which ones are connected to interfaces.
               Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
               MarkFunctionReferenced(Method->getLocation(), Method, true);
-              }
           }
       }
   }
