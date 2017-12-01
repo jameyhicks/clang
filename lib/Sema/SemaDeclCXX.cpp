@@ -5130,19 +5130,20 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
                   Method->setBody(new (Context) class CompoundStmt(Context, Stmts, StartLoc, StartLoc));
                   ActOnFinishInlineMethodDef(Method);
               }
+              if (auto *FT = dyn_cast<FunctionProtoType>(Method->getType()))
+              if (FT->getCallConv() != CC_X86VectorCall) {
+                  for (auto ipar: Method->params()) {
+                      IdentifierInfo &pname = Method->getASTContext().Idents.get(
+                          mname + "$" + ipar->getIdentifier()->getName().str());
+                      ipar->setDeclName(DeclarationName(&pname));
+                  }
+              }
               const FunctionProtoType *FPT = Method->getType()->castAs<FunctionProtoType>();
               FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
               EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
               Method->setType(Method->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
               Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
               MarkFunctionReferenced(Method->getLocation(), Method, true);
-              if (!Record->isDependentType()) {
-                for (auto ipar: Method->params()) {
-                    IdentifierInfo &pname = Method->getASTContext().Idents.get(
-                        mname + "_" + ipar->getIdentifier()->getName().str());
-                    ipar->setDeclName(DeclarationName(&pname));
-                }
-              }
           }
       }
   }
