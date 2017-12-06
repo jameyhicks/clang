@@ -235,8 +235,6 @@ void ASTStmtReader::VisitDoStmt(DoStmt *S) {
 
 void ASTStmtReader::VisitRuleStmt(RuleStmt *S) {
   VisitStmt(S);
-  S->setConditionVariable(Reader.getContext(),
-                          ReadDeclAs<VarDecl>(Record, Idx));
   S->setCond(Reader.ReadSubExpr());
   S->setBody(Reader.ReadSubStmt());
   S->setRuleLoc(ReadSourceLocation(Record, Idx));

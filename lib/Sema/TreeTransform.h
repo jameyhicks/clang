@@ -1206,8 +1206,8 @@ public:
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
   StmtResult RebuildRuleStmt(SourceLocation RuleLoc, Sema::FullExprArg Cond,
-                           VarDecl *CondVar, Stmt *Body) {
-    return getSema().ActOnRuleStmt(RuleLoc, Cond, CondVar, Body);
+                           Stmt *Body) {
+    return getSema().ActOnRuleStmt(RuleLoc, "", Cond, Body);
   }
 
   /// \brief Build a new for statement.
@@ -6148,16 +6148,6 @@ StmtResult
 TreeTransform<Derived>::TransformRuleStmt(RuleStmt *S) {
   // Transform the condition
   ExprResult Cond;
-  VarDecl *ConditionVar = nullptr;
-  if (S->getConditionVariable()) {
-    ConditionVar
-      = cast_or_null<VarDecl>(
-                   getDerived().TransformDefinition(
-                                      S->getConditionVariable()->getLocation(),
-                                                    S->getConditionVariable()));
-    if (!ConditionVar)
-      return StmtError();
-  } else {
     Cond = getDerived().TransformExpr(S->getCond());
 
     if (Cond.isInvalid())
@@ -6172,10 +6162,9 @@ TreeTransform<Derived>::TransformRuleStmt(RuleStmt *S) {
 
       Cond = CondE.get();
     }
-  }
 
   Sema::FullExprArg FullCond(getSema().MakeFullExpr(Cond.get()));
-  if (!S->getConditionVariable() && S->getCond() && !FullCond.get())
+  if (S->getCond() && !FullCond.get())
     return StmtError();
 
   // Transform the "then" branch.
@@ -6185,12 +6174,10 @@ TreeTransform<Derived>::TransformRuleStmt(RuleStmt *S) {
 
   if (!getDerived().AlwaysRebuild() &&
       FullCond.get() == S->getCond() &&
-      ConditionVar == S->getConditionVariable() &&
       Body.get() == S->getBody())
     return S;
 
-  return getDerived().RebuildRuleStmt(S->getRuleLoc(), FullCond, ConditionVar,
-				      Body.get());
+  return getDerived().RebuildRuleStmt(S->getRuleLoc(), FullCond, Body.get());
 }
 
 template<typename Derived>

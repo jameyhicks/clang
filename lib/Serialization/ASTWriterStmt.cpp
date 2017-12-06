@@ -162,7 +162,6 @@ void ASTStmtWriter::VisitDoStmt(DoStmt *S) {
 
 void ASTStmtWriter::VisitRuleStmt(RuleStmt *S) {
   VisitStmt(S);
-  Writer.AddDeclRef(S->getConditionVariable(), Record);
   Writer.AddStmt(S->getCond());
   Writer.AddStmt(S->getBody());
   Writer.AddSourceLocation(S->getRuleLoc(), Record);

@@ -811,10 +811,10 @@ StmtResult Parser::ParseDefaultStatement() {
 
 StmtResult Parser::ParseRuleStatement(SourceLocation *TrailingElseLoc) {
   assert(Tok.is(tok::kw_rule) && "Not a rule stmt!");
-  SourceLocation RuleLoc = ConsumeToken();  // eat the 'do'.
+  SourceLocation RuleLoc = ConsumeToken();  // eat the 'rule'.
 
   assert(Tok.is(tok::identifier) && "No rule name!");
-  Token RuleName = NextToken();
+  Token RuleName = Tok;
   ConsumeToken();
 
   assert(Tok.is(tok::kw_if) && "No guard on a rule stmt!");
@@ -844,30 +844,12 @@ StmtResult Parser::ParseRuleStatement(SourceLocation *TrailingElseLoc) {
 
   // Parse the condition.
   ExprResult CondExp;
-  Decl *CondVar = nullptr;
+  Decl *CondVar = nullptr;    // don't allow declarations in the condition expression
   if (ParseParenExprOrCondition(CondExp, CondVar, RuleLoc, true))
     return StmtError();
 
   FullExprArg FullCondExp(Actions.MakeFullExpr(CondExp.get(), RuleLoc));
 
-  // C99 6.8.4p3 - In C99, the body of the if statement is a scope, even if
-  // there is no compound stmt.  C90 does not have this clause.  We only do this
-  // if the body isn't a compound statement to avoid push/pop in common cases.
-  //
-  // C++ 6.4p1:
-  // The substatement in a selection-statement (each substatement, in the else
-  // form of the if statement) implicitly defines a local scope.
-  //
-  // For C++ we create a scope for the condition and a new scope for
-  // substatements because:
-  // -When the 'then' scope exits, we want the condition declaration to still be
-  //    active for the 'else' scope too.
-  // -Sema will detect name clashes by considering declarations of a
-  //    'ControlScope' as part of its direct subscope.
-  // -If we wanted the condition and substatement to be in the same scope, we
-  //    would have to notify ParseStatement not to create a new scope. It's
-  //    simpler to let it create a new scope.
-  //
   ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
 
   // Read the 'then' stmt.
@@ -878,11 +860,6 @@ StmtResult Parser::ParseRuleStatement(SourceLocation *TrailingElseLoc) {
 
   // Pop the 'if' scope if needed.
   InnerScope.Exit();
-
-  // If it has an else, parse it.
-  SourceLocation ElseLoc;
-  SourceLocation ElseStmtLoc;
-  StmtResult ElseStmt;
 
   if (Tok.is(tok::code_completion)) {
     Actions.CodeCompleteAfterIf(getCurScope());
@@ -896,7 +873,7 @@ StmtResult Parser::ParseRuleStatement(SourceLocation *TrailingElseLoc) {
   if (BodyStmt.isInvalid())
     BodyStmt = Actions.ActOnNullStmt(BodyStmtLoc);
 
-  return Actions.ActOnRuleStmt(RuleLoc, FullCondExp, CondVar, BodyStmt.get());
+  return Actions.ActOnRuleStmt(RuleLoc, RuleName.getIdentifierInfo()->getName(), FullCondExp, BodyStmt.get());
 }
 
 StmtResult Parser::ParseCompoundStatement(bool isStmtExpr) {

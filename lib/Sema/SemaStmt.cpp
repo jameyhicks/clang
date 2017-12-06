@@ -1269,35 +1269,101 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
   return new (Context) DoStmt(Body, Cond, DoLoc, WhileLoc, CondRParen);
 }
 
+static QualType ccharp;
+static QualType voidp;
+static QualType bbool;
+static QualType bvoid;
+static FunctionDecl *getABR(Sema *s, SourceLocation OpLoc)
+{
+    static FunctionDecl *ABRDecl;
+    if (!ABRDecl) {
+        SmallVector<QualType, 8> NullArgs;
+        FunctionProtoType::ExtProtoInfo EPI;
+        bbool = s->Context.getBlockPointerType(s->Context.getFunctionType(s->Context.BoolTy, NullArgs, EPI));
+        bvoid = s->Context.getBlockPointerType(s->Context.getFunctionType(s->Context.VoidTy, NullArgs, EPI));
+        ccharp = s->Context.getPointerType(s->Context.CharTy.withConst());
+        voidp = s->Context.getPointerType(s->Context.VoidTy);
+        DeclContext *Parent = s->Context.getTranslationUnitDecl();
+        LinkageSpecDecl *CLinkageDecl = LinkageSpecDecl::Create(s->Context, Parent, OpLoc, OpLoc, LinkageSpecDecl::lang_c, false);
+        CLinkageDecl->setImplicit();
+        Parent->addDecl(CLinkageDecl);
+        Parent = CLinkageDecl;
+        IdentifierInfo *II = &s->Context.Idents.get("addBaseRule");
+        DeclarationNameInfo NameInfo(II, OpLoc);
+        QualType ArgTypes[] = {voidp, ccharp, bbool, bvoid};
+        auto FnType = s->Context.getFunctionType(s->Context.VoidTy, ArrayRef<QualType>(ArgTypes, 4), EPI);
+        ABRDecl = FunctionDecl::Create(s->Context, Parent, OpLoc,
+            NameInfo, FnType, nullptr, SC_Extern, false, true, false);
+        SmallVector<ParmVarDecl *, 16> Params;
+        Params.push_back(ParmVarDecl::Create(s->Context, ABRDecl, OpLoc,
+            OpLoc, nullptr, voidp, /*TInfo=*/nullptr, SC_None, nullptr));
+        Params.push_back(ParmVarDecl::Create(s->Context, ABRDecl, OpLoc,
+            OpLoc, nullptr, ccharp, /*TInfo=*/nullptr, SC_None, nullptr));
+        Params.push_back(ParmVarDecl::Create(s->Context, ABRDecl, OpLoc,
+            OpLoc, nullptr, bbool, /*TInfo=*/nullptr, SC_None, nullptr));
+        Params.push_back(ParmVarDecl::Create(s->Context, ABRDecl, OpLoc,
+            OpLoc, nullptr, bvoid, /*TInfo=*/nullptr, SC_None, nullptr));
+        ABRDecl->setParams(Params);
+    }
+    return ABRDecl;
+}
 StmtResult
-Sema::ActOnRuleStmt(SourceLocation RuleLoc, FullExprArg CondVal, Decl *CondVar, Stmt *bodyStmt) {
-  // If the condition was invalid, discard the rule statement.  We could recover
-  // better by replacing it with a valid expr, but don't do that yet.
-  if (!CondVal.get() && !CondVar) {
-    getCurFunction()->setHasDroppedStmt();
-    return StmtError();
-  }
-
-  ExprResult CondResult(CondVal.release());
-
-  VarDecl *ConditionVar = nullptr;
-  if (CondVar) {
-    ConditionVar = cast<VarDecl>(CondVar);
-    CondResult = CheckConditionVariable(ConditionVar, RuleLoc, true);
-    CondResult = ActOnFinishFullExpr(CondResult.get(), RuleLoc);
-    if (CondResult.isInvalid())
+Sema::ActOnRuleStmt(SourceLocation RuleLoc, StringRef Name, FullExprArg CondVal, Stmt *bodyStmt) {
+  if (!CondVal.get()) {
+      getCurFunction()->setHasDroppedStmt();
       return StmtError();
   }
+  ExprResult CondResult(CondVal.release());
   Expr *ConditionExpr = CondResult.getAs<Expr>();
   if (!ConditionExpr)
-    return StmtError();
+      return StmtError();
 
   DiagnoseUnusedExprResult(bodyStmt);
+  //DiagnoseEmptyStmtBody(ConditionExpr->getLocEnd(), bodyStmt, diag::warn_empty_if_body); 
+  SmallVector<BlockDecl::Capture, 4> Captures;
+  BlockExpr *bresult;
+  BlockExpr *vresult;
+  FunctionDecl *ABRDecl = getABR(this, RuleLoc);
 
-  DiagnoseEmptyStmtBody(ConditionExpr->getLocEnd(), bodyStmt,
-			diag::warn_empty_if_body);
+  {
+  BlockDecl *TheDecl = BlockDecl::Create(Context, CurContext, RuleLoc);
+  CurContext->addDecl(TheDecl);
+  StmtResult retStmt = new (Context) ReturnStmt(RuleLoc, ConditionExpr, nullptr);
+  SmallVector<Stmt*, 32> Stmts;
+  Stmts.push_back(retStmt.get());
+  TheDecl->setBody(new (Context) class CompoundStmt(Context, Stmts, RuleLoc, RuleLoc));
+  TheDecl->setCaptures(Context, Captures.begin(), Captures.end(), true);
+  bresult = new (Context) BlockExpr(TheDecl, bbool);
+  ExprCleanupObjects.push_back(TheDecl);
+  }
+  {
+  BlockDecl *TheDecl = BlockDecl::Create(Context, CurContext, RuleLoc);
+  CurContext->addDecl(TheDecl);
+  TheDecl->setBody(cast<CompoundStmt>(bodyStmt));
+  TheDecl->setCaptures(Context, Captures.begin(), Captures.end(), true);
+  vresult = new (Context) BlockExpr(TheDecl, bvoid);
+  ExprCleanupObjects.push_back(TheDecl);
+  }
+  ExprNeedsCleanups = true;
 
-  return new (Context) RuleStmt(Context, RuleLoc, ConditionVar, ConditionExpr, bodyStmt);
+  std::string ruleName = Name;
+  Expr *NameExpr = ImpCastExprToType(StringLiteral::Create(Context, ruleName,
+          StringLiteral::Ascii, /*Pascal*/ false,
+          Context.getConstantArrayType(Context.CharTy.withConst(),
+          llvm::APInt(32, ruleName.length() + 1), ArrayType::Normal, 0), RuleLoc),
+          ccharp, CK_ArrayToPointerDecay).get();
+  QualType ThisTy = getCurrentThisType();
+  Expr *thisp = ImpCastExprToType(new (Context) CXXThisExpr(RuleLoc, ThisTy, /*isImplicit=*/true), voidp, CK_BitCast).get();
+  NestedNameSpecifierLoc NNSloc;
+  Expr *Fn = DeclRefExpr::Create(Context, NNSloc, RuleLoc, ABRDecl, false,
+      RuleLoc, ABRDecl->getType(), VK_LValue, nullptr);
+  Fn = ImpCastExprToType(Fn, Context.getPointerType(ABRDecl->getType()), CK_FunctionToPointerDecay).get();
+  Expr *Args[] = {thisp, NameExpr, bresult, vresult};
+  CallExpr *TheCall = new (Context) CallExpr(Context, Fn, Args, Context.VoidTy, VK_RValue, RuleLoc);
+  auto res = MaybeCreateExprWithCleanups(TheCall);
+printf("[%s:%d]BLEXPER res %p\n", __FUNCTION__, __LINE__, res);
+res->dump();
+  return res;
 }
 
 namespace {

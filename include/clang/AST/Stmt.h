@@ -1036,35 +1036,17 @@ public:
 /// RuleStmt - This represents an atomic C rule
 ///
 class RuleStmt : public Stmt {
-  enum { VAR, COND, BODY, END_EXPR };
+  enum { COND, BODY, END_EXPR };
   Stmt* SubExprs[END_EXPR];
 
   SourceLocation RuleLoc;
   //Token RuleName;
 
 public:
-  RuleStmt(const ASTContext &C, SourceLocation RL, VarDecl *var, Expr *cond,
-         Stmt *body);
+  RuleStmt(const ASTContext &C, SourceLocation RL, Expr *cond, Stmt *body);
 
   /// \brief Build an empty if/then/else statement
   explicit RuleStmt(EmptyShell Empty) : Stmt(RuleStmtClass, Empty) { }
-
-  /// \brief Retrieve the variable declared in this "if" statement, if any.
-  ///
-  /// In the following example, "x" is the condition variable.
-  /// \code
-  /// if (int x = foo()) {
-  ///   printf("x is %d", x);
-  /// }
-  /// \endcode
-  VarDecl *getConditionVariable() const;
-  void setConditionVariable(const ASTContext &C, VarDecl *V);
-
-  /// If this IfStmt has a condition variable, return the faux DeclStmt
-  /// associated with the creation of that condition variable.
-  const DeclStmt *getConditionVariableDeclStmt() const {
-    return reinterpret_cast<DeclStmt*>(SubExprs[VAR]);
-  }
 
   const Expr *getCond() const { return reinterpret_cast<Expr*>(SubExprs[COND]);}
   void setCond(Expr *E) { SubExprs[COND] = reinterpret_cast<Stmt *>(E); }
