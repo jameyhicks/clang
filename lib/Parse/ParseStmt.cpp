@@ -292,7 +292,7 @@ Retry:
     SemiError = "__leave";
     break;
 
-  case tok::kw_rule:
+  case tok::kw___rule:
     return ParseRuleStatement(TrailingElseLoc);
     break;
 
@@ -810,7 +810,7 @@ StmtResult Parser::ParseDefaultStatement() {
 }
 
 StmtResult Parser::ParseRuleStatement(SourceLocation *TrailingElseLoc) {
-  assert(Tok.is(tok::kw_rule) && "Not a rule stmt!");
+  assert(Tok.is(tok::kw___rule) && "Not a rule stmt!");
   SourceLocation RuleLoc = ConsumeToken();  // eat the 'rule'.
 
   assert(Tok.is(tok::identifier) && "No rule name!");
