@@ -28,7 +28,6 @@ def SwitchCase : Stmt<1>;
 def CaseStmt : DStmt<SwitchCase>;
 def DefaultStmt : DStmt<SwitchCase>;
 def CapturedStmt : Stmt;
-def RuleStmt : Stmt;
 
 // Asm statements
 def AsmStmt : Stmt<1>;

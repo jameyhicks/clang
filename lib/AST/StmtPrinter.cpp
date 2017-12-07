@@ -260,20 +260,6 @@ void StmtPrinter::VisitDoStmt(DoStmt *Node) {
   OS << ");\n";
 }
 
-void StmtPrinter::VisitRuleStmt(RuleStmt *Node) {
-  Indent() << "rule if (";
-  PrintExpr(Node->getCond());
-  OS << ")";
-  if (CompoundStmt *CS = dyn_cast<CompoundStmt>(Node->getBody())) {
-    OS << " ";
-    PrintRawCompoundStmt(CS);
-  } else {
-    OS << "\n";
-    PrintStmt(Node->getBody());
-  }
-  OS << ";\n";
-}
-
 void StmtPrinter::VisitForStmt(ForStmt *Node) {
   Indent() << "for (";
   if (Node->getInit()) {

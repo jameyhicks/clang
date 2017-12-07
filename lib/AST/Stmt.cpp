@@ -910,14 +910,6 @@ void IfStmt::setConditionVariable(const ASTContext &C, VarDecl *V) {
                                    VarRange.getEnd());
 }
 
-RuleStmt::RuleStmt(const ASTContext &C, SourceLocation RL, Expr *cond,
-               Stmt *body)
-  : Stmt(RuleStmtClass), RuleLoc(RL)
-{
-  SubExprs[COND] = cond;
-  SubExprs[BODY] = body;
-}
-
 ForStmt::ForStmt(const ASTContext &C, Stmt *Init, Expr *Cond, VarDecl *condVar,
                  Expr *Inc, Stmt *Body, SourceLocation FL, SourceLocation LP,
                  SourceLocation RP)

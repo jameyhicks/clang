@@ -160,14 +160,6 @@ void ASTStmtWriter::VisitDoStmt(DoStmt *S) {
   Code = serialization::STMT_DO;
 }
 
-void ASTStmtWriter::VisitRuleStmt(RuleStmt *S) {
-  VisitStmt(S);
-  Writer.AddStmt(S->getCond());
-  Writer.AddStmt(S->getBody());
-  Writer.AddSourceLocation(S->getRuleLoc(), Record);
-  Code = serialization::STMT_RULE;
-}
-
 void ASTStmtWriter::VisitForStmt(ForStmt *S) {
   VisitStmt(S);
   Writer.AddStmt(S->getInit());

@@ -133,10 +133,6 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_DoStmt;
     break;
   
-  case Stmt::RuleStmtClass:
-    K = CXCursor_RuleStmt;
-    break;
-
   case Stmt::ForStmtClass:
     K = CXCursor_ForStmt;
     break;

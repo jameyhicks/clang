@@ -1033,48 +1033,6 @@ public:
 };
 
 
-/// RuleStmt - This represents an atomic C rule
-///
-class RuleStmt : public Stmt {
-  enum { COND, BODY, END_EXPR };
-  Stmt* SubExprs[END_EXPR];
-
-  SourceLocation RuleLoc;
-  //Token RuleName;
-
-public:
-  RuleStmt(const ASTContext &C, SourceLocation RL, Expr *cond, Stmt *body);
-
-  /// \brief Build an empty if/then/else statement
-  explicit RuleStmt(EmptyShell Empty) : Stmt(RuleStmtClass, Empty) { }
-
-  const Expr *getCond() const { return reinterpret_cast<Expr*>(SubExprs[COND]);}
-  void setCond(Expr *E) { SubExprs[COND] = reinterpret_cast<Stmt *>(E); }
-  const Stmt *getBody() const { return SubExprs[BODY]; }
-  void setBody(Stmt *S) { SubExprs[BODY] = S; }
-
-  Expr *getCond() { return reinterpret_cast<Expr*>(SubExprs[COND]); }
-  Stmt *getBody() { return SubExprs[BODY]; }
-
-  SourceLocation getRuleLoc() const { return RuleLoc; }
-  void setRuleLoc(SourceLocation L) { RuleLoc = L; }
-
-  SourceLocation getLocStart() const LLVM_READONLY { return RuleLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY {
-    return SubExprs[BODY]->getLocEnd();
-  }
-
-  // Iterators over subexpressions.  The iterators will include iterating
-  // over the initialization expression referenced by the condition variable.
-  child_range children() {
-    return child_range(&SubExprs[0], &SubExprs[0]+END_EXPR);
-  }
-
-  static bool classof(const Stmt *T) {
-    return T->getStmtClass() == RuleStmtClass;
-  }
-};
-
 /// WhileStmt - This represents a 'while' stmt.
 ///
 class WhileStmt : public Stmt {
