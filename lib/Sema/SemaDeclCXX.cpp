@@ -5111,6 +5111,7 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
 
   checkClassLevelDLLAttribute(Record);
   if(Record->getTagKind() == TTK_AInterface) {
+printf("[%s:%d] INTERFACE %s\n", __FUNCTION__, __LINE__, Record->getName().str().c_str());
       auto StartLoc = Record->getLocStart();
       for (auto mitem: Record->methods()) {
           if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
@@ -5123,8 +5124,7 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
                   SmallVector<Stmt*, 32> Stmts;
                   if (!Method->getReturnType()->isVoidType()) {
                       StmtResult retStmt = new (Context) ReturnStmt(StartLoc,
-                          IntegerLiteral::Create(Context, llvm::APInt(32, 0), Context.IntTy, StartLoc),
-                          nullptr);
+                          ActOnInitList(StartLoc, None, StartLoc).get(), nullptr);
                       Stmts.push_back(retStmt.get());
                   }
                   Method->setBody(new (Context) class CompoundStmt(Context, Stmts, StartLoc, StartLoc));
@@ -5148,6 +5148,7 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
       }
   }
   else if(Record->getTagKind() == TTK_AModule || Record->getTagKind() == TTK_AEModule) {
+printf("[%s:%d] MODULE/EMODULE %s\n", __FUNCTION__, __LINE__, Record->getName().str().c_str());
       auto StartLoc = Record->getLocStart();
       auto trec = dyn_cast<CXXRecordDecl>(Record);
       std::string recname = Record->getName();
@@ -5164,6 +5165,8 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
           if (auto stype = dyn_cast<TemplateSpecializationType>(field->getType()))
               if (auto acl = dyn_cast<ClassTemplateDecl>(stype->getTemplateName().getAsTemplateDecl()))
                   hoistInterface(*this, trec, acl->getTemplatedDecl(), fname + "$", StartLoc, finalize);
+          if (auto frec = dyn_cast<RecordType>(field->getType()))
+              hoistInterface(*this, trec, frec->getDecl(), fname + "$", StartLoc, finalize);
           hoistInterface(*this, trec, field, fname + "$", StartLoc, finalize);
       }
       for (auto mitem: Record->methods()) {
@@ -5171,6 +5174,7 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
           if (Method->getDeclName().isIdentifier()) {
               std::string mname = mitem->getName();
               printf("[%s:%d]TTTMETHOD %p %s meth %s %p\n", __FUNCTION__, __LINE__, Method, recname.c_str(), mname.c_str(), Method);
+//Method->dump();
               // We need to generate all methods in a module, since we don't know
               // until runtime which ones are connected to interfaces.
               Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));

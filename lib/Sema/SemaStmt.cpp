@@ -1361,8 +1361,8 @@ Sema::ActOnRuleStmt(SourceLocation RuleLoc, StringRef Name, FullExprArg CondVal,
   Expr *Args[] = {thisp, NameExpr, bresult, vresult};
   CallExpr *TheCall = new (Context) CallExpr(Context, Fn, Args, Context.VoidTy, VK_RValue, RuleLoc);
   auto res = MaybeCreateExprWithCleanups(TheCall);
-printf("[%s:%d]BLEXPER res %p\n", __FUNCTION__, __LINE__, res);
-res->dump();
+//printf("[%s:%d]BLEXPER res %p\n", __FUNCTION__, __LINE__, res);
+//res->dump();
   return res;
 }
 

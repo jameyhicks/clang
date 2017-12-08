@@ -6597,12 +6597,30 @@ class AtomiccABIInfo : public ABIInfo {
     if (FI.getCallingConvention() == llvm::CallingConv::X86_VectorCall) {
       isAtomiccMethod = true;
     }
+    for (auto &I : FI.arguments()) {
+      QualType Ty = useFirstFieldIfTransparentUnion(I.type);
+      if(auto PTy = Ty->getAs<PointerType>())
+      if(auto STy = Ty->getPointeeType()->getAs<RecordType>()) {
+          //printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+          //STy->dump();
+          Decl *decl = STy->getDecl();
+          if (auto rec = dyn_cast<CXXRecordDecl>(decl)) {
+            //if (auto stype = dyn_cast<TemplateSpecializationType>(fieldType)) 
+            //if (auto acl = dyn_cast<ClassTemplateDecl>(stype->getTemplateName().getAsTemplateDecl()))
+            if (rec->getTagKind() == TTK_AInterface
+             || rec->getTagKind() == TTK_AModule || rec->getTagKind() == TTK_AEModule)
+                isAtomiccMethod = true;
+            //rec->dump();
+          }
+      }
+      break;
+    }
     if (isAtomiccMethod || !getCXXABI().classifyReturnType(FI)) {
       QualType RetTy = FI.getReturnType();
       if (RetTy->isVoidType())
         FI.getReturnInfo() = ABIArgInfo::getIgnore();
       else if (isAggregateTypeForABI(RetTy)) {
-printf("[%s:%d] AGGREGATERETURN %d\n", __FUNCTION__, __LINE__, isAtomiccMethod);
+printf("[AtomiccABIInfo::%s:%d] AGGREGATERETURN %d\n", __FUNCTION__, __LINE__, isAtomiccMethod);
         if (isAtomiccMethod)
             FI.getReturnInfo() = ABIArgInfo::getDirect();
         else
@@ -6619,7 +6637,7 @@ printf("[%s:%d] AGGREGATERETURN %d\n", __FUNCTION__, __LINE__, isAtomiccMethod);
       QualType Ty = useFirstFieldIfTransparentUnion(I.type);
       if (isAggregateTypeForABI(Ty)) {
         if (isAtomiccMethod)
-          I.info = ABIArgInfo::getDirect();
+          I.info = ABIArgInfo::getDirect(nullptr, 0, nullptr, false/*can be flattened*/);
         else if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
           I.info = ABIArgInfo::getIndirect(0, RAA == CGCXXABI::RAA_DirectInMemory);
         else
