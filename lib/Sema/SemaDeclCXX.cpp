@@ -67,7 +67,7 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
             if (Method->getDeclName().isIdentifier()) {
                 FunctionDecl *FD = nullptr;
                 std::string mname = interfaceName + ritem->getName().str();
-                Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+                //Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
                 Actions.MarkFunctionReferenced(Method->getLocation(), Method, true);
                 IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
                 const DeclarationNameInfo nName(DeclarationName(&funcName), loc);
@@ -78,7 +78,6 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
                    ritem->getStorageClass(), ritem->isInlined(),
                    ritem->isConstexpr(), loc);
                 parent->addDecl(FD);
-                FD->setIsUsed();
                 FD->setAccess(AS_public);
                 FD->setLexicalDeclContext(parent);
                 SmallVector<Expr *, 16> Args;
@@ -5177,7 +5176,6 @@ printf("[%s:%d] MODULE/EMODULE %s\n", __FUNCTION__, __LINE__, Record->getName().
 //Method->dump();
               // We need to generate all methods in a module, since we don't know
               // until runtime which ones are connected to interfaces.
-              Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
               MarkFunctionReferenced(Method->getLocation(), Method, true);
           }
       }

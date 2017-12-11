@@ -12281,6 +12281,8 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   // We (incorrectly) mark overload resolution as an unevaluated context, so we
   // can just check that here. Skip the rest of this function if we've already
   // marked the function as used.
+//printf("[%s:%d] isUsed %d constex %d body %d impl %d curcontx==func %d odruse %d\n", __FUNCTION__, __LINE__,Func->isUsed(false), Func->isConstexpr(), Func->getBody() != NULL, Func->isImplicitlyInstantiable(), CurContext == Func, OdrUse);
+//Func->dump();
   if (Func->isUsed(/*CheckUsedAttr=*/false) ||
       !IsPotentiallyEvaluatedContext(*this)) {
     // C++11 [temp.inst]p3:

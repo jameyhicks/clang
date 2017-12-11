@@ -522,6 +522,13 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
     if (Tok.is(tok::eof) && Tok.getEofData() == LM.D)
       ConsumeAnyToken();
+
+    // Clear the late-template-parsed bit if we set it before.
+    if (LM.D)
+      LM.D->getAsFunction()->setLateTemplateParsed(false);
+
+    if (CXXMethodDecl *MD = dyn_cast_or_null<CXXMethodDecl>(LM.D))
+      Actions.ActOnFinishInlineMethodDef(MD);
     return;
   }
   if (Tok.is(tok::kw_try)) {
