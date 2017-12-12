@@ -817,36 +817,28 @@ StmtResult Parser::ParseRuleStatement(SourceLocation *TrailingElseLoc) {
   Token RuleName = Tok;
   ConsumeToken();
 
-  assert(Tok.is(tok::kw_if) && "No guard on a rule stmt!");
-  SourceLocation GuardLoc = ConsumeToken();  // eat the 'if'.
-
-  if (Tok.isNot(tok::l_paren)) {
-    Diag(Tok, diag::err_expected_lparen_after) << "if";
-    SkipUntil(tok::semi);
-    return StmtError();
-  }
-
   bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
-
-  // C99 6.8.4p3 - In C99, the if statement is a block.  This is not
-  // the case for C90.
-  //
-  // C++ 6.4p3:
-  // A name introduced by a declaration in a condition is in scope from its
-  // point of declaration until the end of the substatements controlled by the
-  // condition.
-  // C++ 3.3.2p4:
-  // Names declared in the for-init-statement, and in the condition of if,
-  // while, for, and switch statements are local to the if, while, for, or
-  // switch statement (including the controlled statement).
-  //
   ParseScope RuleScope(this, Scope::DeclScope | Scope::ControlScope, C99orCXX);
-
-  // Parse the condition.
   ExprResult CondExp;
-  Decl *CondVar = nullptr;    // don't allow declarations in the condition expression
-  if (ParseParenExprOrCondition(CondExp, CondVar, RuleLoc, true))
-    return StmtError();
+
+  if (Tok.is(tok::kw_if)) {
+    assert(Tok.is(tok::kw_if) && "No guard on a rule stmt!");
+    ConsumeToken();  // eat the 'if'.
+
+    if (Tok.isNot(tok::l_paren)) {
+      Diag(Tok, diag::err_expected_lparen_after) << "if";
+      SkipUntil(tok::semi);
+      return StmtError();
+    }
+
+    // Parse the condition.
+    Decl *CondVar = nullptr;    // don't allow declarations in the condition expression
+    if (ParseParenExprOrCondition(CondExp, CondVar, RuleLoc, true))
+      return StmtError();
+  }
+  else {  // default guard is 'if (true)'
+    CondExp = Actions.ActOnCXXBoolLiteral(RuleLoc, tok::kw_true);
+  }
 
   FullExprArg FullCondExp(Actions.MakeFullExpr(CondExp.get(), RuleLoc));
 
