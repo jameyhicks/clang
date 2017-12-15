@@ -1989,7 +1989,7 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
 
 void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr)
 {
-//printf("[%s:%d] start\n", __FUNCTION__, __LINE__);
+//printf("[%s:%d] start %s DC %p\n", __FUNCTION__, __LINE__, mname.c_str(), DC);
     for (auto item: DC->decls())
         if (auto Method = dyn_cast<CXXMethodDecl>(item))
         if (Method->getDeclName().isIdentifier() && Method->getName() == mname)
@@ -2031,6 +2031,7 @@ void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::
         Actions.ActOnFinishInlineMethodDef(cast<CXXMethodDecl>(FD));
     }
 printf("[%s:%d] adding Method %p mname %s\n", __FUNCTION__, __LINE__, FD, mname.c_str());
+//FD->dump();
 }
 /// ParseFunctionIfBlock - Parse a C++ function-if-block.
 ///

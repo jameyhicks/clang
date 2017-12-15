@@ -48,14 +48,16 @@ void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::
 static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc, bool finalize)
 {
     std::string pname = parent->getName();
+//printf("[%s:%d] finalize %d\n", __FUNCTION__, __LINE__, finalize);
+//field->dump();
     if (auto rec = dyn_cast<CXXRecordDecl>(field)) {
         for (auto fitem: rec->fields()) {
             std::string fname = fitem->getName();
             QualType fieldType = fitem->getType();
-            if (auto stype = dyn_cast<TemplateSpecializationType>(fieldType)) {
-                if (auto acl = dyn_cast<ClassTemplateDecl>(stype->getTemplateName().getAsTemplateDecl()))
-                    hoistInterface(Actions, parent, acl->getTemplatedDecl(), interfaceName + fname + "$", loc, finalize);
-            }
+            if (auto stype = dyn_cast<TemplateSpecializationType>(fieldType))
+            if (auto frec = dyn_cast<RecordType>(stype->desugar()))
+            if (auto crec = dyn_cast<ClassTemplateSpecializationDecl>(frec->getDecl()))
+                hoistInterface(Actions, parent, crec, interfaceName + fname + "$", loc, finalize);
             if (auto frec = dyn_cast<RecordType>(fieldType))
                 hoistInterface(Actions, parent, frec->getDecl(), interfaceName + fname + "$", loc, finalize);
             hoistInterface(Actions, parent, fitem, interfaceName + fname + "$", loc, finalize);
@@ -67,7 +69,7 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
             if (Method->getDeclName().isIdentifier()) {
                 FunctionDecl *FD = nullptr;
                 std::string mname = interfaceName + ritem->getName().str();
-                //Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+                Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
                 Actions.MarkFunctionReferenced(Method->getLocation(), Method, true);
                 IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
                 const DeclarationNameInfo nName(DeclarationName(&funcName), loc);
@@ -101,7 +103,7 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
                 FD->setParams(Params);
                 FD->addAttr(::new (FD->getASTContext()) UsedAttr(FD->getLocStart(), FD->getASTContext(), 0));
                 Actions.MarkFunctionReferenced(FD->getLocation(), FD, true);
-                printf("[%s:%d] %p rec %s orig %s; %p pname %s HMETH %s\n", __FUNCTION__, __LINE__, Method, recname.c_str(), Method->getName().str().c_str(), FD, pname.c_str(), mname.c_str());
+                printf("[%s:%d] %p rec %s orig %s; %p pname %s HMETH %s finalize %d\n", __FUNCTION__, __LINE__, Method, recname.c_str(), Method->getName().str().c_str(), FD, pname.c_str(), mname.c_str(), finalize);
 
                 CXXMethodDecl *method = cast<CXXMethodDecl>(FD);
                 MemberExpr *ME = new (Actions.Context) MemberExpr(
@@ -5147,24 +5149,29 @@ printf("[%s:%d] INTERFACE %s\n", __FUNCTION__, __LINE__, Record->getName().str()
       }
   }
   else if(Record->getTagKind() == TTK_AModule || Record->getTagKind() == TTK_AEModule) {
-printf("[%s:%d] MODULE/EMODULE %s\n", __FUNCTION__, __LINE__, Record->getName().str().c_str());
       auto StartLoc = Record->getLocStart();
       auto trec = dyn_cast<CXXRecordDecl>(Record);
       std::string recname = Record->getName();
-      auto finalize = !isa<ClassTemplateSpecializationDecl>(trec);
+      auto finalize = true;
+printf("[%s:%d] MODULE/EMODULE %s depend %d special %d\n", __FUNCTION__, __LINE__, Record->getName().str().c_str(), Record->isDependentType(), isa<ClassTemplateSpecializationDecl>(trec));
       for (auto bitem: Record->bases()) {
           if (auto rec = dyn_cast<RecordType>(bitem.getType()))
               hoistInterface(*this, trec, rec->getDecl(), "", StartLoc, finalize);
           if (auto stype = dyn_cast<TemplateSpecializationType>(bitem.getType()))
-              if (auto acl = dyn_cast<ClassTemplateDecl>(stype->getTemplateName().getAsTemplateDecl()))
-                  hoistInterface(*this, trec, acl->getTemplatedDecl(), "", StartLoc, finalize);
+          if (auto frec = dyn_cast<RecordType>(stype->desugar()))
+          if (auto crec = dyn_cast<ClassTemplateSpecializationDecl>(frec->getDecl()))
+              hoistInterface(*this, trec, crec, "", StartLoc, finalize);
       }
       for (auto field: Record->fields()) {
           std::string fname = field->getName();
-          if (auto stype = dyn_cast<TemplateSpecializationType>(field->getType()))
-              if (auto acl = dyn_cast<ClassTemplateDecl>(stype->getTemplateName().getAsTemplateDecl()))
-                  hoistInterface(*this, trec, acl->getTemplatedDecl(), fname + "$", StartLoc, finalize);
-          if (auto frec = dyn_cast<RecordType>(field->getType()))
+          auto ftype = field->getType();
+          if (auto ttype = dyn_cast<TypedefType>(ftype))
+              ftype = ttype->getDecl()->getUnderlyingType();
+          if (auto stype = dyn_cast<TemplateSpecializationType>(ftype))
+          if (auto frec = dyn_cast<RecordType>(stype->desugar()))
+          if (auto crec = dyn_cast<ClassTemplateSpecializationDecl>(frec->getDecl()))
+              hoistInterface(*this, trec, crec, fname + "$", StartLoc, finalize);
+          if (auto frec = dyn_cast<RecordType>(ftype))
               hoistInterface(*this, trec, frec->getDecl(), fname + "$", StartLoc, finalize);
           hoistInterface(*this, trec, field, fname + "$", StartLoc, finalize);
       }
@@ -5176,7 +5183,7 @@ printf("[%s:%d] MODULE/EMODULE %s\n", __FUNCTION__, __LINE__, Record->getName().
 //Method->dump();
               // We need to generate all methods in a module, since we don't know
               // until runtime which ones are connected to interfaces.
-              //Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+              Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
               MarkFunctionReferenced(Method->getLocation(), Method, true);
           }
       }
