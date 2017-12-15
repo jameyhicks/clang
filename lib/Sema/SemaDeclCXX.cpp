@@ -45,10 +45,10 @@
 using namespace clang;
 bool endswith(std::string str, std::string suffix);
 void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
-static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc, bool finalize)
+static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc)
 {
     std::string pname = parent->getName();
-//printf("[%s:%d] finalize %d\n", __FUNCTION__, __LINE__, finalize);
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 //field->dump();
     if (auto rec = dyn_cast<CXXRecordDecl>(field)) {
         for (auto fitem: rec->fields()) {
@@ -57,10 +57,10 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
             if (auto stype = dyn_cast<TemplateSpecializationType>(fieldType))
             if (auto frec = dyn_cast<RecordType>(stype->desugar()))
             if (auto crec = dyn_cast<ClassTemplateSpecializationDecl>(frec->getDecl()))
-                hoistInterface(Actions, parent, crec, interfaceName + fname + "$", loc, finalize);
+                hoistInterface(Actions, parent, crec, interfaceName + fname + "$", loc);
             if (auto frec = dyn_cast<RecordType>(fieldType))
-                hoistInterface(Actions, parent, frec->getDecl(), interfaceName + fname + "$", loc, finalize);
-            hoistInterface(Actions, parent, fitem, interfaceName + fname + "$", loc, finalize);
+                hoistInterface(Actions, parent, frec->getDecl(), interfaceName + fname + "$", loc);
+            hoistInterface(Actions, parent, fitem, interfaceName + fname + "$", loc);
         }
     if (rec->getTagKind() == TTK_AInterface) {
         std::string recname = rec->getName();
@@ -103,7 +103,7 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
                 FD->setParams(Params);
                 FD->addAttr(::new (FD->getASTContext()) UsedAttr(FD->getLocStart(), FD->getASTContext(), 0));
                 Actions.MarkFunctionReferenced(FD->getLocation(), FD, true);
-                printf("[%s:%d] %p rec %s orig %s; %p pname %s HMETH %s finalize %d\n", __FUNCTION__, __LINE__, Method, recname.c_str(), Method->getName().str().c_str(), FD, pname.c_str(), mname.c_str(), finalize);
+                printf("[%s:%d] %p rec %s orig %s; %p pname %s HMETH %s\n", __FUNCTION__, __LINE__, Method, recname.c_str(), Method->getName().str().c_str(), FD, pname.c_str(), mname.c_str());
 
                 CXXMethodDecl *method = cast<CXXMethodDecl>(FD);
                 MemberExpr *ME = new (Actions.Context) MemberExpr(
@@ -120,8 +120,7 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
                 SmallVector<Stmt*, 32> Stmts;
                 Stmts.push_back(call);
                 FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
-                if (finalize)
-                     Actions.ActOnFinishInlineMethodDef(cast<CXXMethodDecl>(FD));
+                Actions.ActOnFinishInlineMethodDef(cast<CXXMethodDecl>(FD));
             }
         }
     }
@@ -5152,15 +5151,14 @@ printf("[%s:%d] INTERFACE %s\n", __FUNCTION__, __LINE__, Record->getName().str()
       auto StartLoc = Record->getLocStart();
       auto trec = dyn_cast<CXXRecordDecl>(Record);
       std::string recname = Record->getName();
-      auto finalize = true;
 printf("[%s:%d] MODULE/EMODULE %s depend %d special %d\n", __FUNCTION__, __LINE__, Record->getName().str().c_str(), Record->isDependentType(), isa<ClassTemplateSpecializationDecl>(trec));
       for (auto bitem: Record->bases()) {
           if (auto rec = dyn_cast<RecordType>(bitem.getType()))
-              hoistInterface(*this, trec, rec->getDecl(), "", StartLoc, finalize);
+              hoistInterface(*this, trec, rec->getDecl(), "", StartLoc);
           if (auto stype = dyn_cast<TemplateSpecializationType>(bitem.getType()))
           if (auto frec = dyn_cast<RecordType>(stype->desugar()))
           if (auto crec = dyn_cast<ClassTemplateSpecializationDecl>(frec->getDecl()))
-              hoistInterface(*this, trec, crec, "", StartLoc, finalize);
+              hoistInterface(*this, trec, crec, "", StartLoc);
       }
       for (auto field: Record->fields()) {
           std::string fname = field->getName();
@@ -5170,10 +5168,10 @@ printf("[%s:%d] MODULE/EMODULE %s depend %d special %d\n", __FUNCTION__, __LINE_
           if (auto stype = dyn_cast<TemplateSpecializationType>(ftype))
           if (auto frec = dyn_cast<RecordType>(stype->desugar()))
           if (auto crec = dyn_cast<ClassTemplateSpecializationDecl>(frec->getDecl()))
-              hoistInterface(*this, trec, crec, fname + "$", StartLoc, finalize);
+              hoistInterface(*this, trec, crec, fname + "$", StartLoc);
           if (auto frec = dyn_cast<RecordType>(ftype))
-              hoistInterface(*this, trec, frec->getDecl(), fname + "$", StartLoc, finalize);
-          hoistInterface(*this, trec, field, fname + "$", StartLoc, finalize);
+              hoistInterface(*this, trec, frec->getDecl(), fname + "$", StartLoc);
+          hoistInterface(*this, trec, field, fname + "$", StartLoc);
       }
       for (auto mitem: Record->methods()) {
           if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
