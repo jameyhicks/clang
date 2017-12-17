@@ -44,7 +44,7 @@
 
 using namespace clang;
 bool endswith(std::string str, std::string suffix);
-void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
+void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr, AccessSpecifier Access);
 static bool hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc)
 {
     std::string pname = parent->getName();
@@ -5130,7 +5130,8 @@ printf("[%s:%d] INTERFACE %s\n", __FUNCTION__, __LINE__, Record->getName().str()
               printf("[%s:%d]GMETHOD %s %p\n", __FUNCTION__, __LINE__, mname.c_str(), Method);
               if (!endswith(mname, "__RDY")) {
                   createGuardMethod(*this, Method->getLexicalDeclContext(),
-                      StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
+                      StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get(),
+                      Method->getAccess());
                   SmallVector<Stmt*, 32> Stmts;
                   if (!Method->getReturnType()->isVoidType()) {
                       StmtResult retStmt = new (Context) ReturnStmt(StartLoc,
@@ -5193,9 +5194,10 @@ printf("[%s:%d] MODULE/EMODULE %s depend %d special %d\n", __FUNCTION__, __LINE_
                   setX86VectorCall(Method);
                   if (!endswith(mname, "__RDY"))
                       createGuardMethod(*this, Method->getLexicalDeclContext(),
-                          StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
+                          StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get(),
+                          Method->getAccess());
               }
-              printf("[%s:%d]TTTMETHOD %p %s meth %s %p\n", __FUNCTION__, __LINE__, Method, recname.c_str(), mname.c_str(), Method);
+              printf("[%s:%d]TTTMETHOD %p %s meth %s %p public %d\n", __FUNCTION__, __LINE__, Method, recname.c_str(), mname.c_str(), Method, Method->getAccess() == AS_public);
 //Method->dump();
               // We need to generate all methods in a module, since we don't know
               // until runtime which ones are connected to interfaces.

@@ -1987,7 +1987,7 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
   return Actions.ActOnFinishFunctionBody(Decl, FnBody.get());
 }
 
-void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr)
+void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr, AccessSpecifier Access)
 {
 //printf("[%s:%d] start %s DC %p\n", __FUNCTION__, __LINE__, mname.c_str(), DC);
     for (auto item: DC->decls())
@@ -2020,7 +2020,7 @@ void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::
         Previous, TemplateParams, AddToScope);
     FunctionDecl *FD = New->getAsFunction();
     FD->setIsUsed();
-    FD->setAccess(AS_public);
+    FD->setAccess(Access);
     FD->setLexicalDeclContext(DC);
     DC->addDecl(New);
     if (expr) {
@@ -2072,7 +2072,7 @@ printf("[%s:%d] name %s EXPINV %d METHODKKKKK %d\n", __FUNCTION__, __LINE__, mna
       SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
   }
   else if (auto meth = dyn_cast<CXXMethodDecl>(Decl))
-      createGuardMethod(Actions, meth->getParent(), loc, mname + "__RDY", Rexp.get());
+      createGuardMethod(Actions, meth->getParent(), loc, mname + "__RDY", Rexp.get(), meth->getAccess());
   if (!T.consumeClose())
     {}
   assert(Tok.is(tok::l_brace));
