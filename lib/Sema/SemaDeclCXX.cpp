@@ -45,9 +45,10 @@
 using namespace clang;
 bool endswith(std::string str, std::string suffix);
 void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr);
-static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc)
+static bool hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc)
 {
     std::string pname = parent->getName();
+    bool ret = false;
 //printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 //field->dump();
     if (auto rec = dyn_cast<CXXRecordDecl>(field)) {
@@ -63,6 +64,7 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
             hoistInterface(Actions, parent, fitem, interfaceName + fname + "$", loc);
         }
     if (rec->getTagKind() == TTK_AInterface) {
+        ret = true;
         std::string recname = rec->getName();
         for (auto ritem: rec->methods()) {
             if (auto Method = dyn_cast<CXXMethodDecl>(ritem))
@@ -125,6 +127,7 @@ static void hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
         }
     }
     }
+    return ret;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4974,6 +4977,13 @@ void Sema::propagateDLLAttrToBaseClassTemplate(
 /// \brief Perform semantic checks on a class definition that has been
 /// completing, introducing implicitly-declared members, checking for
 /// abstract types, etc.
+void setX86VectorCall(CXXMethodDecl *Method)
+{
+    const FunctionProtoType *FPT = Method->getType()->castAs<FunctionProtoType>();
+    FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+    EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
+    Method->setType(Method->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
+}
 void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   if (!Record)
     return;
@@ -5138,10 +5148,7 @@ printf("[%s:%d] INTERFACE %s\n", __FUNCTION__, __LINE__, Record->getName().str()
                       ipar->setDeclName(DeclarationName(&pname));
                   }
               }
-              const FunctionProtoType *FPT = Method->getType()->castAs<FunctionProtoType>();
-              FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-              EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
-              Method->setType(Method->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
+              setX86VectorCall(Method);
               Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
               MarkFunctionReferenced(Method->getLocation(), Method, true);
           }
@@ -5161,6 +5168,7 @@ printf("[%s:%d] MODULE/EMODULE %s depend %d special %d\n", __FUNCTION__, __LINE_
               hoistInterface(*this, trec, crec, "", StartLoc);
       }
       for (auto field: Record->fields()) {
+          bool interfaceItem = false;
           std::string fname = field->getName();
           auto ftype = field->getType();
           if (auto ttype = dyn_cast<TypedefType>(ftype))
@@ -5168,15 +5176,25 @@ printf("[%s:%d] MODULE/EMODULE %s depend %d special %d\n", __FUNCTION__, __LINE_
           if (auto stype = dyn_cast<TemplateSpecializationType>(ftype))
           if (auto frec = dyn_cast<RecordType>(stype->desugar()))
           if (auto crec = dyn_cast<ClassTemplateSpecializationDecl>(frec->getDecl()))
-              hoistInterface(*this, trec, crec, fname + "$", StartLoc);
+              interfaceItem |= hoistInterface(*this, trec, crec, fname + "$", StartLoc);
           if (auto frec = dyn_cast<RecordType>(ftype))
-              hoistInterface(*this, trec, frec->getDecl(), fname + "$", StartLoc);
-          hoistInterface(*this, trec, field, fname + "$", StartLoc);
+              interfaceItem |= hoistInterface(*this, trec, frec->getDecl(), fname + "$", StartLoc);
+          interfaceItem |= hoistInterface(*this, trec, field, fname + "$", StartLoc);
+          if (interfaceItem || field->getType()->isPointerType())
+              field->setAccess(AS_public);
       }
       for (auto mitem: Record->methods()) {
+          if (auto Method = dyn_cast<CXXConstructorDecl>(mitem)) // module constructors always public
+              Method->setAccess(AS_public);
           if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
           if (Method->getDeclName().isIdentifier()) {
               std::string mname = mitem->getName();
+              if (Method->getAccess() == AS_public) {
+                  setX86VectorCall(Method);
+                  if (!endswith(mname, "__RDY"))
+                      createGuardMethod(*this, Method->getLexicalDeclContext(),
+                          StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get());
+              }
               printf("[%s:%d]TTTMETHOD %p %s meth %s %p\n", __FUNCTION__, __LINE__, Method, recname.c_str(), mname.c_str(), Method);
 //Method->dump();
               // We need to generate all methods in a module, since we don't know

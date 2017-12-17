@@ -2943,7 +2943,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   // by default. Members of a class defined with the keywords struct or union
   // are public by default.
   AccessSpecifier CurAS;
-  if (TagType == DeclSpec::TST_class)
+  if (TagType == DeclSpec::TST_class || TagType == DeclSpec::TST_amodule || TagType == DeclSpec::TST_aemodule)
     CurAS = AS_private;
   else
     CurAS = AS_public;
