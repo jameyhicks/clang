@@ -53,7 +53,14 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
                                      StringRef suffix) {
   SmallString<256> TypeName;
   llvm::raw_svector_ostream OS(TypeName);
-  OS << RD->getKindName() << '.';
+  StringRef Name = RD->getKindName();
+  if (RD->hasAttr<AtomiccInterfaceAttr>())
+      Name = "ainterface";
+  else if (RD->hasAttr<AtomiccEModuleAttr>())
+      Name = "emodule";
+  else if (RD->hasAttr<AtomiccModuleAttr>())
+      Name = "module";
+  OS << Name << '.';
   
   // Name the codegen type after the typedef name
   // if there is no tag type name available
@@ -487,6 +494,15 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 #include "clang/AST/BuiltinTypes.def"
       llvm_unreachable("Unexpected placeholder builtin type!");
     }
+    break;
+  }
+  case Type::AtomiccBits: {
+    const AtomiccBitsType *ATy = cast<AtomiccBitsType>(Ty);
+//printf("[%s:%d] ACCconverttoLLVMtype, width %d\n", __FUNCTION__, __LINE__, ATy->accbWidth);
+//T.dump();
+//Ty->dump();
+    ResultType = llvm::IntegerType::get(getLLVMContext(),
+                                 static_cast<unsigned>(Context.getTypeSize(T)));
     break;
   }
   case Type::Auto:

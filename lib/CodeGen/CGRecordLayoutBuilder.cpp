@@ -722,6 +722,45 @@ CGRecordLayout *CodeGenTypes::ComputeRecordLayout(const RecordDecl *D,
 
   // Add bitfield info.
   RL->BitFields.swap(Builder.BitFields);
+#if 1
+{
+  RecordDecl::field_iterator it = D->field_begin();
+  unsigned Idx = 0;
+  for (unsigned i = 0, e = RL->FieldInfo.size(); i != e; ++i, ++it) {
+    const FieldDecl *FD = *it;
+
+    if (Ty->structFieldMap.length())
+      Ty->structFieldMap += ',';
+    if (!FD->isBitField()) {
+      unsigned FieldNo = RL->getLLVMFieldNo(FD);
+      std::string fname;
+      if (const NamedDecl *ND = dyn_cast<NamedDecl>(FD))
+        fname = ND->getDeclName().getAsString();
+      if (Idx > FieldNo) {
+printf("[%s:%d] ERROR in fieldnumber Idx %d Field %d\n", __FUNCTION__, __LINE__, Idx, FieldNo);
+      }
+      while (Idx++ < FieldNo)
+        Ty->structFieldMap += ',';
+      Ty->structFieldMap += fname;
+    }
+  }
+  if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D)) {
+    Ty->structFieldMap += ",/";
+    for (auto *MD : RD->methods()) {
+      MD = MD->getCanonicalDecl();
+      if (!isa<CXXConstructorDecl>(MD) && !isa<CXXDestructorDecl>(MD))
+      if (auto *FT = dyn_cast<FunctionType>(MD->getType()))
+      //if (FT->getCallConv() == CC_X86VectorCall)
+      if (const auto *ND = dyn_cast<NamedDecl>(MD)) {
+        SmallString<256> Buffer;
+        llvm::raw_svector_ostream Out(Buffer);
+        getCXXABI().getMangleContext().mangleName(ND, Out);
+        Ty->structFieldMap += Out.str().str() + ":" + MD->getName().str() + ",";
+      }
+    }
+  }
+}
+#endif
 
   // Dump the layout, if requested.
   if (getContext().getLangOpts().DumpRecordLayouts) {

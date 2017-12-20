@@ -3795,6 +3795,7 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
       T = QualType();
       break;
     // These types are never variably-modified.
+    case Type::AtomiccBits:
     case Type::Builtin:
     case Type::Complex:
     case Type::Vector:
@@ -11690,6 +11691,85 @@ static ExprResult BuildOverloadedBinOp(Sema &S, Scope *Sc, SourceLocation OpLoc,
   return S.CreateOverloadedBinOp(OpLoc, Opc, Functions, LHS, RHS);
 }
 
+static std::string methString(Sema *s, const LangOptions &Opt, Expr *expr)
+{
+    std::string retVal;
+    if (auto item = dyn_cast<CXXDependentScopeMemberExpr>(expr)) {
+        std::string base =  methString(s, Opt, item->getBase());
+        if (base != "")
+            retVal = base + "$";
+        retVal +=  item->getMemberNameInfo().getName().getAsIdentifierInfo()->getName().str();
+    }
+    if (auto item = dyn_cast<MemberExpr>(expr)) {
+        std::string base =  methString(s, Opt, item->getBase());
+        if (base != "")
+            retVal = base + "$";
+        if (auto meth = item->getMemberDecl()) {
+            retVal += meth->getName();
+            if (auto Method = dyn_cast<FunctionDecl>(meth)) {
+printf("[%s:%d]METHOD %s\n", __FUNCTION__, __LINE__, Method->getName().str().c_str());
+            Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+            s->MarkFunctionReferenced(Method->getLocation(), Method, true);
+            }
+        }
+    }
+    return retVal;
+}
+static QualType ccharp;
+static FunctionDecl *getAIFC(Sema *s, SourceLocation OpLoc)
+{
+    static FunctionDecl *AIFCDecl;
+    if (!AIFCDecl) {
+        ccharp = s->Context.getPointerType(s->Context.CharTy.withConst());
+        FunctionProtoType::ExtProtoInfo EPI;
+        DeclContext *Parent = s->Context.getTranslationUnitDecl();
+        LinkageSpecDecl *CLinkageDecl = LinkageSpecDecl::Create(s->Context, Parent, OpLoc, OpLoc, LinkageSpecDecl::lang_c, false);
+        CLinkageDecl->setImplicit();
+        Parent->addDecl(CLinkageDecl);
+        Parent = CLinkageDecl;
+        IdentifierInfo *II = &s->Context.Idents.get("atomiccInterfaceName");
+        DeclarationNameInfo NameInfo(II, OpLoc);
+        QualType ArgTypes[] = {ccharp, ccharp, s->Context.LongTy};
+        auto FnType = s->Context.getFunctionType(s->Context.VoidTy, ArrayRef<QualType>(ArgTypes, 3), EPI);
+        AIFCDecl = FunctionDecl::Create(s->Context, Parent, OpLoc,
+            NameInfo, FnType, nullptr, SC_Extern, false, true, false);
+        SmallVector<ParmVarDecl *, 16> Params;
+        ParmVarDecl *Parm = ParmVarDecl::Create(s->Context, AIFCDecl, OpLoc,
+            OpLoc, nullptr, ccharp, /*TInfo=*/nullptr, SC_None, nullptr);
+        Params.push_back(Parm);
+        Params.push_back(Parm);
+        Params.push_back(ParmVarDecl::Create(s->Context, AIFCDecl, OpLoc,
+            OpLoc, nullptr, s->Context.LongTy, /*TInfo=*/nullptr, SC_None, nullptr));
+        AIFCDecl->setParams(Params);
+    }
+    return AIFCDecl;
+}
+static CallExpr *getAssignCall(Sema *s, SourceLocation OpLoc, Expr *LHSExpr, Expr *RHSExpr)
+{
+    FunctionDecl *AIFCDecl = getAIFC(s, OpLoc);
+    std::string lStr = methString(s, s->getLangOpts(), LHSExpr);
+    std::string rStr = methString(s, s->getLangOpts(), RHSExpr);
+    LHSExpr = s->ImpCastExprToType(StringLiteral::Create(s->Context, lStr, StringLiteral::Ascii, /*Pascal*/ false,
+            s->Context.getConstantArrayType(s->Context.CharTy.withConst(),
+            llvm::APInt(32, lStr.length() + 1), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc),
+            ccharp, CK_ArrayToPointerDecay).get();
+    RHSExpr = s->ImpCastExprToType(StringLiteral::Create(s->Context, rStr, StringLiteral::Ascii, /*Pascal*/ false,
+            s->Context.getConstantArrayType(s->Context.CharTy.withConst(),
+            llvm::APInt(32, rStr.length() + 1), ArrayType::Normal, /*IndexTypeQuals*/ 0), OpLoc),
+            ccharp, CK_ArrayToPointerDecay).get();
+    NestedNameSpecifierLoc NNSloc;
+    Expr *Fn = DeclRefExpr::Create(s->Context, NNSloc, OpLoc, AIFCDecl, false,
+        OpLoc, AIFCDecl->getType(), VK_LValue, nullptr);
+    Fn = s->ImpCastExprToType(Fn, s->Context.getPointerType(AIFCDecl->getType()), CK_FunctionToPointerDecay).get();
+    Expr *intPlaceholder = IntegerLiteral::Create(s->Context,
+        llvm::APInt(s->Context.getIntWidth(s->Context.LongTy), 0), s->Context.LongTy, OpLoc);
+    Expr *Args[] = {LHSExpr, RHSExpr, intPlaceholder};
+    CallExpr *TheCall = new (s->Context) CallExpr(s->Context, Fn, Args, s->Context.VoidTy, VK_RValue, OpLoc);
+printf("[%s:%d] IFCASSIGN %s = %s\n", __FUNCTION__, __LINE__, lStr.c_str(), rStr.c_str());
+//printf("[%s:%d] NUM %d isproto %d\n", __FUNCTION__, __LINE__, TheCall->getNumArgs(), AIFCDecl->hasPrototype());
+//TheCall->dump();
+    return TheCall;
+}
 ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
                             BinaryOperatorKind Opc,
                             Expr *LHSExpr, Expr *RHSExpr) {
@@ -11701,6 +11781,12 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
 
   // Handle pseudo-objects in the LHS.
   if (const BuiltinType *pty = LHSExpr->getType()->getAsPlaceholderType()) {
+printf("[%s:%d] BEFOREASS PLACEH pty %d bmem %d\n", __FUNCTION__, __LINE__, pty->getKind(), BuiltinType::BoundMember);
+    if (Opc == BO_Assign && pty->getKind() == BuiltinType::BoundMember) {
+printf("[%s:%d] ASSIGN MEMBER1\n", __FUNCTION__, __LINE__);
+      CallExpr *TheCall = getAssignCall(this, OpLoc, LHSExpr, RHSExpr);
+      return MaybeBindToTemporary(TheCall);
+    }
     // Assignments with a pseudo-object l-value need special analysis.
     if (pty->getKind() == BuiltinType::PseudoObject &&
         BinaryOperator::isAssignmentOp(Opc))
@@ -11751,6 +11837,12 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
 
   // Handle pseudo-objects in the RHS.
   if (const BuiltinType *pty = RHSExpr->getType()->getAsPlaceholderType()) {
+printf("[%s:%d] BEFOREASS CHECK2\n", __FUNCTION__, __LINE__);
+    if (Opc == BO_Assign && pty->getKind() == BuiltinType::BoundMember) {
+printf("[%s:%d] ASSIGN MEMBER2\n", __FUNCTION__, __LINE__);
+      CallExpr *TheCall = getAssignCall(this, OpLoc, LHSExpr, RHSExpr);
+      return MaybeBindToTemporary(TheCall);
+    }
     // An overload in the RHS can potentially be resolved by the type
     // being assigned to.
     if (Opc == BO_Assign && pty->getKind() == BuiltinType::Overload) {

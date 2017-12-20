@@ -1344,6 +1344,7 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
 
     // These types cannot be dependent, so simply check whether the types are
     // the same.
+    case Type::AtomiccBits:
     case Type::Builtin:
     case Type::VariableArray:
     case Type::Vector:
@@ -5240,6 +5241,9 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
       MarkUsedTemplateParameters(Ctx,
                                  cast<AtomicType>(T)->getValueType(),
                                  OnlyDeduced, Depth, Used);
+    break;
+  case Type::AtomiccBits:
+printf("[%s:%d] STUBBBBBB ACC\n", __FUNCTION__, __LINE__);
     break;
 
   case Type::DependentName:

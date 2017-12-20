@@ -500,6 +500,7 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
       
       switch (D->getTagKind()) {
       case TTK_Interface:
+      case TTK_AInterface: case TTK_AModule: case TTK_AEModule:
       case TTK_Class:
       case TTK_Struct: Out << "@ST"; break;
       case TTK_Union:  Out << "@UT"; break;
@@ -512,6 +513,7 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
       
       switch (D->getTagKind()) {
       case TTK_Interface:
+      case TTK_AInterface: case TTK_AModule: case TTK_AEModule:
       case TTK_Class:
       case TTK_Struct: Out << "@SP"; break;
       case TTK_Union:  Out << "@UP"; break;
@@ -524,6 +526,7 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
   if (!AlreadyStarted) {
     switch (D->getTagKind()) {
       case TTK_Interface:
+      case TTK_AInterface: case TTK_AModule: case TTK_AEModule:
       case TTK_Class:
       case TTK_Struct: Out << "@S"; break;
       case TTK_Union:  Out << "@U"; break;

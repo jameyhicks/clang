@@ -1853,6 +1853,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
                                                     StringRef Prefix) {
   // Only certain other types are valid as prefixes;  enumerate them.
   switch (Ty->getTypeClass()) {
+  case Type::AtomiccBits:
   case Type::Builtin:
   case Type::Complex:
   case Type::Adjusted:
@@ -3065,6 +3066,9 @@ void CXXNameMangler::mangleType(const DependentNameType *T) {
       break;
     case ETK_Struct:
     case ETK_Class:
+    case ETK_AInterface:
+    case ETK_AModule:
+    case ETK_AEModule:
     case ETK_Interface:
       Out << "Ts";
       break;
@@ -3109,6 +3113,10 @@ void CXXNameMangler::mangleType(const TypeOfExprType *T) {
   // FIXME: this is pretty unsatisfactory, but there isn't an obvious
   // "extension with parameters" mangling.
   Out << "u6typeof";
+}
+void CXXNameMangler::mangleType(const AtomiccBitsType *T) {
+  Out << 'i'; // BuiltinType::Int:
+  //Out << 'j'; // BuiltinType::UInt:
 }
 
 void CXXNameMangler::mangleType(const DecltypeType *T) {

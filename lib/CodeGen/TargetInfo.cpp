@@ -7930,6 +7930,86 @@ public:
 
 } // End anonymous namespace.
 
+//===----------------------------------------------------------------------===//
+// Atomicc ABI Implementation
+//===----------------------------------------------------------------------===//
+namespace {
+class AtomiccABIInfo : public ABIInfo {
+ public:
+  AtomiccABIInfo(CodeGen::CodeGenTypes &CGT) : ABIInfo(CGT) {}
+  void computeInfo(CGFunctionInfo &FI) const override {
+    bool isAtomiccMethod = false;
+    if (FI.getCallingConvention() == llvm::CallingConv::X86_VectorCall) {
+      isAtomiccMethod = true;
+    }
+    for (auto &I : FI.arguments()) {
+      QualType Ty = useFirstFieldIfTransparentUnion(I.type);
+      if(auto PTy = Ty->getAs<PointerType>())
+      if(auto STy = Ty->getPointeeType()->getAs<RecordType>()) {
+          //printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+          //STy->dump();
+          Decl *decl = STy->getDecl();
+          if (auto rec = dyn_cast<CXXRecordDecl>(decl)) {
+            //if (auto stype = dyn_cast<TemplateSpecializationType>(fieldType)) 
+            //if (auto acl = dyn_cast<ClassTemplateDecl>(stype->getTemplateName().getAsTemplateDecl()))
+            if (rec->getTagKind() == TTK_AInterface
+             || rec->getTagKind() == TTK_AModule || rec->getTagKind() == TTK_AEModule)
+                isAtomiccMethod = true;
+            //rec->dump();
+          }
+      }
+      break;
+    }
+    if (isAtomiccMethod || !getCXXABI().classifyReturnType(FI)) {
+      QualType RetTy = FI.getReturnType();
+      if (RetTy->isVoidType())
+        FI.getReturnInfo() = ABIArgInfo::getIgnore();
+      else if (isAggregateTypeForABI(RetTy)) {
+printf("[AtomiccABIInfo::%s:%d] AGGREGATERETURN %d\n", __FUNCTION__, __LINE__, isAtomiccMethod);
+        if (isAtomiccMethod)
+            FI.getReturnInfo() = ABIArgInfo::getDirect();
+        else
+            FI.getReturnInfo() = ABIArgInfo::getIndirect(0);
+      }
+      else {
+        if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
+          RetTy = EnumTy->getDecl()->getIntegerType();
+        FI.getReturnInfo() = (RetTy->isPromotableIntegerType() ?
+              ABIArgInfo::getExtend() : ABIArgInfo::getDirect());
+      }
+    }
+    for (auto &I : FI.arguments()) {
+      QualType Ty = useFirstFieldIfTransparentUnion(I.type);
+      if (isAggregateTypeForABI(Ty)) {
+        if (isAtomiccMethod)
+          I.info = ABIArgInfo::getDirect(nullptr, 0, nullptr, false/*can be flattened*/);
+        else if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
+          I.info = ABIArgInfo::getIndirect(0, RAA == CGCXXABI::RAA_DirectInMemory);
+        else
+          I.info = ABIArgInfo::getIndirect(0);
+      }
+      else {
+        if (const EnumType *EnumTy = Ty->getAs<EnumType>())
+          Ty = EnumTy->getDecl()->getIntegerType();
+        I.info = (Ty->isPromotableIntegerType() ?
+              ABIArgInfo::getExtend() : ABIArgInfo::getDirect());
+      }
+    }
+  }
+  llvm::Value *EmitVAArg(llvm::Value *VAListAddr, QualType Ty,
+                         CodeGenFunction &CGF) const override {
+    return nullptr;
+  }
+};
+class AtomiccTargetCodeGenInfo : public TargetCodeGenInfo {
+public:
+  AtomiccTargetCodeGenInfo(CodeGenTypes &CGT)
+    : TargetCodeGenInfo(new AtomiccABIInfo(CGT)) {}
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+       CodeGen::CodeGenModule &M) const override {}
+};
+} // End anonymous namespace.
+
 // TODO: this implementation is likely now redundant with the default
 // EmitVAArg.
 Address XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
@@ -8573,6 +8653,9 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
 
   case llvm::Triple::msp430:
     return SetCGInfo(new MSP430TargetCodeGenInfo(Types));
+
+  case llvm::Triple::atomicc:
+    return SetCGInfo(new AtomiccTargetCodeGenInfo(Types));
 
   case llvm::Triple::systemz: {
     bool HasVector = getTarget().getABI() == "vector";

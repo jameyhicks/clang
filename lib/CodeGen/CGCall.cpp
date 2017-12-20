@@ -1244,8 +1244,10 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
 static void BuildAggStore(CodeGenFunction &CGF, llvm::Value *Val,
                           Address Dest, bool DestIsVolatile) {
   // Prefer scalar stores to first-class aggregate stores.
-  if (llvm::StructType *STy =
-        dyn_cast<llvm::StructType>(Val->getType())) {
+  llvm::StructType *STy =
+        dyn_cast<llvm::StructType>(Val->getType());
+  bool atomiccMethod = true;
+  if (STy && !atomiccMethod) {
     const llvm::StructLayout *Layout =
       CGF.CGM.getDataLayout().getStructLayout(STy);
 
@@ -2296,7 +2298,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
     case ABIArgInfo::Direct: {
 
       // If we have the trivial case, handle it with no muss and fuss.
-      if (!isa<llvm::StructType>(ArgI.getCoerceToType()) &&
+      bool atomiccMethod = true;
+      if ((atomiccMethod || !isa<llvm::StructType>(ArgI.getCoerceToType())) &&
           ArgI.getCoerceToType() == ConvertType(Ty) &&
           ArgI.getDirectOffset() == 0) {
         assert(NumIRArgs == 1);

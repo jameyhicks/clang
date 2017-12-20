@@ -9073,6 +9073,68 @@ public:
   }
 };
 
+#if 1 //jca
+  class AtomiccTargetInfo : public TargetInfo {
+  public:
+    AtomiccTargetInfo(const llvm::Triple &Triple) : TargetInfo(Triple) {
+      LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
+      DoubleAlign = LongLongAlign = 64;
+      LongDoubleWidth = LongDoubleAlign = 128;
+      LargeArrayMinWidth = LargeArrayAlign = 128;
+      SuitableAlign = 128;
+      SizeType    = UnsignedLong;
+      PtrDiffType = IntPtrType = IntMaxType = Int64Type = SignedLong;
+      RegParmMax = 0;
+
+      // Pointers are 32-bit in x32.
+      DescriptionString = "e-m:e-i64:64-f80:128-n8:16:32:64-S128";
+
+      // x86-64 has atomics up to 16 bytes.
+      MaxAtomicPromoteWidth = 128;
+      MaxAtomicInlineWidth = 128;
+    }
+    void getTargetDefines(const LangOptions &Opts,
+                          MacroBuilder &Builder) const override {
+      Builder.defineMacro("Atomicc");
+      Builder.defineMacro("__Atomicc__");
+      Builder.defineMacro("__x86_64");
+      Builder.defineMacro("__x86_64__");
+    }
+    void getTargetBuiltins(const Builtin::Info *&Records,
+                           unsigned &NumRecords) const override {
+      Records = nullptr;
+      NumRecords = 0;
+    }
+    bool hasFeature(StringRef Feature) const override {
+      return Feature == "atomicc";
+    }
+    void getGCCRegNames(const char * const *&Names,
+                        unsigned &NumNames) const override {
+      Names = NULL;
+      NumNames = 0;
+    }
+    void getGCCRegAliases(const GCCRegAlias *&Aliases,
+                          unsigned &NumAliases) const override {
+      Aliases = nullptr;
+      NumAliases = 0;
+    }
+    bool
+    validateAsmConstraint(const char *&Name,
+                          TargetInfo::ConstraintInfo &info) const override {
+      return true;
+    }
+    const char *getClobbers() const override {
+      return "";
+    }
+    BuiltinVaListKind getBuiltinVaListKind() const override {
+      return TargetInfo::CharPtrBuiltinVaList;
+   }
+   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    return (CC == CC_C || CC == CC_X86VectorCall || CC == CC_X86Pascal) ? CCCR_OK : CCCR_Warning;
+   }
+  };
+#endif
+
 /// Information about a specific microcontroller.
 struct MCUInfo {
   const char *Name;
@@ -9982,6 +10044,13 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     return new LinuxTargetInfo<RenderScript32TargetInfo>(Triple, Opts);
   case llvm::Triple::renderscript64:
     return new LinuxTargetInfo<RenderScript64TargetInfo>(Triple, Opts);
+
+  case llvm::Triple::atomicc:
+#ifdef __APPLE__
+    return new DarwinTargetInfo<AtomiccTargetInfo>(Triple);
+#else
+    return new LinuxTargetInfo<AtomiccTargetInfo>(Triple);
+#endif
   }
 }
 

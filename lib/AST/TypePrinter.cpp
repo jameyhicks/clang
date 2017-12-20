@@ -215,6 +215,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
       NeedARCStrongQualifier = true;
       // Fall through
       
+    case Type::AtomiccBits:
     case Type::Adjusted:
     case Type::Decayed:
     case Type::Pointer:
@@ -857,7 +858,15 @@ void TypePrinter::printDecltypeBefore(const DecltypeType *T, raw_ostream &OS) {
   OS << ')';
   spaceBeforePlaceHolder(OS);
 }
-void TypePrinter::printDecltypeAfter(const DecltypeType *T, raw_ostream &OS) { } 
+void TypePrinter::printDecltypeAfter(const DecltypeType *T, raw_ostream &OS) { }
+void TypePrinter::printAtomiccBitsBefore(const AtomiccBitsType *T, raw_ostream &OS) {
+  if (const BuiltinType *BT = dyn_cast<BuiltinType>(T->getBaseType())) {
+    OS << BT->getName(Policy);
+  }
+else printf("[%s:%d] FAILLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL\n", __FUNCTION__, __LINE__);
+  spaceBeforePlaceHolder(OS);
+}
+void TypePrinter::printAtomiccBitsAfter(const AtomiccBitsType *T, raw_ostream &OS) { }
 
 void TypePrinter::printUnaryTransformBefore(const UnaryTransformType *T,
                                             raw_ostream &OS) {

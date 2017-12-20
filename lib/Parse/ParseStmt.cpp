@@ -21,6 +21,8 @@
 #include "clang/Sema/PrettyDeclStackTrace.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/TypoCorrection.h"
+#include "clang/Sema/Lookup.h" // LookupResult for adding 'xxx__RDY()'
+#include "clang/AST/Stmt.h"    // CompoundStmt
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
@@ -299,6 +301,10 @@ Retry:
   case tok::kw___leave:
     Res = ParseSEHLeaveStatement();
     SemiError = "__leave";
+    break;
+
+  case tok::kw___rule:
+    return ParseRuleStatement(TrailingElseLoc);
     break;
 
   case tok::annot_pragma_vis:
@@ -837,6 +843,65 @@ StmtResult Parser::ParseDefaultStatement() {
 
   return Actions.ActOnDefaultStmt(DefaultLoc, ColonLoc,
                                   SubStmt.get(), getCurScope());
+}
+
+StmtResult Parser::ParseRuleStatement(SourceLocation *TrailingElseLoc) {
+  assert(Tok.is(tok::kw___rule) && "Not a rule stmt!");
+  SourceLocation RuleLoc = ConsumeToken();  // eat the 'rule'.
+
+  assert(Tok.is(tok::identifier) && "No rule name!");
+  Token RuleName = Tok;
+  ConsumeToken();
+
+  bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
+  ParseScope RuleScope(this, Scope::DeclScope | Scope::ControlScope, C99orCXX);
+  ExprResult CondExp;
+
+  if (Tok.is(tok::kw_if)) {
+    assert(Tok.is(tok::kw_if) && "No guard on a rule stmt!");
+    ConsumeToken();  // eat the 'if'.
+
+    if (Tok.isNot(tok::l_paren)) {
+      Diag(Tok, diag::err_expected_lparen_after) << "if";
+      SkipUntil(tok::semi);
+      return StmtError();
+    }
+
+    // Parse the condition.
+    Decl *CondVar = nullptr;    // don't allow declarations in the condition expression
+    if (ParseParenExprOrCondition(CondExp, CondVar, RuleLoc, true))
+      return StmtError();
+  }
+  else {  // default guard is 'if (true)'
+    CondExp = Actions.ActOnCXXBoolLiteral(RuleLoc, tok::kw_true);
+  }
+
+  FullExprArg FullCondExp(Actions.MakeFullExpr(CondExp.get(), RuleLoc));
+
+  ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
+
+  // Read the 'then' stmt.
+  SourceLocation BodyStmtLoc = Tok.getLocation();
+
+  SourceLocation InnerStatementTrailingElseLoc;
+  StmtResult BodyStmt(ParseStatement(&InnerStatementTrailingElseLoc));
+
+  // Pop the 'if' scope if needed.
+  InnerScope.Exit();
+
+  if (Tok.is(tok::code_completion)) {
+    Actions.CodeCompleteAfterIf(getCurScope());
+    cutOffParsing();
+    return StmtError();
+  }
+
+  RuleScope.Exit();
+
+  // Now if either are invalid, replace with a ';'.
+  if (BodyStmt.isInvalid())
+    BodyStmt = Actions.ActOnNullStmt(BodyStmtLoc);
+
+  return Actions.ActOnRuleStmt(RuleLoc, RuleName.getIdentifierInfo()->getName(), FullCondExp, BodyStmt.get());
 }
 
 StmtResult Parser::ParseCompoundStatement(bool isStmtExpr) {
@@ -2009,6 +2074,106 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
     FnBody = Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc, None, false);
   }
 
+  BodyScope.Exit();
+  return Actions.ActOnFinishFunctionBody(Decl, FnBody.get());
+}
+
+void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr, AccessSpecifier Access)
+{
+//printf("[%s:%d] start %s DC %p\n", __FUNCTION__, __LINE__, mname.c_str(), DC);
+    for (auto item: DC->decls())
+        if (auto Method = dyn_cast<CXXMethodDecl>(item))
+        if (Method->getDeclName().isIdentifier() && Method->getName() == mname)
+            return;
+    const char *Dummy = nullptr;
+    unsigned DiagID;
+    SourceLocation NoLoc;
+
+    AttributeFactory attrFactory;
+    DeclSpec DSBool(attrFactory);
+    (void)DSBool.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy,
+        DiagID, Actions.Context.getPrintingPolicy());
+
+    ParsedAttributes parsedAttrs(attrFactory);
+    Declarator DFunc(DSBool, Declarator::MemberContext);
+    DFunc.AddTypeInfo(DeclaratorChunk::getFunction( true, false, NoLoc,
+        nullptr, 0, NoLoc, NoLoc, 0, true, NoLoc, NoLoc, NoLoc, NoLoc, NoLoc, EST_None, NoLoc,
+        nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DFunc), parsedAttrs, loc);
+    DFunc.setFunctionDefinitionKind(expr ? FDK_Declaration : FDK_Definition);
+    IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
+    DFunc.SetIdentifier(&funcName, loc);
+    LookupResult Previous(Actions, Actions.GetNameForDeclarator(DFunc),
+        Sema::LookupOrdinaryName, Sema::ForRedeclaration);
+    bool AddToScope = true;
+    MultiTemplateParamsArg TemplateParams(nullptr, (size_t)0);
+    auto New = Actions.ActOnFunctionDeclarator(Actions.getCurScope(), DFunc,
+        DC, Actions.GetTypeForDeclarator(DFunc, Actions.getCurScope()),
+        Previous, TemplateParams, AddToScope);
+    FunctionDecl *FD = New->getAsFunction();
+    FD->setIsUsed();
+    FD->setAccess(Access);
+    FD->setLexicalDeclContext(DC);
+    DC->addDecl(New);
+    if (expr) {
+        StmtResult retStmt = new (Actions.Context) ReturnStmt(loc, expr, nullptr);
+        SmallVector<Stmt*, 32> Stmts;
+        Stmts.push_back(retStmt.get());
+        FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
+        Actions.ActOnFinishInlineMethodDef(cast<CXXMethodDecl>(FD));
+    }
+printf("[%s:%d] adding Method %p mname %s\n", __FUNCTION__, __LINE__, FD, mname.c_str());
+//FD->dump();
+}
+/// ParseFunctionIfBlock - Parse a C++ function-if-block.
+///
+///       function-if-block:
+///         'if' ctor-initializer[opt] compound-statement handler-seq
+///
+Decl *Parser::ParseFunctionIfBlock(Decl *Decl, ParseScope &BodyScope) {
+  assert(Tok.is(tok::kw_if) && "Expected 'if'");
+  std::string mname;
+  if (const CXXMethodDecl *mdecl = cast<CXXMethodDecl>(Decl)) {
+      mname = mdecl->getName();
+  }
+  SourceLocation IfLoc = ConsumeToken();
+  PrettyDeclStackTraceEntry CrashInfo(Actions, Decl, IfLoc,
+                                      "parsing function if block");
+  // Constructor initializer list?
+  if (Tok.is(tok::colon))
+    ParseConstructorInitializer(Decl);
+  else
+    Actions.ActOnDefaultCtorInitializers(Decl);
+
+  if (SkipFunctionBodies && Actions.canSkipFunctionBody(Decl) &&
+      trySkippingFunctionBody()) {
+    BodyScope.Exit();
+    return Actions.ActOnSkippedFunctionBody(Decl);
+  }
+
+  assert(Tok.is(tok::l_paren) && "Expected '('");
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.consumeOpen()) {
+assert(false && "not open");
+    //return StmtError();
+  }
+  SourceLocation loc = Tok.getLocation();
+  ExprResult Rexp = ParseExpression();
+printf("[%s:%d] name %s EXPINV %d METHODKKKKK %d\n", __FUNCTION__, __LINE__, mname.c_str(), Rexp.isInvalid(), isa<CXXMethodDecl>(Decl));
+  if (Rexp.isInvalid()) {
+      SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
+  }
+  else if (auto meth = dyn_cast<CXXMethodDecl>(Decl))
+      createGuardMethod(Actions, meth->getParent(), loc, mname + "__RDY", Rexp.get(), meth->getAccess());
+  if (!T.consumeClose())
+    {}
+  assert(Tok.is(tok::l_brace));
+  SourceLocation LBraceLoc = Tok.getLocation();
+  StmtResult FnBody(ParseCompoundStatementBody());
+  // If the function body could not be parsed, make a bogus compoundstmt.
+  if (FnBody.isInvalid()) {
+    Sema::CompoundScopeRAII CompoundScope(Actions);
+    FnBody = Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc, None, false);
+  }
   BodyScope.Exit();
   return Actions.ActOnFinishFunctionBody(Decl, FnBody.get());
 }

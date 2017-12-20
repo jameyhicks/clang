@@ -3676,6 +3676,9 @@ public:
                          SourceLocation WhileLoc, SourceLocation CondLParen,
                          Expr *Cond, SourceLocation CondRParen);
 
+  StmtResult ActOnRuleStmt(SourceLocation RuleLoc,
+                         StringRef Name, FullExprArg CondVal, Stmt *BodyVal);
+
   StmtResult ActOnForStmt(SourceLocation ForLoc,
                           SourceLocation LParenLoc,
                           Stmt *First,

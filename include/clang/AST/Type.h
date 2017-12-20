@@ -3758,6 +3758,23 @@ public:
   }
 };
 
+class AtomiccBitsType : public Type {
+  QualType BaseType;
+public:
+  int accbWidth;
+  AtomiccBitsType(QualType BaseType, int width)
+    //: Type(AtomiccBits, BaseType, false, false, false, false), accbWidth(width) {}
+    : Type(AtomiccBits, QualType(), /*Dependent=*/false,
+           /*InstantiationDependent=*/false,
+           /*VariablyModified=*/false, /*Unexpanded paramter pack=*/false), BaseType(BaseType), accbWidth(width) {}
+  QualType getBaseType() const { return BaseType; }
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == AtomiccBits;
+  }
+};
+
 class TagType : public Type {
   /// Stores the TagDecl associated with this type. The decl may point to any
   /// TagDecl that declares the entity.
@@ -4494,6 +4511,9 @@ enum TagTypeKind {
   TTK_Union,
   /// \brief The "class" keyword.
   TTK_Class,
+  TTK_AInterface,
+  TTK_AModule,
+  TTK_AEModule,
   /// \brief The "enum" keyword.
   TTK_Enum
 };
@@ -4509,6 +4529,9 @@ enum ElaboratedTypeKeyword {
   ETK_Union,
   /// \brief The "class" keyword introduces the elaborated-type-specifier.
   ETK_Class,
+  ETK_AInterface,
+  ETK_AModule,
+  ETK_AEModule,
   /// \brief The "enum" keyword introduces the elaborated-type-specifier.
   ETK_Enum,
   /// \brief The "typename" keyword precedes the qualified type name, e.g.,

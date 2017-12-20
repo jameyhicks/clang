@@ -5156,6 +5156,11 @@ bool UnnamedLocalNoLinkageFinder::VisitDecltypeType(const DecltypeType*) {
   return false;
 }
 
+bool UnnamedLocalNoLinkageFinder::VisitAtomiccBitsType(const AtomiccBitsType*) {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+  return false;
+}
+
 bool UnnamedLocalNoLinkageFinder::VisitUnaryTransformType(
                                                     const UnaryTransformType*) {
   return false;

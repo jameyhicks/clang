@@ -29,7 +29,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(AccessSpecifier AS,
                                       const VirtSpecifiers& VS,
                                       SourceLocation PureSpecLoc) {
   assert(D.isFunctionDeclarator() && "This isn't a function declarator!");
-  assert(Tok.isOneOf(tok::l_brace, tok::colon, tok::kw_try, tok::equal) &&
+  assert(Tok.isOneOf(tok::l_brace, tok::colon, tok::kw_try, tok::equal, tok::kw_if) &&
          "Current token not a '{', ':', '=', or 'try'!");
 
   MultiTemplateParamsArg TemplateParams(
@@ -504,7 +504,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
   // Consume the previously pushed token.
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
-  assert(Tok.isOneOf(tok::l_brace, tok::colon, tok::kw_try)
+  assert(Tok.isOneOf(tok::l_brace, tok::colon, tok::kw_try, tok::kw_if)
          && "Inline method not starting with '{', ':' or 'try'");
 
   // Parse the method body. Function body parsing code is similar enough
@@ -512,6 +512,23 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
   ParseScope FnScope(this, Scope::FnScope|Scope::DeclScope);
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);
 
+  if (Tok.is(tok::kw_if)) {
+    ParseFunctionIfBlock(LM.D, FnScope);
+
+    while (Tok.isNot(tok::eof))
+      ConsumeAnyToken();
+
+    if (Tok.is(tok::eof) && Tok.getEofData() == LM.D)
+      ConsumeAnyToken();
+
+    // Clear the late-template-parsed bit if we set it before.
+    if (LM.D)
+      LM.D->getAsFunction()->setLateTemplateParsed(false);
+
+    if (CXXMethodDecl *MD = dyn_cast_or_null<CXXMethodDecl>(LM.D))
+      Actions.ActOnFinishInlineMethodDef(MD);
+    return;
+  }
   if (Tok.is(tok::kw_try)) {
     ParseFunctionTryBlock(LM.D, FnScope);
 

@@ -2173,6 +2173,9 @@ void MicrosoftCXXNameMangler::mangleTagTypeKind(TagTypeKind TTK) {
       Out << 'U';
       break;
     case TTK_Class:
+    case TTK_AInterface:
+    case TTK_AModule:
+    case TTK_AEModule:
       Out << 'V';
       break;
     case TTK_Enum:
@@ -2522,6 +2525,15 @@ void MicrosoftCXXNameMangler::mangleType(const DecltypeType *T, Qualifiers,
 }
 
 void MicrosoftCXXNameMangler::mangleType(const UnaryTransformType *T,
+                                         Qualifiers, SourceRange Range) {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+    "cannot mangle this unary transform type yet");
+  Diags.Report(Range.getBegin(), DiagID)
+    << Range;
+}
+
+void MicrosoftCXXNameMangler::mangleType(const AtomiccBitsType *T,
                                          Qualifiers, SourceRange Range) {
   DiagnosticsEngine &Diags = Context.getDiags();
   unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,

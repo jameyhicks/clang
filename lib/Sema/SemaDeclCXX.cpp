@@ -44,6 +44,92 @@
 #include <set>
 
 using namespace clang;
+bool endswith(std::string str, std::string suffix);
+void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr, AccessSpecifier Access);
+static bool hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc)
+{
+    std::string pname = parent->getName();
+    bool ret = false;
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+//field->dump();
+    if (auto rec = dyn_cast<CXXRecordDecl>(field)) {
+        for (auto fitem: rec->fields()) {
+            std::string fname = fitem->getName();
+            QualType fieldType = fitem->getType();
+            if (auto stype = dyn_cast<TemplateSpecializationType>(fieldType))
+            if (auto frec = dyn_cast<RecordType>(stype->desugar()))
+            if (auto crec = dyn_cast<ClassTemplateSpecializationDecl>(frec->getDecl()))
+                hoistInterface(Actions, parent, crec, interfaceName + fname + "$", loc);
+            if (auto frec = dyn_cast<RecordType>(fieldType))
+                hoistInterface(Actions, parent, frec->getDecl(), interfaceName + fname + "$", loc);
+            hoistInterface(Actions, parent, fitem, interfaceName + fname + "$", loc);
+        }
+    if (rec->getTagKind() == TTK_AInterface) {
+        ret = true;
+        std::string recname = rec->getName();
+        for (auto ritem: rec->methods()) {
+            if (auto Method = dyn_cast<CXXMethodDecl>(ritem))
+            if (Method->getDeclName().isIdentifier()) {
+                FunctionDecl *FD = nullptr;
+                std::string mname = interfaceName + ritem->getName().str();
+                Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+                Actions.MarkFunctionReferenced(Method->getLocation(), Method, true);
+                IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
+                const DeclarationNameInfo nName(DeclarationName(&funcName), loc);
+                SourceLocation NoLoc;
+                FD = CXXMethodDecl::Create(
+                   ritem->getASTContext(), parent, loc,
+                   nName, ritem->getType(), ritem->getTypeSourceInfo(),
+                   ritem->getStorageClass(), ritem->isInlined(),
+                   ritem->isConstexpr(), loc);
+                parent->addDecl(FD);
+                FD->setAccess(AS_public);
+                FD->setLexicalDeclContext(parent);
+                SmallVector<Expr *, 16> Args;
+                SmallVector<ParmVarDecl*, 16> Params;
+                for (auto ipar: Method->params()) {
+                    IdentifierInfo &pname = Actions.Context.Idents.get(
+                        interfaceName + ipar->getIdentifier()->getName().str());
+                    ParmVarDecl *PD = ParmVarDecl::Create(Actions.Context, FD, loc, loc, &pname,
+                        ipar->getType(), ipar->getTypeSourceInfo(), SC_None, ipar->getDefaultArg());
+                    PD->markUsed(Actions.Context);
+                    Params.push_back(PD);
+                    QualType ptype = PD->getType();
+                    if (ptype->isReferenceType())
+                        ptype = ptype->getPointeeType();
+                    ExprResult aitem = ImplicitCastExpr::Create(Actions.Context, ptype, CK_LValueToRValue, 
+                            DeclRefExpr::Create(Actions.Context, NestedNameSpecifierLoc(),
+                                loc, PD, false, loc, ptype, VK_LValue, nullptr),
+                        nullptr, VK_RValue);
+                    Args.push_back(aitem.get());
+                }
+                FD->setParams(Params);
+                FD->addAttr(::new (FD->getASTContext()) UsedAttr(FD->getLocStart(), FD->getASTContext(), 0));
+                Actions.MarkFunctionReferenced(FD->getLocation(), FD, true);
+                printf("[%s:%d] %p rec %s orig %s; %p pname %s HMETH %s\n", __FUNCTION__, __LINE__, Method, recname.c_str(), Method->getName().str().c_str(), FD, pname.c_str(), mname.c_str());
+
+                CXXMethodDecl *method = cast<CXXMethodDecl>(FD);
+                MemberExpr *ME = new (Actions.Context) MemberExpr(
+                    new (Actions.Context) CXXThisExpr(loc,
+                         method->getThisType(Actions.Context), /*isImplicit=*/ true),
+                    /*IsArrow=*/true, loc, FD, loc,
+                    Actions.Context.BoundMemberTy, VK_RValue, OK_Ordinary);
+                Actions.MarkMemberReferenced(ME);
+                QualType ResultType = FD->getReturnType().getNonLValueExprType(Actions.Context);
+                Stmt *call = new (Actions.Context) CXXMemberCallExpr(Actions.Context,
+                    ME, Args, ResultType, Expr::getValueKindForType(ResultType), loc);
+                if (!FD->getReturnType()->isVoidType())
+                    call = new (Actions.Context) ReturnStmt(loc, cast<Expr>(call), nullptr);
+                SmallVector<Stmt*, 32> Stmts;
+                Stmts.push_back(call);
+                FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
+                Actions.ActOnFinishInlineMethodDef(cast<CXXMethodDecl>(FD));
+            }
+        }
+    }
+    }
+    return ret;
+}
 
 //===----------------------------------------------------------------------===//
 // CheckDefaultArgumentVisitor
@@ -1576,6 +1662,7 @@ static unsigned getRecordDiagFromTagKind(TagTypeKind Tag) {
   switch (Tag) {
   case TTK_Struct: return 0;
   case TTK_Interface: return 1;
+  case TTK_AInterface: case TTK_AModule: case TTK_AEModule:
   case TTK_Class:  return 2;
   default: llvm_unreachable("Invalid tag kind for record diagnostic!");
   }
@@ -2180,7 +2267,10 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     }
 
     return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual,
-                                          Class->getTagKind() == TTK_Class,
+                                          Class->getTagKind() == TTK_Class
+                                          || Class->getTagKind() == TTK_AInterface
+                                          || Class->getTagKind() == TTK_AModule
+                                          || Class->getTagKind() == TTK_AEModule,
                                           Access, TInfo, EllipsisLoc);
   }
 
@@ -2254,7 +2344,10 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
 
   // Create the base specifier.
   return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual,
-                                        Class->getTagKind() == TTK_Class,
+                                        Class->getTagKind() == TTK_Class
+                                        || Class->getTagKind() == TTK_AInterface
+                                        || Class->getTagKind() == TTK_AModule
+                                        || Class->getTagKind() == TTK_AEModule,
                                         Access, TInfo, EllipsisLoc);
 }
 
@@ -5779,6 +5872,13 @@ static bool computeCanPassInRegisters(Sema &S, CXXRecordDecl *D) {
 /// \brief Perform semantic checks on a class definition that has been
 /// completing, introducing implicitly-declared members, checking for
 /// abstract types, etc.
+void setX86VectorCall(CXXMethodDecl *Method)
+{
+    const FunctionProtoType *FPT = Method->getType()->castAs<FunctionProtoType>();
+    FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+    EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_X86VectorCall);
+    Method->setType(Method->getASTContext().getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI));
+}
 void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   if (!Record)
     return;
@@ -5922,6 +6022,93 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   checkClassLevelDLLAttribute(Record);
 
   Record->setCanPassInRegisters(computeCanPassInRegisters(*this, Record));
+
+  if(Record->getTagKind() == TTK_AInterface) {
+printf("[%s:%d] INTERFACE %s\n", __FUNCTION__, __LINE__, Record->getName().str().c_str());
+      auto StartLoc = Record->getLocStart();
+      for (auto mitem: Record->methods()) {
+          if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
+          if (Method->getDeclName().isIdentifier()) {
+              std::string mname = mitem->getName();
+              printf("[%s:%d]GMETHOD %s %p\n", __FUNCTION__, __LINE__, mname.c_str(), Method);
+              if (!endswith(mname, "__RDY")) {
+                  createGuardMethod(*this, Method->getLexicalDeclContext(),
+                      StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get(),
+                      Method->getAccess());
+                  SmallVector<Stmt*, 32> Stmts;
+                  if (!Method->getReturnType()->isVoidType()) {
+                      StmtResult retStmt = new (Context) ReturnStmt(StartLoc,
+                          ActOnInitList(StartLoc, None, StartLoc).get(), nullptr);
+                      Stmts.push_back(retStmt.get());
+                  }
+                  Method->setBody(new (Context) class CompoundStmt(Context, Stmts, StartLoc, StartLoc));
+                  ActOnFinishInlineMethodDef(Method);
+              }
+              if (auto *FT = dyn_cast<FunctionProtoType>(Method->getType()))
+              if (FT->getCallConv() != CC_X86VectorCall) {
+                  for (auto ipar: Method->params()) {
+                      IdentifierInfo &pname = Method->getASTContext().Idents.get(
+                          mname + "$" + ipar->getIdentifier()->getName().str());
+                      ipar->setDeclName(DeclarationName(&pname));
+                  }
+              }
+              setX86VectorCall(Method);
+              Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+              MarkFunctionReferenced(Method->getLocation(), Method, true);
+          }
+      }
+  }
+  else if(Record->getTagKind() == TTK_AModule || Record->getTagKind() == TTK_AEModule) {
+      auto StartLoc = Record->getLocStart();
+      auto trec = dyn_cast<CXXRecordDecl>(Record);
+      std::string recname = Record->getName();
+printf("[%s:%d] MODULE/EMODULE %s depend %d special %d\n", __FUNCTION__, __LINE__, Record->getName().str().c_str(), Record->isDependentType(), isa<ClassTemplateSpecializationDecl>(trec));
+      for (auto bitem: Record->bases()) {
+          if (auto rec = dyn_cast<RecordType>(bitem.getType()))
+              hoistInterface(*this, trec, rec->getDecl(), "", StartLoc);
+          if (auto stype = dyn_cast<TemplateSpecializationType>(bitem.getType()))
+          if (auto frec = dyn_cast<RecordType>(stype->desugar()))
+          if (auto crec = dyn_cast<ClassTemplateSpecializationDecl>(frec->getDecl()))
+              hoistInterface(*this, trec, crec, "", StartLoc);
+      }
+      for (auto field: Record->fields()) {
+          bool interfaceItem = false;
+          std::string fname = field->getName();
+          auto ftype = field->getType();
+          if (auto ttype = dyn_cast<TypedefType>(ftype))
+              ftype = ttype->getDecl()->getUnderlyingType();
+          if (auto stype = dyn_cast<TemplateSpecializationType>(ftype))
+          if (auto frec = dyn_cast<RecordType>(stype->desugar()))
+          if (auto crec = dyn_cast<ClassTemplateSpecializationDecl>(frec->getDecl()))
+              interfaceItem |= hoistInterface(*this, trec, crec, fname + "$", StartLoc);
+          if (auto frec = dyn_cast<RecordType>(ftype))
+              interfaceItem |= hoistInterface(*this, trec, frec->getDecl(), fname + "$", StartLoc);
+          interfaceItem |= hoistInterface(*this, trec, field, fname + "$", StartLoc);
+          if (interfaceItem || field->getType()->isPointerType())
+              field->setAccess(AS_public);
+      }
+      for (auto mitem: Record->methods()) {
+          if (auto Method = dyn_cast<CXXConstructorDecl>(mitem)) // module constructors always public
+              Method->setAccess(AS_public);
+          if (auto Method = dyn_cast<CXXMethodDecl>(mitem))
+          if (Method->getDeclName().isIdentifier()) {
+              std::string mname = mitem->getName();
+              if (Method->getAccess() == AS_public) {
+                  setX86VectorCall(Method);
+                  if (!endswith(mname, "__RDY"))
+                      createGuardMethod(*this, Method->getLexicalDeclContext(),
+                          StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get(),
+                          Method->getAccess());
+              }
+              printf("[%s:%d]TTTMETHOD %p %s meth %s %p public %d\n", __FUNCTION__, __LINE__, Method, recname.c_str(), mname.c_str(), Method, Method->getAccess() == AS_public);
+//Method->dump();
+              // We need to generate all methods in a module, since we don't know
+              // until runtime which ones are connected to interfaces.
+              Method->addAttr(::new (Method->getASTContext()) UsedAttr(Method->getLocStart(), Method->getASTContext(), 0));
+              MarkFunctionReferenced(Method->getLocation(), Method, true);
+          }
+      }
+  }
 }
 
 /// Look up the special member function that would be called by a special

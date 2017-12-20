@@ -3502,6 +3502,57 @@ void Sema::AddAlignValueAttr(SourceRange AttrRange, Decl *D, Expr *E,
   D->addAttr(::new (Context) AlignValueAttr(TmpAttr));
 }
 
+static void handleAtomiccWidthAttr(Sema &S, Decl *D,
+                                 const AttributeList &Attr) {
+  Expr *E = Attr.getArgAsExpr(0);
+  AtomiccWidthAttr TmpAttr(Attr.getRange(), S.Context, E, Attr.getAttributeSpellingListIndex());
+  //SourceLocation AttrLoc = Attr.getRange().getBegin();
+
+  QualType T;
+  if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(D))
+    T = TD->getUnderlyingType();
+  else if (ValueDecl *VD = dyn_cast<ValueDecl>(D))
+    T = VD->getType();
+  else
+    llvm_unreachable("Unknown decl type for atomicc_width");
+
+  if (!T->isIntegerType()) {
+    printf("[%s:%d] atomicc_width not integer type\n", __FUNCTION__, __LINE__);
+    //Diag(AttrLoc, diag::warn_attribute_pointer_or_reference_only)
+      //<< &TmpAttr /*TmpAttr.getName()*/ << T << D->getSourceRange();
+    //return;
+  }
+
+printf("[%s:%d] depend %d\n", __FUNCTION__, __LINE__, E->isValueDependent());
+  unsigned DestWidth = 9;
+  if (!E->isValueDependent()) {
+//E->isTypeDependent() ||
+    llvm::APSInt itemWidth(32);
+    if (E->isIntegerConstantExpr(itemWidth, S.Context)) {
+      DestWidth = itemWidth.getZExtValue();
+      const IdentifierInfo *foo = T.getBaseTypeIdentifier();
+      printf("[%s:%d] value %d qual %p %s\n", __FUNCTION__, __LINE__, DestWidth, foo, foo? foo->getNameStart():"none");
+    }
+    else
+      printf("[%s:%d] NOTINTEGERLITERAL\n", __FUNCTION__, __LINE__);
+    QualType NewTy = QualType(T.getTypePtr(), 0);
+    AtomiccBitsType *Ty = new (S.Context, TypeAlignment)AtomiccBitsType(T, DestWidth);
+    //S.Context.Types.push_back(Ty);
+    NewTy = QualType(Ty, 0);
+
+    // Install the new type.
+    if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(D))
+      TD->setModedTypeSourceInfo(TD->getTypeSourceInfo(), NewTy);
+    else
+      cast<ValueDecl>(D)->setType(NewTy);
+    D->addAttr(::new (S.Context)
+               AtomiccWidthAttr(Attr.getRange(), S.Context, E,
+               Attr.getAttributeSpellingListIndex()));
+  }
+  else // Save dependent expressions in the AST to be instantiated.
+      D->addAttr(::new (S.Context) AtomiccWidthAttr(TmpAttr));
+}
+
 static void handleAlignedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   // check the attribute arguments.
   if (Attr.getNumArgs() > 1) {
@@ -6003,6 +6054,21 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_AllocSize:
     handleAllocSizeAttr(S, D, Attr);
+    break;
+  case AttributeList::AT_AtomiccWidth:
+    handleAtomiccWidthAttr(S, D, Attr);
+    break;
+  case AttributeList::AT_AtomiccInterface:
+    handleSimpleAttribute<AtomiccInterfaceAttr>(S, D, Attr);
+    break;
+  case AttributeList::AT_AtomiccModule:
+    handleSimpleAttribute<AtomiccModuleAttr>(S, D, Attr);
+    break;
+  case AttributeList::AT_AtomiccEModule:
+    handleSimpleAttribute<AtomiccEModuleAttr>(S, D, Attr);
+    break;
+  case AttributeList::AT_AtomiccReadyValid:
+    handleSimpleAttribute<AtomiccReadyValidAttr>(S, D, Attr);
     break;
   case AttributeList::AT_AlwaysInline:
     handleAlwaysInlineAttr(S, D, Attr);

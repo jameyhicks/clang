@@ -1746,6 +1746,8 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 
   // Ignore declarations, they will be emitted on their first use.
   if (const auto *FD = dyn_cast<FunctionDecl>(Global)) {
+//printf("[%s:%d] haveABODY %d\n", __FUNCTION__, __LINE__, FD->doesThisDeclarationHaveABody());
+//FD->dump();
     // Forward declarations are emitted lazily on first use.
     if (!FD->doesThisDeclarationHaveABody()) {
       if (!FD->doesDeclarationForceExternallyVisibleDefinition())
@@ -2121,6 +2123,16 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
     addGlobalValReplacement(Entry, BC);
   }
 
+  if (const FunctionDecl *FD = cast_or_null<FunctionDecl>(D))
+  if (FD->getDeclName().isIdentifier())
+  if (auto rec = dyn_cast<CXXRecordDecl>(FD->getLexicalDeclContext())) {
+    auto FI = F->arg_begin(), FE = F->arg_end();
+    auto DI = FD->param_begin(), DE = FD->param_end();
+    FI++;
+    for (; FI != FE && DI != DE; FI++, DI++)
+      if (FI->getName() == "")
+        FI->setName((*DI)->getName());
+  }
   assert(F->getName() == MangledName && "name was uniqued!");
   if (D)
     SetFunctionAttributes(GD, F, IsIncompleteFunction, IsThunk);

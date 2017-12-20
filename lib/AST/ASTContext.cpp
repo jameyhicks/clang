@@ -1798,6 +1798,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Width = Target->getPointerWidth(0);
     Align = Target->getPointerAlign(0);
     break;
+  case Type::AtomiccBits:
+    Width = cast<AtomiccBitsType>(T)->accbWidth;
+    Align = 1;
+printf("[%s:%d] ATOMICCBITS w %d al %d\n", __FUNCTION__, __LINE__, (int)Width, (int)Align);
+    break;
   case Type::BlockPointer: {
     unsigned AS = getTargetAddressSpace(
         cast<BlockPointerType>(T)->getPointeeType());
@@ -1962,7 +1967,7 @@ unsigned ASTContext::getOpenMPDefaultSimdAlign(QualType T) const {
 
 /// toCharUnitsFromBits - Convert a size in bits to a size in characters.
 CharUnits ASTContext::toCharUnitsFromBits(int64_t BitSize) const {
-  return CharUnits::fromQuantity(BitSize / getCharWidth());
+  return CharUnits::fromQuantity((BitSize + getCharWidth()-1) / getCharWidth());
 }
 
 /// toBits - Convert a size in characters to a size in characters.
@@ -2778,6 +2783,10 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::BlockPointer:
   case Type::MemberPointer:
   case Type::Pipe:
+    return type;
+
+  case Type::AtomiccBits:
+printf("[%s:%d]ABITTT\n", __FUNCTION__, __LINE__);
     return type;
 
   // These types can be variably-modified.  All these modifications
@@ -6165,6 +6174,9 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
   case Type::FunctionProto:
     S += '?';
     return;
+  case Type::AtomiccBits:
+    S += "ATOMICCBITS";
+    return;
 
   case Type::Record: {
     RecordDecl *RDecl = cast<RecordType>(CT)->getDecl();
@@ -8304,6 +8316,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
     return mergeFunctionTypes(LHS, RHS, OfBlockPointer, Unqualified);
   case Type::Record:
   case Type::Enum:
+  case Type::AtomiccBits:
     return QualType();
   case Type::Builtin:
     // Only exactly equal builtin types are compatible, which is tested above.

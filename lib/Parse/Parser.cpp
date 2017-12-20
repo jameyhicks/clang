@@ -887,6 +887,7 @@ bool Parser::isStartOfFunctionDefinition(const ParsingDeclarator &Declarator) {
   }
   
   return Tok.is(tok::colon) ||         // X() : Base() {} (used for ctors)
+         Tok.is(tok::kw_if) ||         // atomicc
          Tok.is(tok::kw_try);          // X() try { ... }
 }
 
@@ -1041,7 +1042,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // we may have a colon.
   if (Tok.isNot(tok::l_brace) && 
       (!getLangOpts().CPlusPlus ||
-       (Tok.isNot(tok::colon) && Tok.isNot(tok::kw_try) &&
+       (Tok.isNot(tok::colon) && Tok.isNot(tok::kw_try) && Tok.isNot(tok::kw_if) &&
         Tok.isNot(tok::equal)))) {
     Diag(Tok, diag::err_expected_fn_body);
 
@@ -1101,7 +1102,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   }
   else if (CurParsedObjCImpl && 
            !TemplateInfo.TemplateParams &&
-           (Tok.is(tok::l_brace) || Tok.is(tok::kw_try) ||
+           (Tok.is(tok::l_brace) || Tok.is(tok::kw_try) || Tok.is(tok::kw_if) ||
             Tok.is(tok::colon)) && 
       Actions.CurContext->isTranslationUnit()) {
     ParseScope BodyScope(this, Scope::FnScope|Scope::DeclScope);
@@ -1190,6 +1191,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
 
   if (Tok.is(tok::kw_try))
     return ParseFunctionTryBlock(Res, BodyScope);
+  else if (Tok.is(tok::kw_if))                      // atomicc
+    return ParseFunctionIfBlock(Res, BodyScope);    // atomicc
 
   // If we have a colon, then we're probably parsing a C++
   // ctor-initializer.
