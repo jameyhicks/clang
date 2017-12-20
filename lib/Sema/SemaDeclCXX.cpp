@@ -44,7 +44,6 @@
 #include <set>
 
 using namespace clang;
-bool endswith(std::string str, std::string suffix);
 void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr, AccessSpecifier Access);
 static bool hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, std::string interfaceName, SourceLocation loc)
 {
@@ -87,7 +86,7 @@ static bool hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
                 FD->setLexicalDeclContext(parent);
                 SmallVector<Expr *, 16> Args;
                 SmallVector<ParmVarDecl*, 16> Params;
-                for (auto ipar: Method->params()) {
+                for (auto ipar: Method->parameters()) {
                     IdentifierInfo &pname = Actions.Context.Idents.get(
                         interfaceName + ipar->getIdentifier()->getName().str());
                     ParmVarDecl *PD = ParmVarDecl::Create(Actions.Context, FD, loc, loc, &pname,
@@ -123,7 +122,7 @@ static bool hoistInterface(Sema &Actions, CXXRecordDecl *parent, Decl *field, st
                 SmallVector<Stmt*, 32> Stmts;
                 Stmts.push_back(call);
                 FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
-                Actions.ActOnFinishInlineMethodDef(cast<CXXMethodDecl>(FD));
+                Actions.ActOnFinishInlineFunctionDef(cast<CXXMethodDecl>(FD));
             }
         }
     }
@@ -6031,7 +6030,7 @@ printf("[%s:%d] INTERFACE %s\n", __FUNCTION__, __LINE__, Record->getName().str()
           if (Method->getDeclName().isIdentifier()) {
               std::string mname = mitem->getName();
               printf("[%s:%d]GMETHOD %s %p\n", __FUNCTION__, __LINE__, mname.c_str(), Method);
-              if (!endswith(mname, "__RDY")) {
+              if (!StringRef(mname).endswith("__RDY")) {
                   createGuardMethod(*this, Method->getLexicalDeclContext(),
                       StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get(),
                       Method->getAccess());
@@ -6042,11 +6041,11 @@ printf("[%s:%d] INTERFACE %s\n", __FUNCTION__, __LINE__, Record->getName().str()
                       Stmts.push_back(retStmt.get());
                   }
                   Method->setBody(new (Context) class CompoundStmt(Context, Stmts, StartLoc, StartLoc));
-                  ActOnFinishInlineMethodDef(Method);
+                  ActOnFinishInlineFunctionDef(Method);
               }
               if (auto *FT = dyn_cast<FunctionProtoType>(Method->getType()))
               if (FT->getCallConv() != CC_X86VectorCall) {
-                  for (auto ipar: Method->params()) {
+                  for (auto ipar: Method->parameters()) {
                       IdentifierInfo &pname = Method->getASTContext().Idents.get(
                           mname + "$" + ipar->getIdentifier()->getName().str());
                       ipar->setDeclName(DeclarationName(&pname));
@@ -6095,7 +6094,7 @@ printf("[%s:%d] MODULE/EMODULE %s depend %d special %d\n", __FUNCTION__, __LINE_
               std::string mname = mitem->getName();
               if (Method->getAccess() == AS_public) {
                   setX86VectorCall(Method);
-                  if (!endswith(mname, "__RDY"))
+                  if (!StringRef(mname).endswith("__RDY"))
                       createGuardMethod(*this, Method->getLexicalDeclContext(),
                           StartLoc, mname + "__RDY", ActOnCXXBoolLiteral(StartLoc, tok::kw_true).get(),
                           Method->getAccess());

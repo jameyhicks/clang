@@ -4655,9 +4655,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (!DC || DC->isRecord())
         Kind = Member;
     }
-    void VisitAtomiccBitsTypeLoc(AtomiccBitsTypeLoc TL) {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    }
 
     // C++11 [dcl.fct]p6 (w/DR1417):
     // An attempt to specify a function type with a cv-qualifier-seq or a
@@ -5226,6 +5223,9 @@ namespace {
       TypeSourceInfo *TInfo = nullptr;
       Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
       TL.getValueLoc().initializeFullCopy(TInfo->getTypeLoc());
+    }
+    void VisitAtomiccBitsTypeLoc(AtomiccBitsTypeLoc TL) {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     }
 
     void VisitTypeLoc(TypeLoc TL) {

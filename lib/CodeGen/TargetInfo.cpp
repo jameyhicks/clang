@@ -7969,7 +7969,7 @@ printf("[AtomiccABIInfo::%s:%d] AGGREGATERETURN %d\n", __FUNCTION__, __LINE__, i
         if (isAtomiccMethod)
             FI.getReturnInfo() = ABIArgInfo::getDirect();
         else
-            FI.getReturnInfo() = ABIArgInfo::getIndirect(0);
+            FI.getReturnInfo() = ABIArgInfo::getIndirect(CharUnits::fromQuantity(0));
       }
       else {
         if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
@@ -7984,9 +7984,9 @@ printf("[AtomiccABIInfo::%s:%d] AGGREGATERETURN %d\n", __FUNCTION__, __LINE__, i
         if (isAtomiccMethod)
           I.info = ABIArgInfo::getDirect(nullptr, 0, nullptr, false/*can be flattened*/);
         else if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-          I.info = ABIArgInfo::getIndirect(0, RAA == CGCXXABI::RAA_DirectInMemory);
+          I.info = ABIArgInfo::getIndirect(CharUnits::fromQuantity(0), RAA == CGCXXABI::RAA_DirectInMemory);
         else
-          I.info = ABIArgInfo::getIndirect(0);
+          I.info = ABIArgInfo::getIndirect(CharUnits::fromQuantity(0));
       }
       else {
         if (const EnumType *EnumTy = Ty->getAs<EnumType>())
@@ -7996,9 +7996,9 @@ printf("[AtomiccABIInfo::%s:%d] AGGREGATERETURN %d\n", __FUNCTION__, __LINE__, i
       }
     }
   }
-  llvm::Value *EmitVAArg(llvm::Value *VAListAddr, QualType Ty,
-                         CodeGenFunction &CGF) const override {
-    return nullptr;
+  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                    QualType Ty) const override {
+    return VAListAddr;
   }
 };
 class AtomiccTargetCodeGenInfo : public TargetCodeGenInfo {

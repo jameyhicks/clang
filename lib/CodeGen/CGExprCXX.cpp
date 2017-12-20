@@ -698,11 +698,12 @@ static llvm::Value *EmitCXXNewAllocSize(CodeGenFunction &CGF,
   CallArgList callArgs;
   callArgs.add(RValue::get(numElements), sizeType);
   llvm::Instruction *CallOrInvoke;
+  llvm::Constant *CalleePtr = CGF.CGM.GetAddrOfFunction(call);
+  CGCallee Callee = CGCallee::forDirect(CalleePtr, call);
   RValue RV = CGF.EmitCall(CGF.CGM.getTypes().
         arrangeFreeFunctionCall(callArgs,
         call->getType()->castAs<FunctionProtoType>(), /*chainCall=*/false),
-      CGF.CGM.GetAddrOfFunction(call),
-      ReturnValueSlot(), callArgs, call, &CallOrInvoke);
+      Callee, ReturnValueSlot(), callArgs, &CallOrInvoke);
   numElements = RV.getScalarVal();
 #endif
   assert(isa<llvm::IntegerType>(numElements->getType()));

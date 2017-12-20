@@ -6586,7 +6586,7 @@ void TypeLocReader::VisitPipeTypeLoc(PipeTypeLoc TL) {
 
 void TypeLocReader::VisitAtomiccBitsTypeLoc(AtomiccBitsTypeLoc TL) {
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-  TL.setNameLoc(ReadSourceLocation(Record, Idx));
+  TL.setKWLoc(ReadSourceLocation());
 }
 
 TypeSourceInfo *

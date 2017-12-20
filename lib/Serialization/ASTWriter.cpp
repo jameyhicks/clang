@@ -541,11 +541,6 @@ ASTTypeWriter::VisitPipeType(const PipeType *T) {
   Code = TYPE_PIPE;
 }
 
-void TypeLocWriter::VisitAtomiccBitsTypeLoc(AtomiccBitsTypeLoc TL) {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
-}
-
 namespace {
 
 class TypeLocWriter : public TypeLocVisitor<TypeLocWriter> {
@@ -826,6 +821,9 @@ void TypeLocWriter::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
 }
 
 void TypeLocWriter::VisitPipeTypeLoc(PipeTypeLoc TL) {
+  Record.AddSourceLocation(TL.getKWLoc());
+}
+void TypeLocWriter::VisitAtomiccBitsTypeLoc(AtomiccBitsTypeLoc TL) {
   Record.AddSourceLocation(TL.getKWLoc());
 }
 

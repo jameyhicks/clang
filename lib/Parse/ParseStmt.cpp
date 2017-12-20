@@ -855,7 +855,7 @@ StmtResult Parser::ParseRuleStatement(SourceLocation *TrailingElseLoc) {
 
   bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
   ParseScope RuleScope(this, Scope::DeclScope | Scope::ControlScope, C99orCXX);
-  ExprResult CondExp;
+  Expr *CondExpr;
 
   if (Tok.is(tok::kw_if)) {
     assert(Tok.is(tok::kw_if) && "No guard on a rule stmt!");
@@ -867,16 +867,17 @@ StmtResult Parser::ParseRuleStatement(SourceLocation *TrailingElseLoc) {
       return StmtError();
     }
 
+    Sema::ConditionResult Cond;
     // Parse the condition.
-    Decl *CondVar = nullptr;    // don't allow declarations in the condition expression
-    if (ParseParenExprOrCondition(CondExp, CondVar, RuleLoc, true))
+    if (ParseParenExprOrCondition(nullptr, Cond, RuleLoc, Sema::ConditionKind::Boolean))
       return StmtError();
+    CondExpr = Cond.get().second;
   }
   else {  // default guard is 'if (true)'
-    CondExp = Actions.ActOnCXXBoolLiteral(RuleLoc, tok::kw_true);
+    CondExpr = Actions.ActOnCXXBoolLiteral(RuleLoc, tok::kw_true).get();
   }
 
-  FullExprArg FullCondExp(Actions.MakeFullExpr(CondExp.get(), RuleLoc));
+  FullExprArg FullCondExp(Actions.MakeFullExpr(CondExpr));
 
   ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
 
@@ -2078,7 +2079,7 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
   return Actions.ActOnFinishFunctionBody(Decl, FnBody.get());
 }
 
-void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::string mname, Expr *expr, AccessSpecifier Access)
+void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation Loc, std::string mname, Expr *expr, AccessSpecifier Access)
 {
 //printf("[%s:%d] start %s DC %p\n", __FUNCTION__, __LINE__, mname.c_str(), DC);
     for (auto item: DC->decls())
@@ -2091,17 +2092,38 @@ void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::
 
     AttributeFactory attrFactory;
     DeclSpec DSBool(attrFactory);
-    (void)DSBool.SetTypeSpecType(DeclSpec::TST_bool, loc, Dummy,
+    (void)DSBool.SetTypeSpecType(DeclSpec::TST_bool, Loc, Dummy,
         DiagID, Actions.Context.getPrintingPolicy());
 
     ParsedAttributes parsedAttrs(attrFactory);
     Declarator DFunc(DSBool, Declarator::MemberContext);
-    DFunc.AddTypeInfo(DeclaratorChunk::getFunction( true, false, NoLoc,
-        nullptr, 0, NoLoc, NoLoc, 0, true, NoLoc, NoLoc, NoLoc, NoLoc, NoLoc, EST_None, NoLoc,
-        nullptr, nullptr, 0, nullptr, nullptr, loc, loc, DFunc), parsedAttrs, loc);
+    DFunc.AddTypeInfo(DeclaratorChunk::getFunction(/*HasProto=*/true,
+                                             /*IsAmbiguous=*/false,
+                                             /*LParenLoc=*/NoLoc,
+                                             /*Params=*/nullptr,
+                                             /*NumParams=*/0,
+                                             /*EllipsisLoc=*/NoLoc,
+                                             /*RParenLoc=*/NoLoc,
+                                             /*TypeQuals=*/0,
+                                             /*RefQualifierIsLvalueRef=*/true,
+                                             /*RefQualifierLoc=*/NoLoc,
+                                             /*ConstQualifierLoc=*/NoLoc,
+                                             /*VolatileQualifierLoc=*/NoLoc,
+                                             /*RestrictQualifierLoc=*/NoLoc,
+                                             /*MutableLoc=*/NoLoc,
+                                             EST_None,
+                                             /*ESpecRange=*/SourceRange(),
+                                             /*Exceptions=*/nullptr,
+                                             /*ExceptionRanges=*/nullptr,
+                                             /*NumExceptions=*/0,
+                                             /*NoexceptExpr=*/nullptr,
+                                             /*ExceptionSpecTokens=*/nullptr,
+                                             /*DeclsInPrototype=*/None,
+                                             Loc, Loc, DFunc),
+        parsedAttrs, Loc);
     DFunc.setFunctionDefinitionKind(expr ? FDK_Declaration : FDK_Definition);
     IdentifierInfo &funcName = Actions.Context.Idents.get(mname);
-    DFunc.SetIdentifier(&funcName, loc);
+    DFunc.SetIdentifier(&funcName, Loc);
     LookupResult Previous(Actions, Actions.GetNameForDeclarator(DFunc),
         Sema::LookupOrdinaryName, Sema::ForRedeclaration);
     bool AddToScope = true;
@@ -2115,11 +2137,11 @@ void createGuardMethod(Sema &Actions, DeclContext *DC, SourceLocation loc, std::
     FD->setLexicalDeclContext(DC);
     DC->addDecl(New);
     if (expr) {
-        StmtResult retStmt = new (Actions.Context) ReturnStmt(loc, expr, nullptr);
+        StmtResult retStmt = new (Actions.Context) ReturnStmt(Loc, expr, nullptr);
         SmallVector<Stmt*, 32> Stmts;
         Stmts.push_back(retStmt.get());
-        FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, loc, loc));
-        Actions.ActOnFinishInlineMethodDef(cast<CXXMethodDecl>(FD));
+        FD->setBody(new (Actions.Context) class CompoundStmt(Actions.Context, Stmts, Loc, Loc));
+        Actions.ActOnFinishInlineFunctionDef(FD);
     }
 printf("[%s:%d] adding Method %p mname %s\n", __FUNCTION__, __LINE__, FD, mname.c_str());
 //FD->dump();

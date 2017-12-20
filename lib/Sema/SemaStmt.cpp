@@ -1396,7 +1396,7 @@ Sema::ActOnRuleStmt(SourceLocation RuleLoc, StringRef Name, FullExprArg CondVal,
   SmallVector<Stmt*, 32> Stmts;
   Stmts.push_back(retStmt.get());
   TheDecl->setBody(new (Context) class CompoundStmt(Context, Stmts, RuleLoc, RuleLoc));
-  TheDecl->setCaptures(Context, Captures.begin(), Captures.end(), true);
+  TheDecl->setCaptures(Context, Captures, true);
   BlockExpr *bresult = new (Context) BlockExpr(TheDecl, bbool);
   Expr *item = ImpCastExprToType(bresult, voidpp, CK_BitCast).get();
   Expr *Fn = DeclRefExpr::Create(Context, NNSloc, RuleLoc, FFDecl, false,
@@ -1422,7 +1422,7 @@ Sema::ActOnRuleStmt(SourceLocation RuleLoc, StringRef Name, FullExprArg CondVal,
   BlockDecl *TheDecl = BlockDecl::Create(Context, CurContext, RuleLoc);
   CurContext->addDecl(TheDecl);
   TheDecl->setBody(cast<CompoundStmt>(bodyStmt));
-  TheDecl->setCaptures(Context, Captures.begin(), Captures.end(), true);
+  TheDecl->setCaptures(Context, Captures, true);
   BlockExpr *vresult = new (Context) BlockExpr(TheDecl, bvoid);
   Expr *item = ImpCastExprToType(vresult, voidpp, CK_BitCast).get();
   Expr *Fn = DeclRefExpr::Create(Context, NNSloc, RuleLoc, FFDecl, false,
@@ -1438,7 +1438,7 @@ Sema::ActOnRuleStmt(SourceLocation RuleLoc, StringRef Name, FullExprArg CondVal,
   ExprCleanupObjects.push_back(TheDecl);
   ExprCleanupObjects.push_back(TheDecl);
   }
-  ExprNeedsCleanups = true;
+  Cleanup.setExprNeedsCleanups(true);
 
   Expr *Fn = DeclRefExpr::Create(Context, NNSloc, RuleLoc, ABRDecl, false,
       RuleLoc, ABRDecl->getType(), VK_LValue, nullptr);

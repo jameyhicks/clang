@@ -526,7 +526,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
       LM.D->getAsFunction()->setLateTemplateParsed(false);
 
     if (CXXMethodDecl *MD = dyn_cast_or_null<CXXMethodDecl>(LM.D))
-      Actions.ActOnFinishInlineMethodDef(MD);
+      Actions.ActOnFinishInlineFunctionDef(MD);
     return;
   }
   if (Tok.is(tok::kw_try)) {

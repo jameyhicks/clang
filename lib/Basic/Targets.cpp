@@ -9074,9 +9074,21 @@ public:
 };
 
 #if 1 //jca
-  class AtomiccTargetInfo : public TargetInfo {
-  public:
-    AtomiccTargetInfo(const llvm::Triple &Triple) : TargetInfo(Triple) {
+class AtomiccTargetInfo : public TargetInfo {
+  static const Builtin::Info BuiltinInfo[];
+public:
+  AtomiccTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
+      : TargetInfo(Triple) {
+    NoAsmVariants = true;
+//    LongLongAlign = 32;
+//    SuitableAlign = 32;
+//    DoubleAlign = LongDoubleAlign = 32;
+//    PtrDiffType = SignedInt;
+//    IntPtrType = SignedInt;
+//    WCharType = UnsignedChar;
+//    WIntType = UnsignedInt;
+//    UseZeroLengthBitfieldAlignment = true;
+//    resetDataLayout("e-m:e-p:32:32-i1:8:32-i8:8:32-i16:16:32-i64:32-f64:32-a:0:32-n32");
       LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
       DoubleAlign = LongLongAlign = 64;
       LongDoubleWidth = LongDoubleAlign = 128;
@@ -9087,7 +9099,7 @@ public:
       RegParmMax = 0;
 
       // Pointers are 32-bit in x32.
-      DescriptionString = "e-m:e-i64:64-f80:128-n8:16:32:64-S128";
+      resetDataLayout("e-m:e-i64:64-f80:128-n8:16:32:64-S128");
 
       // x86-64 has atomics up to 16 bytes.
       MaxAtomicPromoteWidth = 128;
@@ -9100,23 +9112,11 @@ public:
       Builder.defineMacro("__x86_64");
       Builder.defineMacro("__x86_64__");
     }
-    void getTargetBuiltins(const Builtin::Info *&Records,
-                           unsigned &NumRecords) const override {
-      Records = nullptr;
-      NumRecords = 0;
+    ArrayRef<Builtin::Info> getTargetBuiltins() const override {
+      return llvm::makeArrayRef(BuiltinInfo, 0);
     }
     bool hasFeature(StringRef Feature) const override {
       return Feature == "atomicc";
-    }
-    void getGCCRegNames(const char * const *&Names,
-                        unsigned &NumNames) const override {
-      Names = NULL;
-      NumNames = 0;
-    }
-    void getGCCRegAliases(const GCCRegAlias *&Aliases,
-                          unsigned &NumAliases) const override {
-      Aliases = nullptr;
-      NumAliases = 0;
     }
     bool
     validateAsmConstraint(const char *&Name,
@@ -9132,7 +9132,25 @@ public:
    CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
     return (CC == CC_C || CC == CC_X86VectorCall || CC == CC_X86Pascal) ? CCCR_OK : CCCR_Warning;
    }
-  };
+   ArrayRef<const char *> getGCCRegNames() const override {
+     static const char * const GCCRegNames[] = { " "
+     };
+     return llvm::makeArrayRef(GCCRegNames);
+   }
+   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
+     return None;
+   }
+  bool allowsLargerPreferedTypeAlignment() const override {
+    return false;
+  }
+};
+const Builtin::Info AtomiccTargetInfo::BuiltinInfo[] = {
+//////////////////////HACKHACKHACK
+#define BUILTIN(ID, TYPE, ATTRS) \
+  { #ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr },
+//#include "clang/Basic/BuiltinsXCore.def"
+BUILTIN(__builtin_cpu_supports, "bcC*", "nc")
+};
 #endif
 
 /// Information about a specific microcontroller.
@@ -10047,9 +10065,9 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
 
   case llvm::Triple::atomicc:
 #ifdef __APPLE__
-    return new DarwinTargetInfo<AtomiccTargetInfo>(Triple);
+    return new DarwinTargetInfo<AtomiccTargetInfo>(Triple, Opts);
 #else
-    return new LinuxTargetInfo<AtomiccTargetInfo>(Triple);
+    return new LinuxTargetInfo<AtomiccTargetInfo>(Triple, Opts);
 #endif
   }
 }

@@ -2217,60 +2217,29 @@ inline T TypeLoc::getAsAdjusted() const {
   }
   return Cur.getAs<T>();
 }
-}
 
 struct AtomiccBitsTypeLocInfo {
-  // FIXME: While there's only one unary transform right now, future ones may
-  // need different representations
-  SourceLocation KWLoc, LParenLoc, RParenLoc, NameLoc;
-  TypeSourceInfo *UnderlyingTInfo;
+  SourceLocation KWLoc;
 };
 
-class AtomiccBitsTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc,
-                                                    AtomiccBitsTypeLoc,
-                                                    AtomiccBitsType,
-                                                    AtomiccBitsTypeLocInfo> {
+class AtomiccBitsTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc, AtomiccBitsTypeLoc, AtomiccBitsType,
+                                           AtomiccBitsTypeLocInfo> {
 public:
-  SourceLocation getKWLoc() const { return getLocalData()->KWLoc; }
-  void setKWLoc(SourceLocation Loc) { getLocalData()->KWLoc = Loc; }
+  TypeLoc getValueLoc() const { return this->getInnerTypeLoc(); }
 
-  SourceLocation getLParenLoc() const { return getLocalData()->LParenLoc; }
-  void setLParenLoc(SourceLocation Loc) { getLocalData()->LParenLoc = Loc; }
+  SourceRange getLocalSourceRange() const { return SourceRange(getKWLoc()); }
 
-  SourceLocation getRParenLoc() const { return getLocalData()->RParenLoc; }
-  void setRParenLoc(SourceLocation Loc) { getLocalData()->RParenLoc = Loc; }
-
-  TypeSourceInfo* getUnderlyingTInfo() const {
-    return getLocalData()->UnderlyingTInfo;
-  }
-  void setUnderlyingTInfo(TypeSourceInfo *TInfo) {
-    getLocalData()->UnderlyingTInfo = TInfo;
-  }
-
-  SourceRange getLocalSourceRange() const {
-    return SourceRange(getKWLoc(), getRParenLoc());
-  }
-
-  SourceRange getParensRange() const {
-    return SourceRange(getLParenLoc(), getRParenLoc());
-  }
-  void setParensRange(SourceRange Range) {
-    setLParenLoc(Range.getBegin());
-    setRParenLoc(Range.getEnd());
-  }
+  SourceLocation getKWLoc() const { return this->getLocalData()->KWLoc; }
+  void setKWLoc(SourceLocation Loc) { this->getLocalData()->KWLoc = Loc; }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     setKWLoc(Loc);
-    setRParenLoc(Loc);
-    setLParenLoc(Loc);
   }
 
-  SourceLocation getNameLoc() const {
-    return this->getLocalData()->NameLoc;
-  }
-  void setNameLoc(SourceLocation Loc) {
-    this->getLocalData()->NameLoc = Loc;
+  QualType getInnerType() const { //return HasNoInnerType();//this->getTypePtr()->getElementType(); 
+    return getTypePtr()->getBaseType();
   }
 };
+}
 
 #endif
