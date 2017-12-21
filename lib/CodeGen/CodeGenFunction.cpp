@@ -45,6 +45,8 @@ static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
                                       const LangOptions &LangOpts) {
   if (CGOpts.DisableLifetimeMarkers)
     return false;
+printf("[%s:%d]CGOpts.DisableLifetimeMarkers was not turned on!!!!!!!\n", __FUNCTION__, __LINE__);
+return false;
 
   // Disable lifetime markers in msan builds.
   // FIXME: Remove this when msan works with lifetime markers.

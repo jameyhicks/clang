@@ -931,6 +931,8 @@ llvm::Value *CodeGenFunction::EmitLifetimeStart(uint64_t Size,
                                                 llvm::Value *Addr) {
   if (!ShouldEmitLifetimeMarkers)
     return nullptr;
+printf("[%s:%d] ShouldEmitLifetimeMarkers not cleared!!!\n", __FUNCTION__, __LINE__);
+return nullptr;
 
   llvm::Value *SizeV = llvm::ConstantInt::get(Int64Ty, Size);
   Addr = Builder.CreateBitCast(Addr, AllocaInt8PtrTy);
@@ -941,6 +943,8 @@ llvm::Value *CodeGenFunction::EmitLifetimeStart(uint64_t Size,
 }
 
 void CodeGenFunction::EmitLifetimeEnd(llvm::Value *Size, llvm::Value *Addr) {
+printf("[%s:%d] DONT\n", __FUNCTION__, __LINE__);
+return;
   Addr = Builder.CreateBitCast(Addr, AllocaInt8PtrTy);
   llvm::CallInst *C =
       Builder.CreateCall(CGM.getLLVMLifetimeEndFn(), {Size, Addr});
