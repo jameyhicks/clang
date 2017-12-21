@@ -1298,9 +1298,6 @@ static FunctionDecl *getFFun(Sema *s, SourceLocation OpLoc)
     if (!FFDecl) {
         SmallVector<QualType, 8> NullArgs;
         FunctionProtoType::ExtProtoInfo EPI;
-        ccharp = s->Context.getPointerType(s->Context.CharTy.withConst());
-        voidp = s->Context.getPointerType(s->Context.VoidTy);
-        voidpp = s->Context.getPointerType(voidp);
         DeclContext *Parent = s->Context.getTranslationUnitDecl();
         LinkageSpecDecl *CLinkageDecl = LinkageSpecDecl::Create(s->Context, Parent, OpLoc, OpLoc, LinkageSpecDecl::lang_c, false);
         CLinkageDecl->setImplicit();
@@ -1331,8 +1328,9 @@ static FunctionDecl *getABR(Sema *s, SourceLocation OpLoc)
         FunctionProtoType::ExtProtoInfo EPI;
         bbool = s->Context.getBlockPointerType(s->Context.getFunctionType(s->Context.BoolTy, NullArgs, EPI));
         bvoid = s->Context.getBlockPointerType(s->Context.getFunctionType(s->Context.VoidTy, NullArgs, EPI));
-        //ccharp = s->Context.getPointerType(s->Context.CharTy.withConst());
-        //voidp = s->Context.getPointerType(s->Context.VoidTy);
+        ccharp = s->Context.getPointerType(s->Context.CharTy.withConst());
+        voidp = s->Context.getPointerType(s->Context.VoidTy);
+        voidpp = s->Context.getPointerType(voidp);
         DeclContext *Parent = s->Context.getTranslationUnitDecl();
         LinkageSpecDecl *CLinkageDecl = LinkageSpecDecl::Create(s->Context, Parent, OpLoc, OpLoc, LinkageSpecDecl::lang_c, false);
         CLinkageDecl->setImplicit();
@@ -1357,8 +1355,41 @@ static FunctionDecl *getABR(Sema *s, SourceLocation OpLoc)
     }
     return ABRDecl;
 }
+
+static CallExpr *buildBlock(Sema &Actions, std::string blockName,
+    CompoundStmt *bodyStmt, QualType blockType, SourceLocation RuleLoc)
+{
+  SmallVector<BlockDecl::Capture, 4> Captures;
+  FunctionDecl *FFDecl = getFFun(&Actions, RuleLoc);
+  NestedNameSpecifierLoc NNSloc;
+  Expr *NameExpr = Actions.ImpCastExprToType(StringLiteral::Create(Actions.Context, blockName,
+          StringLiteral::Ascii, /*Pascal*/ false,
+          Actions.Context.getConstantArrayType(Actions.Context.CharTy.withConst(),
+          llvm::APInt(32, blockName.length() + 1), ArrayType::Normal, 0), RuleLoc),
+          ccharp, CK_ArrayToPointerDecay).get();
+  BlockDecl *TheDecl = BlockDecl::Create(Actions.Context, Actions.CurContext, RuleLoc);
+  Actions.CurContext->addDecl(TheDecl);
+  TheDecl->setBody(bodyStmt);
+  TheDecl->setCaptures(Actions.Context, Captures, true);
+  BlockExpr *vresult = new (Actions.Context) BlockExpr(TheDecl, blockType);
+  Expr *item = Actions.ImpCastExprToType(vresult, voidpp, CK_BitCast).get();
+  Expr *Fn = DeclRefExpr::Create(Actions.Context, NNSloc, RuleLoc, FFDecl, false,
+      RuleLoc, FFDecl->getType(), VK_LValue, nullptr);
+  Fn = Actions.ImpCastExprToType(Fn, Actions.Context.getPointerType(FFDecl->getType()), CK_FunctionToPointerDecay).get();
+  Expr *Args[] = {NameExpr, 
+      ImplicitCastExpr::Create(Actions.Context, voidp, CK_LValueToRValue, new (Actions.Context) ArraySubscriptExpr(Actions.ActOnParenExpr(RuleLoc, RuleLoc,
+         Actions.BuildCStyleCastExpr(RuleLoc, Actions.Context.getTrivialTypeSourceInfo(voidpp, RuleLoc), RuleLoc, vresult).get()).get(),
+             IntegerLiteral::Create(Actions.Context, llvm::APInt(Actions.Context.getTypeSize(Actions.Context.IntTy), 2), Actions.Context.IntTy, RuleLoc),
+             voidp, VK_LValue, OK_Ordinary, RuleLoc), nullptr, VK_RValue),
+      item};
+  CallExpr *bcall = new (Actions.Context) CallExpr(Actions.Context, Fn, Args, voidp, VK_RValue, RuleLoc);
+  Actions.ExprCleanupObjects.push_back(TheDecl);
+  Actions.ExprCleanupObjects.push_back(TheDecl);
+  return bcall;
+}
 StmtResult
-Sema::ActOnRuleStmt(SourceLocation RuleLoc, StringRef Name, FullExprArg CondVal, Stmt *bodyStmt) {
+Sema::ActOnRuleStmt(SourceLocation RuleLoc, StringRef AName, FullExprArg CondVal, Stmt *bodyStmt) {
+  std::string Name = AName;
   if (!CondVal.get()) {
       getCurFunction()->setHasDroppedStmt();
       return StmtError();
@@ -1369,75 +1400,21 @@ Sema::ActOnRuleStmt(SourceLocation RuleLoc, StringRef Name, FullExprArg CondVal,
       return StmtError();
 
   DiagnoseUnusedExprResult(bodyStmt);
-  //DiagnoseEmptyStmtBody(ConditionExpr->getLocEnd(), bodyStmt, diag::warn_empty_if_body); 
-  SmallVector<BlockDecl::Capture, 4> Captures;
-  FunctionDecl *FFDecl = getFFun(this, RuleLoc);
   FunctionDecl *ABRDecl = getABR(this, RuleLoc);
-  std::string ruleName = Name;
-  Expr *NameExpr = ImpCastExprToType(StringLiteral::Create(Context, ruleName,
+  Expr *NameExpr = ImpCastExprToType(StringLiteral::Create(Context, Name,
           StringLiteral::Ascii, /*Pascal*/ false,
           Context.getConstantArrayType(Context.CharTy.withConst(),
-          llvm::APInt(32, ruleName.length() + 1), ArrayType::Normal, 0), RuleLoc),
+          llvm::APInt(32, Name.length() + 1), ArrayType::Normal, 0), RuleLoc),
           ccharp, CK_ArrayToPointerDecay).get();
   Expr *thisp = ImpCastExprToType(new (Context) CXXThisExpr(RuleLoc, getCurrentThisType(), /*isImplicit=*/true), voidp, CK_BitCast).get();
   NestedNameSpecifierLoc NNSloc;
-  CallExpr *bcall, *vcall;
 
-  {
-  std::string blockName = ruleName + "__RDY";
-  Expr *NameExpr = ImpCastExprToType(StringLiteral::Create(Context, blockName,
-          StringLiteral::Ascii, /*Pascal*/ false,
-          Context.getConstantArrayType(Context.CharTy.withConst(),
-          llvm::APInt(32, blockName.length() + 1), ArrayType::Normal, 0), RuleLoc),
-          ccharp, CK_ArrayToPointerDecay).get();
-  BlockDecl *TheDecl = BlockDecl::Create(Context, CurContext, RuleLoc);
-  CurContext->addDecl(TheDecl);
   StmtResult retStmt = new (Context) ReturnStmt(RuleLoc, ConditionExpr, nullptr);
   SmallVector<Stmt*, 32> Stmts;
   Stmts.push_back(retStmt.get());
-  TheDecl->setBody(new (Context) class CompoundStmt(Context, Stmts, RuleLoc, RuleLoc));
-  TheDecl->setCaptures(Context, Captures, true);
-  BlockExpr *bresult = new (Context) BlockExpr(TheDecl, bbool);
-  Expr *item = ImpCastExprToType(bresult, voidpp, CK_BitCast).get();
-  Expr *Fn = DeclRefExpr::Create(Context, NNSloc, RuleLoc, FFDecl, false,
-      RuleLoc, FFDecl->getType(), VK_LValue, nullptr);
-  Fn = ImpCastExprToType(Fn, Context.getPointerType(FFDecl->getType()), CK_FunctionToPointerDecay).get();
-  Expr *Args[] = {NameExpr, 
-      ImplicitCastExpr::Create(Context, voidp, CK_LValueToRValue, new (Context) ArraySubscriptExpr(ActOnParenExpr(RuleLoc, RuleLoc,
-         BuildCStyleCastExpr(RuleLoc, Context.getTrivialTypeSourceInfo(voidpp, RuleLoc), RuleLoc, bresult).get()).get(),
-             IntegerLiteral::Create(Context, llvm::APInt(Context.getTypeSize(Context.IntTy), 2), Context.IntTy, RuleLoc),
-             voidp, VK_LValue, OK_Ordinary, RuleLoc), nullptr, VK_RValue),
-      item};
-  bcall = new (Context) CallExpr(Context, Fn, Args, voidp, VK_RValue, RuleLoc);
-  ExprCleanupObjects.push_back(TheDecl);
-  ExprCleanupObjects.push_back(TheDecl);
-  }
-  {
-  std::string blockName = ruleName + "__ENA";
-  Expr *NameExpr = ImpCastExprToType(StringLiteral::Create(Context, blockName,
-          StringLiteral::Ascii, /*Pascal*/ false,
-          Context.getConstantArrayType(Context.CharTy.withConst(),
-          llvm::APInt(32, blockName.length() + 1), ArrayType::Normal, 0), RuleLoc),
-          ccharp, CK_ArrayToPointerDecay).get();
-  BlockDecl *TheDecl = BlockDecl::Create(Context, CurContext, RuleLoc);
-  CurContext->addDecl(TheDecl);
-  TheDecl->setBody(cast<CompoundStmt>(bodyStmt));
-  TheDecl->setCaptures(Context, Captures, true);
-  BlockExpr *vresult = new (Context) BlockExpr(TheDecl, bvoid);
-  Expr *item = ImpCastExprToType(vresult, voidpp, CK_BitCast).get();
-  Expr *Fn = DeclRefExpr::Create(Context, NNSloc, RuleLoc, FFDecl, false,
-      RuleLoc, FFDecl->getType(), VK_LValue, nullptr);
-  Fn = ImpCastExprToType(Fn, Context.getPointerType(FFDecl->getType()), CK_FunctionToPointerDecay).get();
-  Expr *Args[] = {NameExpr, 
-      ImplicitCastExpr::Create(Context, voidp, CK_LValueToRValue, new (Context) ArraySubscriptExpr(ActOnParenExpr(RuleLoc, RuleLoc,
-         BuildCStyleCastExpr(RuleLoc, Context.getTrivialTypeSourceInfo(voidpp, RuleLoc), RuleLoc, vresult).get()).get(),
-             IntegerLiteral::Create(Context, llvm::APInt(Context.getTypeSize(Context.IntTy), 2), Context.IntTy, RuleLoc),
-             voidp, VK_LValue, OK_Ordinary, RuleLoc), nullptr, VK_RValue),
-      item};
-  vcall = new (Context) CallExpr(Context, Fn, Args, voidp, VK_RValue, RuleLoc);
-  ExprCleanupObjects.push_back(TheDecl);
-  ExprCleanupObjects.push_back(TheDecl);
-  }
+  CallExpr *bcall = buildBlock(*this, Name + "__RDY",
+    new (Context) class CompoundStmt(Context, Stmts, RuleLoc, RuleLoc), bbool, RuleLoc);
+  CallExpr *vcall = buildBlock(*this, Name + "__ENA", cast<CompoundStmt>(bodyStmt), bvoid, RuleLoc);
   Cleanup.setExprNeedsCleanups(true);
 
   Expr *Fn = DeclRefExpr::Create(Context, NNSloc, RuleLoc, ABRDecl, false,
