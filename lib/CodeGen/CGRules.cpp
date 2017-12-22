@@ -1,4 +1,3 @@
-#if 0// temp for CGRule debug
 //===--- CGBlocks.cpp - Emit LLVM Code for declarations ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -571,6 +570,8 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
 
   info.StructureType =
     llvm::StructType::get(CGM.getLLVMContext(), elementTypes, true);
+printf("[%s:%d] STRUCTURETYPE count %d\n", __FUNCTION__, __LINE__,block->capturesCXXThis() + (block->capture_end() - block->capture_begin()));
+info.StructureType->dump();
 }
 
 /// Enter the scope of a block.  This should be run at the entrance to
@@ -604,10 +605,12 @@ static void enterBlockScope(CodeGenFunction &CGF, BlockDecl *block) {
   for (const auto &CI : block->captures()) {
     // Ignore __block captures; there's nothing special in the
     // on-stack block that we need to do for them.
+printf("[%s:%d] CAPTURE byref %d\n", __FUNCTION__, __LINE__, CI.isByRef());
     if (CI.isByRef()) continue;
 
     // Ignore variables that are constant-captured.
     const VarDecl *variable = CI.getVariable();
+variable->dump();
     CGBlockInfo::Capture &capture = blockInfo.getCapture(variable);
     if (capture.isConstant()) continue;
 
@@ -744,6 +747,8 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
 
   // Build the block descriptor.
   llvm::Constant *descriptor = buildBlockDescriptor(CGM, blockInfo);
+printf("[%s:%d]BLOCKDESCRIPTOR\n", __FUNCTION__, __LINE__);
+descriptor->dump();
 
   Address blockAddr = blockInfo.LocalAddress;
   assert(blockAddr.isValid() && "block has no address!");
@@ -830,10 +835,12 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
                                       enclosingCapture.getIndex(),
                                       enclosingCapture.getOffset(),
                                       "block.capture.addr");
+printf("[%s:%d]BYREFNESTED\n", __FUNCTION__, __LINE__);
       } else {
         auto I = LocalDeclMap.find(variable);
         assert(I != LocalDeclMap.end());
         src = I->second;
+printf("[%s:%d]BYREF NOTNESTED\n", __FUNCTION__, __LINE__);
       }
     } else {
       DeclRefExpr declRef(const_cast<VarDecl *>(variable),
@@ -841,6 +848,8 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
                           type.getNonReferenceType(), VK_LValue,
                           SourceLocation());
       src = EmitDeclRefLValue(&declRef).getAddress();
+printf("[%s:%d]NOTBYREF\n", __FUNCTION__, __LINE__);
+declRef.dump();
     };
 
     // For byrefs, we just write the pointer to the byref struct into
@@ -1242,6 +1251,7 @@ CodeGenFunction::GenerateBlockFunction(GlobalDecl GD,
     const auto *var = dyn_cast<VarDecl>(i->first);
     if (var && !var->hasLocalStorage())
       setAddrOfLocalVar(var, i->second);
+printf("[%s:%d]LDMMMMMM var %p\n", __FUNCTION__, __LINE__, var);
   }
 
   // Begin building the function declaration.
@@ -2499,4 +2509,3 @@ llvm::Constant *CodeGenModule::getNSConcreteStackBlock() {
   configureBlocksRuntimeObject(*this, NSConcreteStackBlock);
   return NSConcreteStackBlock;
 }
-#endif

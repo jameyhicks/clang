@@ -35,6 +35,7 @@ add_clang_library(clangCodeGen
   BackendUtil.cpp
   CGAtomic.cpp
   CGBlocks.cpp
+  CGRules.cpp
   CGBuiltin.cpp
   CGCUDANV.cpp
   CGCUDARuntime.cpp
