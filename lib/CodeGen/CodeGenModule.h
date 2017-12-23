@@ -800,7 +800,7 @@ public:
 
   /// Notes that BE's global block is available via Addr. Asserts that BE
   /// isn't already emitted.
-  void setAddrOfGlobalBlock(const BlockExpr *BE, llvm::Constant *Addr);
+  //jca void setAddrOfGlobalBlock(const BlockExpr *BE, llvm::Constant *Addr);
   
   /// Return a pointer to a constant CFString object for the given string.
   ConstantAddress GetAddrOfConstantCFString(const StringLiteral *Literal);
@@ -927,10 +927,10 @@ public:
   ///@name Custom Blocks Runtime Interfaces
   ///@{
 
-  llvm::Constant *getNSConcreteGlobalBlock();
+  //jca llvm::Constant *getNSConcreteGlobalBlock();
   llvm::Constant *getNSConcreteStackBlock();
-  llvm::Constant *getBlockObjectAssign();
-  llvm::Constant *getBlockObjectDispose();
+  //jca llvm::Constant *getBlockObjectAssign();
+  //jca llvm::Constant *getBlockObjectDispose();
 
   ///@}
 
