@@ -388,8 +388,6 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
     // So do types that require non-trivial copy construction.
     } else if (CI.hasCopyExpr()) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-
-    // And so do types with destructors.
     } else if (CGM.getLangOpts().CPlusPlus) {
       if (const CXXRecordDecl *record =
             variable->getType()->getAsCXXRecordDecl()) {
@@ -712,9 +710,6 @@ descriptor->dump();
 
     if (blockDecl->isConversionFromLambda()) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-      // The lambda capture in a lambda's conversion-to-block-pointer is
-      // special; we'll simply emit it directly.
-      src = Address::invalid();
     } else if (CI.isByRef()) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
     } else {
@@ -924,7 +919,6 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
   if (auto refType = capture.fieldType()->getAs<ReferenceType>())
 {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-    addr = EmitLoadOfReference(addr, refType);
 }
 
   return addr;
@@ -1262,12 +1256,6 @@ namespace {
 /// to be done externally.
 void CodeGenFunction::enterByrefCleanup(const AutoVarEmission &emission) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  // We don't enter this cleanup if we're in pure-GC mode.
-  if (CGM.getLangOpts().getGC() == LangOptions::GCOnly)
-    return;
-
-  EHStack.pushCleanup<CallBlockRelease>(NormalAndEHCleanup,
-                                        emission.Addr.getPointer());
 }
 
 /// Adjust the declaration of something from the blocks API.
