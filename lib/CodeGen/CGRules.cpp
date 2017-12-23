@@ -43,11 +43,6 @@ CGBlockInfo::CGBlockInfo(const BlockDecl *block, StringRef name)
 // Anchor the vtable to this translation unit.
 BlockByrefHelpers::~BlockByrefHelpers() {}
 
-/// Build the given block as a global block.
-static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
-                                        const CGBlockInfo &blockInfo,
-                                        llvm::Constant *blockFn);
-
 /// buildBlockDescriptor - Build the block descriptor meta-data for a block.
 /// buildBlockDescriptor is accessed from 5th field of the Block_literal
 /// meta-data and contains stationary information about the block literal.
@@ -930,18 +925,6 @@ void CodeGenModule::setAddrOfGlobalBlock(const BlockExpr *BE,
   assert(Ok && "Trying to replace an already-existing global block!");
 }
 
-llvm::Constant *
-CodeGenModule::GetAddrOfGlobalBlock(const BlockExpr *BE,
-                                    StringRef Name) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-}
-
-static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
-                                        const CGBlockInfo &blockInfo,
-                                        llvm::Constant *blockFn) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-}
-
 void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,
                                                unsigned argNum,
                                                llvm::Value *arg) {
@@ -1090,51 +1073,6 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
   return fn;
 }
 
-llvm::Constant *
-CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-}
-template <class T>
-static T *buildByrefHelpers(CodeGenModule &CGM, const BlockByrefInfo &byrefInfo,
-                            T &&generator) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-}
-BlockByrefHelpers *
-CodeGenFunction::buildByrefHelpers(llvm::StructType &byrefType,
-                                   const AutoVarEmission &emission) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-}
-Address CodeGenFunction::emitBlockByrefAddress(Address baseAddr,
-                                               const VarDecl *var,
-                                               bool followForward) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-}
-Address CodeGenFunction::emitBlockByrefAddress(Address baseAddr,
-                                               const BlockByrefInfo &info,
-                                               bool followForward,
-                                               const llvm::Twine &name) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-}
-const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-}
-void CodeGenFunction::emitByrefStructureInit(const AutoVarEmission &emission) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-}
-
-void CodeGenFunction::BuildBlockRelease(llvm::Value *V, BlockFieldFlags flags) {
-  llvm::Value *F = CGM.getBlockObjectDispose();
-  llvm::Value *args[] = {
-    Builder.CreateBitCast(V, Int8PtrTy),
-    llvm::ConstantInt::get(Int32Ty, flags.getBitMask())
-  };
-  EmitNounwindRuntimeCall(F, args); // FIXME: throwing destructors?
-}
-
-void CodeGenFunction::enterByrefCleanup(const AutoVarEmission &emission) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-}
-
 /// Adjust the declaration of something from the blocks API.
 static void configureBlocksRuntimeObject(CodeGenModule &CGM,
                                          llvm::Constant *C) {
@@ -1184,10 +1122,6 @@ llvm::Constant *CodeGenModule::getBlockObjectDispose() {
   return BlockObjectDispose;
 }
 
-llvm::Constant *CodeGenModule::getBlockObjectAssign() {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-}
-
 llvm::Constant *CodeGenModule::getNSConcreteGlobalBlock() {
   if (NSConcreteGlobalBlock)
     return NSConcreteGlobalBlock;
@@ -1208,4 +1142,51 @@ llvm::Constant *CodeGenModule::getNSConcreteStackBlock() {
                                                nullptr);
   configureBlocksRuntimeObject(*this, NSConcreteStackBlock);
   return NSConcreteStackBlock;
+}
+
+llvm::Constant * CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
+}
+template <class T>
+static T *buildByrefHelpers(CodeGenModule &CGM, const BlockByrefInfo &byrefInfo, T &&generator) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
+}
+BlockByrefHelpers *
+CodeGenFunction::buildByrefHelpers(llvm::StructType &byrefType, const AutoVarEmission &emission) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
+}
+Address CodeGenFunction::emitBlockByrefAddress(Address baseAddr, const VarDecl *var, bool followForward) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
+}
+Address CodeGenFunction::emitBlockByrefAddress(Address baseAddr, const BlockByrefInfo &info,
+                                               bool followForward, const llvm::Twine &name) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
+}
+const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
+}
+void CodeGenFunction::emitByrefStructureInit(const AutoVarEmission &emission) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
+}
+
+llvm::Constant * CodeGenModule::GetAddrOfGlobalBlock(const BlockExpr *BE, StringRef Name) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
+}
+
+void CodeGenFunction::BuildBlockRelease(llvm::Value *V, BlockFieldFlags flags) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
+  llvm::Value *F = CGM.getBlockObjectDispose();
+  llvm::Value *args[] = {
+    Builder.CreateBitCast(V, Int8PtrTy),
+    llvm::ConstantInt::get(Int32Ty, flags.getBitMask())
+  };
+  EmitNounwindRuntimeCall(F, args); // FIXME: throwing destructors?
+}
+
+void CodeGenFunction::enterByrefCleanup(const AutoVarEmission &emission) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
+}
+
+llvm::Constant *CodeGenModule::getBlockObjectAssign() {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 }
