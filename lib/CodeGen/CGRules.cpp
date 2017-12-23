@@ -93,14 +93,7 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
     CGM.getContext().getObjCEncodingForBlock(blockInfo.getBlockExpr());
   elements.add(llvm::ConstantExpr::getBitCast(
     CGM.GetAddrOfConstantCString(typeAtEncoding).getPointer(), i8p));
-  
-  // GC layout.
-  if (C.getLangOpts().ObjC1) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  }
-  else
     elements.addNullPointer(i8p);
-
   unsigned AddrSpace = 0;
   llvm::GlobalVariable *global =
     elements.finishAndCreateGlobal("__block_descriptor_tmp",
@@ -718,6 +711,7 @@ descriptor->dump();
     Address src = Address::invalid();
 
     if (blockDecl->isConversionFromLambda()) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
       // The lambda capture in a lambda's conversion-to-block-pointer is
       // special; we'll simply emit it directly.
       src = Address::invalid();
@@ -928,7 +922,10 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
   }
 
   if (auto refType = capture.fieldType()->getAs<ReferenceType>())
+{
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
     addr = EmitLoadOfReference(addr, refType);
+}
 
   return addr;
 }
@@ -1024,10 +1021,6 @@ void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,
     Address alloc = CreateMemTemp(D->getType(), D->getName() + ".addr");
     Builder.CreateStore(arg, alloc);
     localAddr = Builder.CreateLoad(alloc);
-  }
-
-  if (CGDebugInfo *DI = getDebugInfo()) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
   }
 
   SourceLocation StartLoc = BlockInfo->getBlockExpr()->getBody()->getLocStart();
@@ -1171,12 +1164,6 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
   ++entry_ptr;
   Builder.SetInsertPoint(entry, entry_ptr);
 
-  // Emit debug information for all the DeclRefExprs.
-  // FIXME: also for 'this'
-  if (CGDebugInfo *DI = getDebugInfo()) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  }
-
   // And resume where we left off.
   if (resume == nullptr)
     Builder.ClearInsertionPoint();
@@ -1194,8 +1181,6 @@ namespace {
 /// entity that's captured by a block.
 enum class BlockCaptureEntityKind {
   CXXRecord, // Copy or destroy
-  ARCWeak,
-  ARCStrong,
   BlockObject, // Assign or release
   None
 };
@@ -1217,69 +1202,34 @@ struct BlockCaptureManagedEntity {
 } // end anonymous namespace
 
 
-/// Generate the destroy-helper function for a block closure object:
-///   static void block_destroy_helper(block_t *theBlock);
-///
-/// Note that this destroys a heap-allocated block closure object;
-/// it should not be confused with a 'byref destroy helper', which
-/// destroys the heap-allocated contents of an individual __block
-/// variable.
 llvm::Constant *
 CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 }
-
-/// Lazily build the copy and dispose helpers for a __block variable
-/// with the given information.
 template <class T>
 static T *buildByrefHelpers(CodeGenModule &CGM, const BlockByrefInfo &byrefInfo,
                             T &&generator) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 }
-
-/// Build the copy and dispose helpers for the given __block variable
-/// emission.  Places the helpers in the global cache.  Returns null
-/// if no helpers are required.
 BlockByrefHelpers *
 CodeGenFunction::buildByrefHelpers(llvm::StructType &byrefType,
                                    const AutoVarEmission &emission) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 }
-
 Address CodeGenFunction::emitBlockByrefAddress(Address baseAddr,
                                                const VarDecl *var,
                                                bool followForward) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 }
-
 Address CodeGenFunction::emitBlockByrefAddress(Address baseAddr,
                                                const BlockByrefInfo &info,
                                                bool followForward,
                                                const llvm::Twine &name) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 }
-
-/// BuildByrefInfo - This routine changes a __block variable declared as T x
-///   into:
-///
-///      struct {
-///        void *__isa;
-///        void *__forwarding;
-///        int32_t __flags;
-///        int32_t __size;
-///        void *__copy_helper;       // only if needed
-///        void *__destroy_helper;    // only if needed
-///        void *__byref_variable_layout;// only if needed
-///        char padding[X];           // only if needed
-///        T x;
-///      } x
-///
 const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 }
-
-/// Initialize the structural components of a __block variable, i.e.
-/// everything but the actual object.
 void CodeGenFunction::emitByrefStructureInit(const AutoVarEmission &emission) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 }
@@ -1311,6 +1261,7 @@ namespace {
 /// yet; if a cleanup is required for the variable itself, that needs
 /// to be done externally.
 void CodeGenFunction::enterByrefCleanup(const AutoVarEmission &emission) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
   // We don't enter this cleanup if we're in pure-GC mode.
   if (CGM.getLangOpts().getGC() == LangOptions::GCOnly)
     return;
