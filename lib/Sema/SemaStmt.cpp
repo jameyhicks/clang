@@ -1356,10 +1356,9 @@ static FunctionDecl *getABR(Sema *s, SourceLocation OpLoc)
     return ABRDecl;
 }
 
-static CallExpr *buildBlock(Sema &Actions, std::string blockName,
+static CallExpr *buildBlock(Sema &Actions, std::string blockName, ArrayRef<BlockDecl::Capture> Captures,
     CompoundStmt *bodyStmt, QualType blockType, SourceLocation RuleLoc)
 {
-  SmallVector<BlockDecl::Capture, 4> Captures;
   FunctionDecl *FFDecl = getFFun(&Actions, RuleLoc);
   NestedNameSpecifierLoc NNSloc;
   Expr *NameExpr = Actions.ImpCastExprToType(StringLiteral::Create(Actions.Context, blockName,
@@ -1408,13 +1407,26 @@ Sema::ActOnRuleStmt(SourceLocation RuleLoc, StringRef AName, FullExprArg CondVal
           ccharp, CK_ArrayToPointerDecay).get();
   Expr *thisp = ImpCastExprToType(new (Context) CXXThisExpr(RuleLoc, getCurrentThisType(), /*isImplicit=*/true), voidp, CK_BitCast).get();
   NestedNameSpecifierLoc NNSloc;
+  SmallVector<BlockDecl::Capture, 4> Captures;
+  PopExpressionEvaluationContext();
+  PopDeclContext();
+  BlockScopeInfo *BSI = cast<BlockScopeInfo>(FunctionScopes.back());
+  for (CapturingScopeInfo::Capture &Cap : BSI->Captures) {
+    if (Cap.isThisCapture())
+      continue;
+    BlockDecl::Capture NewCap(Cap.getVariable(), Cap.isBlockCapture(),
+                              Cap.isNested(), Cap.getInitExpr());
+    Captures.push_back(NewCap);
+  }
+  PopFunctionScopeInfo();
 
   StmtResult retStmt = new (Context) ReturnStmt(RuleLoc, ConditionExpr, nullptr);
   SmallVector<Stmt*, 32> Stmts;
   Stmts.push_back(retStmt.get());
-  CallExpr *bcall = buildBlock(*this, Name + "__RDY",
+  CallExpr *bcall = buildBlock(*this, Name + "__RDY", Captures,
     new (Context) class CompoundStmt(Context, Stmts, RuleLoc, RuleLoc), bbool, RuleLoc);
-  CallExpr *vcall = buildBlock(*this, Name + "__ENA", cast<CompoundStmt>(bodyStmt), bvoid, RuleLoc);
+  CallExpr *vcall = buildBlock(*this, Name + "__ENA", Captures,
+    cast<CompoundStmt>(bodyStmt), bvoid, RuleLoc);
   Cleanup.setExprNeedsCleanups(true);
 
   Expr *Fn = DeclRefExpr::Create(Context, NNSloc, RuleLoc, ABRDecl, false,

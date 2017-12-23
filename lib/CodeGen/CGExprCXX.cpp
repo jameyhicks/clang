@@ -688,21 +688,31 @@ static llvm::Value *EmitCXXNewAllocSize(CodeGenFunction &CGF,
 #if 1 //jca
   ASTContext &Context = CGF.getContext();
   QualType sizeType = Context.getSizeType();
-  QualType Params[] = {sizeType};
   FunctionProtoType::ExtProtoInfo EPI;
   IdentifierInfo *II = &Context.Idents.get("atomiccNewArrayCount");
-  FunctionDecl *call = FunctionDecl::Create(Context, Context.getTranslationUnitDecl(),
+  SmallVector<QualType, 8> ParamTypes;
+  ParamTypes.push_back(sizeType);
+  QualType ftype = Context.getFunctionType(sizeType, ParamTypes, EPI);
+  const FunctionProtoType *FT = cast<FunctionProtoType>(ftype);
+  FunctionDecl *FD = FunctionDecl::Create(Context, Context.getTranslationUnitDecl(),
       SourceLocation(), SourceLocation(), II,
-      Context.getFunctionType(sizeType, ArrayRef<QualType>(Params, 1), EPI),
-      nullptr, SC_Static, false, false);
+      ftype, nullptr, SC_Static, false, false);
+  SmallVector<ParmVarDecl*, 16> Params;
+  for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
+    QualType ParamType = FT->getParamType(i);
+    ParmVarDecl *Parm = ParmVarDecl::Create(Context, FD, SourceLocation(),
+         SourceLocation(), nullptr, ParamType, /*TInfo=*/nullptr, SC_None, nullptr);
+    Parm->setScopeInfo(0, i);
+    Params.push_back(Parm);
+  }
+  FD->setParams(Params);
   CallArgList callArgs;
   callArgs.add(RValue::get(numElements), sizeType);
   llvm::Instruction *CallOrInvoke;
-  llvm::Constant *CalleePtr = CGF.CGM.GetAddrOfFunction(call);
-  CGCallee Callee = CGCallee::forDirect(CalleePtr, call);
+  llvm::Constant *CalleePtr = CGF.CGM.GetAddrOfFunction(FD);
+  CGCallee Callee = CGCallee::forDirect(CalleePtr, FD);
   RValue RV = CGF.EmitCall(CGF.CGM.getTypes().
-        arrangeFreeFunctionCall(callArgs,
-        call->getType()->castAs<FunctionProtoType>(), /*chainCall=*/false),
+        arrangeFreeFunctionCall(callArgs, FT, /*chainCall=*/false),
       Callee, ReturnValueSlot(), callArgs, &CallOrInvoke);
   numElements = RV.getScalarVal();
 #endif

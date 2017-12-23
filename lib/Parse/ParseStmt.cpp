@@ -849,12 +849,52 @@ StmtResult Parser::ParseRuleStatement(SourceLocation *TrailingElseLoc) {
   assert(Tok.is(tok::kw___rule) && "Not a rule stmt!");
   SourceLocation RuleLoc = ConsumeToken();  // eat the 'rule'.
 
+  ParseScope RuleScope(this, Scope::BlockScope | Scope::FnScope |
+                              Scope::DeclScope);
+
+  Actions.ActOnBlockStart(RuleLoc, getCurScope());
+  DeclSpec DS(AttrFactory);
+  Declarator ParamInfo(DS, Declarator::BlockLiteralContext);
+  ParamInfo.setFunctionDefinitionKind(FDK_Definition);
+
+    ParsedAttributes attrs(AttrFactory);
+    SourceLocation NoLoc;
+    ParamInfo.AddTypeInfo(DeclaratorChunk::getFunction(/*HasProto=*/true,
+                                             /*IsAmbiguous=*/false,
+                                             /*RParenLoc=*/NoLoc,
+                                             /*ArgInfo=*/nullptr,
+                                             /*NumArgs=*/0,
+                                             /*EllipsisLoc=*/NoLoc,
+                                             /*RParenLoc=*/NoLoc,
+                                             /*TypeQuals=*/0,
+                                             /*RefQualifierIsLvalueRef=*/true,
+                                             /*RefQualifierLoc=*/NoLoc,
+                                             /*ConstQualifierLoc=*/NoLoc,
+                                             /*VolatileQualifierLoc=*/NoLoc,
+                                             /*RestrictQualifierLoc=*/NoLoc,
+                                             /*MutableLoc=*/NoLoc,
+                                             EST_None,
+                                             /*ESpecRange=*/SourceRange(),
+                                             /*Exceptions=*/nullptr,
+                                             /*ExceptionRanges=*/nullptr,
+                                             /*NumExceptions=*/0,
+                                             /*NoexceptExpr=*/nullptr,
+                                             /*ExceptionSpecTokens=*/nullptr,
+                                             /*DeclsInPrototype=*/None,
+                                             RuleLoc, RuleLoc,
+                                             ParamInfo),
+                          attrs, RuleLoc);
+
+    MaybeParseGNUAttributes(ParamInfo);
+
+    // Inform sema that we are starting a block.
+    Actions.ActOnBlockArguments(RuleLoc, ParamInfo, getCurScope());
+
   assert(Tok.is(tok::identifier) && "No rule name!");
   Token RuleName = Tok;
   ConsumeToken();
 
   bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
-  ParseScope RuleScope(this, Scope::DeclScope | Scope::ControlScope, C99orCXX);
   Expr *CondExpr;
 
   if (Tok.is(tok::kw_if)) {
@@ -879,16 +919,11 @@ StmtResult Parser::ParseRuleStatement(SourceLocation *TrailingElseLoc) {
 
   FullExprArg FullCondExp(Actions.MakeFullExpr(CondExpr));
 
-  ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
-
   // Read the 'then' stmt.
   SourceLocation BodyStmtLoc = Tok.getLocation();
 
   SourceLocation InnerStatementTrailingElseLoc;
   StmtResult BodyStmt(ParseStatement(&InnerStatementTrailingElseLoc));
-
-  // Pop the 'if' scope if needed.
-  InnerScope.Exit();
 
   if (Tok.is(tok::code_completion)) {
     Actions.CodeCompleteAfterIf(getCurScope());
