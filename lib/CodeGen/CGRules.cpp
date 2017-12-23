@@ -48,20 +48,6 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
                                         const CGBlockInfo &blockInfo,
                                         llvm::Constant *blockFn);
 
-/// Build the helper function to copy a block.
-static llvm::Constant *buildCopyHelper(CodeGenModule &CGM,
-                                       const CGBlockInfo &blockInfo) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  return CodeGenFunction(CGM).GenerateCopyHelperFunction(blockInfo);
-}
-
-/// Build the helper function to dispose of a block.
-static llvm::Constant *buildDisposeHelper(CodeGenModule &CGM,
-                                          const CGBlockInfo &blockInfo) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  return CodeGenFunction(CGM).GenerateDestroyHelperFunction(blockInfo);
-}
-
 /// buildBlockDescriptor - Build the block descriptor meta-data for a block.
 /// buildBlockDescriptor is accessed from 5th field of the Block_literal
 /// meta-data and contains stationary information about the block literal.
@@ -100,11 +86,6 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
   // Optional copy/dispose helpers.
   if (blockInfo.NeedsCopyDispose) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-    // copy_func_helper_decl
-    elements.add(buildCopyHelper(CGM, blockInfo));
-
-    // destroy_func_decl
-    elements.add(buildDisposeHelper(CGM, blockInfo));
   }
 
   // Signature.  Mandatory ObjC-style method descriptor @encode sequence.
@@ -116,10 +97,6 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
   // GC layout.
   if (C.getLangOpts().ObjC1) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-    if (CGM.getLangOpts().getGC() != LangOptions::NonGC)
-      elements.add(CGM.getObjCRuntime().BuildGCBlockLayout(CGM, blockInfo));
-    else
-      elements.add(CGM.getObjCRuntime().BuildRCBlockLayout(CGM, blockInfo));
   }
   else
     elements.addNullPointer(i8p);
@@ -378,17 +355,6 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
 
     if (CI.isByRef()) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-      // We have to copy/dispose of the __block reference.
-      info.NeedsCopyDispose = true;
-
-      // Just use void* instead of a pointer to the byref type.
-      CharUnits align = CGM.getPointerAlign();
-      maxFieldAlign = std::max(maxFieldAlign, align);
-
-      layout.push_back(BlockLayoutChunk(align, CGM.getPointerSize(),
-                                        Qualifiers::OCL_None, &CI,
-                                        CGM.VoidPtrTy, variable->getType()));
-      continue;
     }
 
     // Otherwise, build a layout chunk with the size and alignment of
@@ -429,8 +395,6 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
     // So do types that require non-trivial copy construction.
     } else if (CI.hasCopyExpr()) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-      info.NeedsCopyDispose = true;
-      info.HasCXXObject = true;
 
     // And so do types with destructors.
     } else if (CGM.getLangOpts().CPlusPlus) {
@@ -438,8 +402,6 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
             variable->getType()->getAsCXXRecordDecl()) {
         if (!record->hasTrivialDestructor()) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-          info.HasCXXObject = true;
-          info.NeedsCopyDispose = true;
         }
       }
     }
@@ -599,66 +561,6 @@ static void enterBlockScope(CodeGenFunction &CGF, BlockDecl *block) {
   // If there are cleanups to emit, enter them (but inactive).
   if (!blockInfo.NeedsCopyDispose) return;
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-
-  // Walk through the captures (in order) and find the ones not
-  // captured by constant.
-  for (const auto &CI : block->captures()) {
-    // Ignore __block captures; there's nothing special in the
-    // on-stack block that we need to do for them.
-printf("[%s:%d] CAPTURE byref %d\n", __FUNCTION__, __LINE__, CI.isByRef());
-    if (CI.isByRef()) continue;
-
-    // Ignore variables that are constant-captured.
-    const VarDecl *variable = CI.getVariable();
-variable->dump();
-    CGBlockInfo::Capture &capture = blockInfo.getCapture(variable);
-    if (capture.isConstant()) continue;
-
-    // Ignore objects that aren't destructed.
-    QualType VT = getCaptureFieldType(CGF, CI);
-    QualType::DestructionKind dtorKind = VT.isDestructedType();
-    if (dtorKind == QualType::DK_none) continue;
-
-    CodeGenFunction::Destroyer *destroyer;
-
-    // Block captures count as local values and have imprecise semantics.
-    // They also can't be arrays, so need to worry about that.
-    //
-    // For const-qualified captures, emit clang.arc.use to ensure the captured
-    // object doesn't get released while we are still depending on its validity
-    // within the block.
-    if (VT.isConstQualified() &&
-        VT.getObjCLifetime() == Qualifiers::OCL_Strong &&
-        CGF.CGM.getCodeGenOpts().OptimizationLevel != 0) {
-      assert(CGF.CGM.getLangOpts().ObjCAutoRefCount &&
-             "expected ObjC ARC to be enabled");
-      destroyer = CodeGenFunction::emitARCIntrinsicUse;
-    } else if (dtorKind == QualType::DK_objc_strong_lifetime) {
-      destroyer = CodeGenFunction::destroyARCStrongImprecise;
-    } else {
-      destroyer = CGF.getDestroyer(dtorKind);
-    }
-
-    // GEP down to the address.
-    Address addr = CGF.Builder.CreateStructGEP(blockInfo.LocalAddress,
-                                               capture.getIndex(),
-                                               capture.getOffset());
-
-    // We can use that GEP as the dominating IP.
-    if (!blockInfo.DominatingIP)
-      blockInfo.DominatingIP = cast<llvm::Instruction>(addr.getPointer());
-
-    CleanupKind cleanupKind = InactiveNormalCleanup;
-    bool useArrayEHCleanup = CGF.needsEHCleanup(dtorKind);
-    if (useArrayEHCleanup) 
-      cleanupKind = InactiveNormalAndEHCleanup;
-
-    CGF.pushDestroy(cleanupKind, addr, VT,
-                    destroyer, useArrayEHCleanup);
-
-    // Remember where that cleanup was.
-    capture.setCleanup(CGF.EHStack.stable_begin());
-  }
 }
 
 /// Enter a full-expression with a non-trivial number of objects to
@@ -839,20 +741,6 @@ declRef.dump();
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
     } else if (const Expr *copyExpr = CI.getCopyExpr()) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-      if (blockDecl->isConversionFromLambda()) {
-        // If we have a lambda conversion, emit the expression
-        // directly into the block instead.
-        AggValueSlot Slot =
-            AggValueSlot::forAddr(blockField, Qualifiers(),
-                                  AggValueSlot::IsDestructed,
-                                  AggValueSlot::DoesNotNeedGCBarriers,
-                                  AggValueSlot::IsNotAliased);
-        EmitAggExpr(copyExpr, Slot);
-      } else {
-        EmitSynthesizedCXXCopyCtor(blockField, src, copyExpr);
-      }
-
-    // If it's a reference variable, copy the reference into the block field.
     } else if (type->isReferenceType()) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
     } else if (type.isConstQualified() &&
@@ -1140,12 +1028,6 @@ void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,
 
   if (CGDebugInfo *DI = getDebugInfo()) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-    if (CGM.getCodeGenOpts().getDebugInfo() >=
-        codegenoptions::LimitedDebugInfo) {
-      DI->setLocation(D->getLocation());
-      DI->EmitDeclareOfBlockLiteralArgVariable(*BlockInfo, arg, argNum,
-                                               localAddr, Builder);
-    }
   }
 
   SourceLocation StartLoc = BlockInfo->getBlockExpr()->getBody()->getLocStart();
@@ -1275,7 +1157,6 @@ printf("[%s:%d]LDMMMMMM var %p\n", __FUNCTION__, __LINE__, var);
   if (IsLambdaConversionToBlock)
 {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-    EmitLambdaBlockInvokeBody();
 }
   else {
     PGO.assignRegionCounters(GlobalDecl(blockDecl), fn);
@@ -1294,28 +1175,6 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
   // FIXME: also for 'this'
   if (CGDebugInfo *DI = getDebugInfo()) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-    for (const auto &CI : blockDecl->captures()) {
-      const VarDecl *variable = CI.getVariable();
-      DI->EmitLocation(Builder, variable->getLocation());
-
-      if (CGM.getCodeGenOpts().getDebugInfo() >=
-          codegenoptions::LimitedDebugInfo) {
-        const CGBlockInfo::Capture &capture = blockInfo.getCapture(variable);
-        if (capture.isConstant()) {
-          auto addr = LocalDeclMap.find(variable)->second;
-          DI->EmitDeclareOfAutoVariable(variable, addr.getPointer(),
-                                        Builder);
-          continue;
-        }
-
-        DI->EmitDeclareOfBlockDeclRefVariable(
-            variable, BlockPointerDbgLoc, Builder, blockInfo,
-            entry_ptr == entry->end() ? nullptr : &*entry_ptr);
-      }
-    }
-    // Recover location if it was changed in the above loop.
-    DI->EmitLocation(Builder,
-                     cast<CompoundStmt>(blockDecl->getBody())->getRBracLoc());
   }
 
   // And resume where we left off.
@@ -1357,248 +1216,6 @@ struct BlockCaptureManagedEntity {
 
 } // end anonymous namespace
 
-static std::pair<BlockCaptureEntityKind, BlockFieldFlags>
-computeCopyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
-                               const LangOptions &LangOpts) {
-  if (CI.getCopyExpr()) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-    assert(!CI.isByRef());
-    // don't bother computing flags
-    return std::make_pair(BlockCaptureEntityKind::CXXRecord, BlockFieldFlags());
-  }
-  BlockFieldFlags Flags;
-  if (CI.isByRef()) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  }
-  if (!T->isObjCRetainableType())
-    // For all other types, the memcpy is fine.
-    return std::make_pair(BlockCaptureEntityKind::None, Flags);
-
-  Flags = BLOCK_FIELD_IS_OBJECT;
-  bool isBlockPointer = T->isBlockPointerType();
-  if (isBlockPointer)
-    Flags = BLOCK_FIELD_IS_BLOCK;
-
-  // Special rules for ARC captures:
-  Qualifiers QS = T.getQualifiers();
-
-  // We need to register __weak direct captures with the runtime.
-  if (QS.getObjCLifetime() == Qualifiers::OCL_Weak)
-{
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-}
-
-  // We need to retain the copied value for __strong direct captures.
-  if (QS.getObjCLifetime() == Qualifiers::OCL_Strong) {
-    // If it's a block pointer, we have to copy the block and
-    // assign that to the destination pointer, so we might as
-    // well use _Block_object_assign.  Otherwise we can avoid that.
-    return std::make_pair(!isBlockPointer ? BlockCaptureEntityKind::ARCStrong
-                                          : BlockCaptureEntityKind::BlockObject,
-                          Flags);
-  }
-
-  // Non-ARC captures of retainable pointers are strong and
-  // therefore require a call to _Block_object_assign.
-  if (!QS.getObjCLifetime() && !LangOpts.ObjCAutoRefCount)
-    return std::make_pair(BlockCaptureEntityKind::BlockObject, Flags);
-
-  // Otherwise the memcpy is fine.
-  return std::make_pair(BlockCaptureEntityKind::None, Flags);
-}
-
-/// Find the set of block captures that need to be explicitly copied or destroy.
-static void findBlockCapturedManagedEntities(
-    const CGBlockInfo &BlockInfo, const LangOptions &LangOpts,
-    SmallVectorImpl<BlockCaptureManagedEntity> &ManagedCaptures,
-    llvm::function_ref<std::pair<BlockCaptureEntityKind, BlockFieldFlags>(
-        const BlockDecl::Capture &, QualType, const LangOptions &)>
-        Predicate) {
-  for (const auto &CI : BlockInfo.getBlockDecl()->captures()) {
-    const VarDecl *Variable = CI.getVariable();
-    const CGBlockInfo::Capture &Capture = BlockInfo.getCapture(Variable);
-    if (Capture.isConstant())
-      continue;
-
-    auto Info = Predicate(CI, Variable->getType(), LangOpts);
-    if (Info.first != BlockCaptureEntityKind::None)
-      ManagedCaptures.emplace_back(Info.first, Info.second, CI, Capture);
-  }
-}
-
-/// Generate the copy-helper function for a block closure object:
-///   static void block_copy_helper(block_t *dst, block_t *src);
-/// The runtime will have previously initialized 'dst' by doing a
-/// bit-copy of 'src'.
-///
-/// Note that this copies an entire block closure object to the heap;
-/// it should not be confused with a 'byref copy helper', which moves
-/// the contents of an individual __block variable to the heap.
-llvm::Constant *
-CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  ASTContext &C = getContext();
-
-  FunctionArgList args;
-  ImplicitParamDecl DstDecl(getContext(), C.VoidPtrTy,
-                            ImplicitParamDecl::Other);
-  args.push_back(&DstDecl);
-  ImplicitParamDecl SrcDecl(getContext(), C.VoidPtrTy,
-                            ImplicitParamDecl::Other);
-  args.push_back(&SrcDecl);
-
-  const CGFunctionInfo &FI =
-    CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, args);
-
-  // FIXME: it would be nice if these were mergeable with things with
-  // identical semantics.
-  llvm::FunctionType *LTy = CGM.getTypes().GetFunctionType(FI);
-
-  llvm::Function *Fn =
-    llvm::Function::Create(LTy, llvm::GlobalValue::InternalLinkage,
-                           "__copy_helper_block_", &CGM.getModule());
-
-  IdentifierInfo *II
-    = &CGM.getContext().Idents.get("__copy_helper_block_");
-
-  FunctionDecl *FD = FunctionDecl::Create(C,
-                                          C.getTranslationUnitDecl(),
-                                          SourceLocation(),
-                                          SourceLocation(), II, C.VoidTy,
-                                          nullptr, SC_Static,
-                                          false,
-                                          false);
-
-  CGM.SetInternalFunctionAttributes(nullptr, Fn, FI);
-
-  auto NL = ApplyDebugLocation::CreateEmpty(*this);
-  StartFunction(FD, C.VoidTy, Fn, FI, args);
-  // Create a scope with an artificial location for the body of this function.
-  auto AL = ApplyDebugLocation::CreateArtificial(*this);
-  llvm::Type *structPtrTy = blockInfo.StructureType->getPointerTo();
-
-  Address src = GetAddrOfLocalVar(&SrcDecl);
-  src = Address(Builder.CreateLoad(src), blockInfo.BlockAlign);
-  src = Builder.CreateBitCast(src, structPtrTy, "block.source");
-
-  Address dst = GetAddrOfLocalVar(&DstDecl);
-  dst = Address(Builder.CreateLoad(dst), blockInfo.BlockAlign);
-  dst = Builder.CreateBitCast(dst, structPtrTy, "block.dest");
-
-  SmallVector<BlockCaptureManagedEntity, 4> CopiedCaptures;
-  findBlockCapturedManagedEntities(blockInfo, getLangOpts(), CopiedCaptures,
-                                   computeCopyInfoForBlockCapture);
-
-  for (const auto &CopiedCapture : CopiedCaptures) {
-    const BlockDecl::Capture &CI = CopiedCapture.CI;
-    const CGBlockInfo::Capture &capture = CopiedCapture.Capture;
-    BlockFieldFlags flags = CopiedCapture.Flags;
-
-    unsigned index = capture.getIndex();
-    Address srcField = Builder.CreateStructGEP(src, index, capture.getOffset());
-    Address dstField = Builder.CreateStructGEP(dst, index, capture.getOffset());
-
-    // If there's an explicit copy expression, we do that.
-    if (CI.getCopyExpr()) {
-      assert(CopiedCapture.Kind == BlockCaptureEntityKind::CXXRecord);
-      EmitSynthesizedCXXCopyCtor(dstField, srcField, CI.getCopyExpr());
-    } else if (CopiedCapture.Kind == BlockCaptureEntityKind::ARCWeak) {
-      EmitARCCopyWeak(dstField, srcField);
-    } else {
-      llvm::Value *srcValue = Builder.CreateLoad(srcField, "blockcopy.src");
-      if (CopiedCapture.Kind == BlockCaptureEntityKind::ARCStrong) {
-        // At -O0, store null into the destination field (so that the
-        // storeStrong doesn't over-release) and then call storeStrong.
-        // This is a workaround to not having an initStrong call.
-        if (CGM.getCodeGenOpts().OptimizationLevel == 0) {
-          auto *ty = cast<llvm::PointerType>(srcValue->getType());
-          llvm::Value *null = llvm::ConstantPointerNull::get(ty);
-          Builder.CreateStore(null, dstField);
-          EmitARCStoreStrongCall(dstField, srcValue, true);
-
-        // With optimization enabled, take advantage of the fact that
-        // the blocks runtime guarantees a memcpy of the block data, and
-        // just emit a retain of the src field.
-        } else {
-          EmitARCRetainNonBlock(srcValue);
-
-          // We don't need this anymore, so kill it.  It's not quite
-          // worth the annoyance to avoid creating it in the first place.
-          cast<llvm::Instruction>(dstField.getPointer())->eraseFromParent();
-        }
-      } else {
-        assert(CopiedCapture.Kind == BlockCaptureEntityKind::BlockObject);
-        srcValue = Builder.CreateBitCast(srcValue, VoidPtrTy);
-        llvm::Value *dstAddr =
-          Builder.CreateBitCast(dstField.getPointer(), VoidPtrTy);
-        llvm::Value *args[] = {
-          dstAddr, srcValue, llvm::ConstantInt::get(Int32Ty, flags.getBitMask())
-        };
-
-        const VarDecl *variable = CI.getVariable();
-        bool copyCanThrow = false;
-        if (CI.isByRef() && variable->getType()->getAsCXXRecordDecl()) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-        }
-
-        if (copyCanThrow) {
-          EmitRuntimeCallOrInvoke(CGM.getBlockObjectAssign(), args);
-        } else {
-          EmitNounwindRuntimeCall(CGM.getBlockObjectAssign(), args);
-        }
-      }
-    }
-  }
-
-  FinishFunction();
-
-  return llvm::ConstantExpr::getBitCast(Fn, VoidPtrTy);
-}
-
-static std::pair<BlockCaptureEntityKind, BlockFieldFlags>
-computeDestroyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
-                                  const LangOptions &LangOpts) {
-  BlockFieldFlags Flags;
-  if (CI.isByRef()) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  }
-
-  if (const CXXRecordDecl *Record = T->getAsCXXRecordDecl()) {
-    if (Record->hasTrivialDestructor())
-      return std::make_pair(BlockCaptureEntityKind::None, BlockFieldFlags());
-    return std::make_pair(BlockCaptureEntityKind::CXXRecord, BlockFieldFlags());
-  }
-
-  // Other types don't need to be destroy explicitly.
-  if (!T->isObjCRetainableType())
-    return std::make_pair(BlockCaptureEntityKind::None, Flags);
-
-  Flags = BLOCK_FIELD_IS_OBJECT;
-  if (T->isBlockPointerType())
-    Flags = BLOCK_FIELD_IS_BLOCK;
-
-  // Special rules for ARC captures.
-  Qualifiers QS = T.getQualifiers();
-
-  // Use objc_storeStrong for __strong direct captures; the
-  // dynamic tools really like it when we do this.
-  if (QS.getObjCLifetime() == Qualifiers::OCL_Strong)
-    return std::make_pair(BlockCaptureEntityKind::ARCStrong, Flags);
-
-  // Support __weak direct captures.
-  if (QS.getObjCLifetime() == Qualifiers::OCL_Weak)
-{
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-}
-
-  // Non-ARC captures are strong, and we need to use
-  // _Block_object_dispose.
-  if (!QS.hasObjCLifetime() && !LangOpts.ObjCAutoRefCount)
-    return std::make_pair(BlockCaptureEntityKind::BlockObject, Flags);
-
-  // Otherwise, we have nothing to do.
-  return std::make_pair(BlockCaptureEntityKind::None, Flags);
-}
 
 /// Generate the destroy-helper function for a block closure object:
 ///   static void block_destroy_helper(block_t *theBlock);
@@ -1610,385 +1227,6 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 llvm::Constant *
 CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  ASTContext &C = getContext();
-
-  FunctionArgList args;
-  ImplicitParamDecl SrcDecl(getContext(), C.VoidPtrTy,
-                            ImplicitParamDecl::Other);
-  args.push_back(&SrcDecl);
-
-  const CGFunctionInfo &FI =
-    CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, args);
-
-  // FIXME: We'd like to put these into a mergable by content, with
-  // internal linkage.
-  llvm::FunctionType *LTy = CGM.getTypes().GetFunctionType(FI);
-
-  llvm::Function *Fn =
-    llvm::Function::Create(LTy, llvm::GlobalValue::InternalLinkage,
-                           "__destroy_helper_block_", &CGM.getModule());
-
-  IdentifierInfo *II
-    = &CGM.getContext().Idents.get("__destroy_helper_block_");
-
-  FunctionDecl *FD = FunctionDecl::Create(C, C.getTranslationUnitDecl(),
-                                          SourceLocation(),
-                                          SourceLocation(), II, C.VoidTy,
-                                          nullptr, SC_Static,
-                                          false, false);
-
-  CGM.SetInternalFunctionAttributes(nullptr, Fn, FI);
-
-  // Create a scope with an artificial location for the body of this function.
-  auto NL = ApplyDebugLocation::CreateEmpty(*this);
-  StartFunction(FD, C.VoidTy, Fn, FI, args);
-  auto AL = ApplyDebugLocation::CreateArtificial(*this);
-
-  llvm::Type *structPtrTy = blockInfo.StructureType->getPointerTo();
-
-  Address src = GetAddrOfLocalVar(&SrcDecl);
-  src = Address(Builder.CreateLoad(src), blockInfo.BlockAlign);
-  src = Builder.CreateBitCast(src, structPtrTy, "block");
-
-  CodeGenFunction::RunCleanupsScope cleanups(*this);
-
-  SmallVector<BlockCaptureManagedEntity, 4> DestroyedCaptures;
-  findBlockCapturedManagedEntities(blockInfo, getLangOpts(), DestroyedCaptures,
-                                   computeDestroyInfoForBlockCapture);
-
-  for (const auto &DestroyedCapture : DestroyedCaptures) {
-    const BlockDecl::Capture &CI = DestroyedCapture.CI;
-    const CGBlockInfo::Capture &capture = DestroyedCapture.Capture;
-    BlockFieldFlags flags = DestroyedCapture.Flags;
-
-    Address srcField =
-      Builder.CreateStructGEP(src, capture.getIndex(), capture.getOffset());
-
-    // If the captured record has a destructor then call it.
-    if (DestroyedCapture.Kind == BlockCaptureEntityKind::CXXRecord) {
-      const auto *Dtor =
-          CI.getVariable()->getType()->getAsCXXRecordDecl()->getDestructor();
-      PushDestructorCleanup(Dtor, srcField);
-
-      // If this is a __weak capture, emit the release directly.
-    } else if (DestroyedCapture.Kind == BlockCaptureEntityKind::ARCWeak) {
-      EmitARCDestroyWeak(srcField);
-
-    // Destroy strong objects with a call if requested.
-    } else if (DestroyedCapture.Kind == BlockCaptureEntityKind::ARCStrong) {
-      EmitARCDestroyStrong(srcField, ARCImpreciseLifetime);
-
-    // Otherwise we call _Block_object_dispose.  It wouldn't be too
-    // hard to just emit this as a cleanup if we wanted to make sure
-    // that things were done in reverse.
-    } else {
-      assert(DestroyedCapture.Kind == BlockCaptureEntityKind::BlockObject);
-      llvm::Value *value = Builder.CreateLoad(srcField);
-      value = Builder.CreateBitCast(value, VoidPtrTy);
-      BuildBlockRelease(value, flags);
-    }
-  }
-
-  cleanups.ForceCleanup();
-
-  FinishFunction();
-
-  return llvm::ConstantExpr::getBitCast(Fn, VoidPtrTy);
-}
-
-namespace {
-
-/// Emits the copy/dispose helper functions for a __block object of id type.
-#if 1
-class ObjectByrefHelpers final : public BlockByrefHelpers {
-  BlockFieldFlags Flags;
-
-public:
-  ObjectByrefHelpers(CharUnits alignment, BlockFieldFlags flags)
-    : BlockByrefHelpers(alignment), Flags(flags) {}
-
-  void emitCopy(CodeGenFunction &CGF, Address destField,
-                Address srcField) override {
-    destField = CGF.Builder.CreateBitCast(destField, CGF.VoidPtrTy);
-
-    srcField = CGF.Builder.CreateBitCast(srcField, CGF.VoidPtrPtrTy);
-    llvm::Value *srcValue = CGF.Builder.CreateLoad(srcField);
-
-    unsigned flags = (Flags | BLOCK_BYREF_CALLER).getBitMask();
-
-    llvm::Value *flagsVal = llvm::ConstantInt::get(CGF.Int32Ty, flags);
-    llvm::Value *fn = CGF.CGM.getBlockObjectAssign();
-
-    llvm::Value *args[] = { destField.getPointer(), srcValue, flagsVal };
-    CGF.EmitNounwindRuntimeCall(fn, args);
-  }
-
-  void emitDispose(CodeGenFunction &CGF, Address field) override {
-    field = CGF.Builder.CreateBitCast(field, CGF.Int8PtrTy->getPointerTo(0));
-    llvm::Value *value = CGF.Builder.CreateLoad(field);
-
-    CGF.BuildBlockRelease(value, Flags | BLOCK_BYREF_CALLER);
-  }
-
-  void profileImpl(llvm::FoldingSetNodeID &id) const override {
-    id.AddInteger(Flags.getBitMask());
-  }
-};
-
-/// Emits the copy/dispose helpers for an ARC __block __weak variable.
-class ARCWeakByrefHelpers final : public BlockByrefHelpers {
-public:
-  ARCWeakByrefHelpers(CharUnits alignment) : BlockByrefHelpers(alignment) {}
-
-  void emitCopy(CodeGenFunction &CGF, Address destField,
-                Address srcField) override {
-    CGF.EmitARCMoveWeak(destField, srcField);
-  }
-
-  void emitDispose(CodeGenFunction &CGF, Address field) override {
-    CGF.EmitARCDestroyWeak(field);
-  }
-
-  void profileImpl(llvm::FoldingSetNodeID &id) const override {
-    // 0 is distinguishable from all pointers and byref flags
-    id.AddInteger(0);
-  }
-};
-
-/// Emits the copy/dispose helpers for an ARC __block __strong variable
-/// that's not of block-pointer type.
-class ARCStrongByrefHelpers final : public BlockByrefHelpers {
-public:
-  ARCStrongByrefHelpers(CharUnits alignment) : BlockByrefHelpers(alignment) {}
-
-  void emitCopy(CodeGenFunction &CGF, Address destField,
-                Address srcField) override {
-    // Do a "move" by copying the value and then zeroing out the old
-    // variable.
-
-    llvm::Value *value = CGF.Builder.CreateLoad(srcField);
-    
-    llvm::Value *null =
-      llvm::ConstantPointerNull::get(cast<llvm::PointerType>(value->getType()));
-
-    if (CGF.CGM.getCodeGenOpts().OptimizationLevel == 0) {
-      CGF.Builder.CreateStore(null, destField);
-      CGF.EmitARCStoreStrongCall(destField, value, /*ignored*/ true);
-      CGF.EmitARCStoreStrongCall(srcField, null, /*ignored*/ true);
-      return;
-    }
-    CGF.Builder.CreateStore(value, destField);
-    CGF.Builder.CreateStore(null, srcField);
-  }
-
-  void emitDispose(CodeGenFunction &CGF, Address field) override {
-    CGF.EmitARCDestroyStrong(field, ARCImpreciseLifetime);
-  }
-
-  void profileImpl(llvm::FoldingSetNodeID &id) const override {
-    // 1 is distinguishable from all pointers and byref flags
-    id.AddInteger(1);
-  }
-};
-
-/// Emits the copy/dispose helpers for an ARC __block __strong
-/// variable that's of block-pointer type.
-class ARCStrongBlockByrefHelpers final : public BlockByrefHelpers {
-public:
-  ARCStrongBlockByrefHelpers(CharUnits alignment)
-    : BlockByrefHelpers(alignment) {}
-
-  void emitCopy(CodeGenFunction &CGF, Address destField,
-                Address srcField) override {
-    // Do the copy with objc_retainBlock; that's all that
-    // _Block_object_assign would do anyway, and we'd have to pass the
-    // right arguments to make sure it doesn't get no-op'ed.
-    llvm::Value *oldValue = CGF.Builder.CreateLoad(srcField);
-    llvm::Value *copy = CGF.EmitARCRetainBlock(oldValue, /*mandatory*/ true);
-    CGF.Builder.CreateStore(copy, destField);
-  }
-
-  void emitDispose(CodeGenFunction &CGF, Address field) override {
-    CGF.EmitARCDestroyStrong(field, ARCImpreciseLifetime);
-  }
-
-  void profileImpl(llvm::FoldingSetNodeID &id) const override {
-    // 2 is distinguishable from all pointers and byref flags
-    id.AddInteger(2);
-  }
-};
-
-/// Emits the copy/dispose helpers for a __block variable with a
-/// nontrivial copy constructor or destructor.
-class CXXByrefHelpers final : public BlockByrefHelpers {
-  QualType VarType;
-  const Expr *CopyExpr;
-
-public:
-  CXXByrefHelpers(CharUnits alignment, QualType type,
-                  const Expr *copyExpr)
-    : BlockByrefHelpers(alignment), VarType(type), CopyExpr(copyExpr) {}
-
-  bool needsCopy() const override { return CopyExpr != nullptr; }
-  void emitCopy(CodeGenFunction &CGF, Address destField,
-                Address srcField) override {
-    if (!CopyExpr) return;
-    CGF.EmitSynthesizedCXXCopyCtor(destField, srcField, CopyExpr);
-  }
-
-  void emitDispose(CodeGenFunction &CGF, Address field) override {
-    EHScopeStack::stable_iterator cleanupDepth = CGF.EHStack.stable_begin();
-    CGF.PushDestructorCleanup(VarType, field);
-    CGF.PopCleanupBlocks(cleanupDepth);
-  }
-
-  void profileImpl(llvm::FoldingSetNodeID &id) const override {
-    id.AddPointer(VarType.getCanonicalType().getAsOpaquePtr());
-  }
-};
-#endif
-} // end anonymous namespace
-
-static llvm::Constant *
-generateByrefCopyHelper(CodeGenFunction &CGF, const BlockByrefInfo &byrefInfo,
-                        BlockByrefHelpers &generator) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  ASTContext &Context = CGF.getContext();
-
-  QualType R = Context.VoidTy;
-
-  FunctionArgList args;
-  ImplicitParamDecl Dst(CGF.getContext(), Context.VoidPtrTy,
-                        ImplicitParamDecl::Other);
-  args.push_back(&Dst);
-
-  ImplicitParamDecl Src(CGF.getContext(), Context.VoidPtrTy,
-                        ImplicitParamDecl::Other);
-  args.push_back(&Src);
-
-  const CGFunctionInfo &FI =
-    CGF.CGM.getTypes().arrangeBuiltinFunctionDeclaration(R, args);
-
-  llvm::FunctionType *LTy = CGF.CGM.getTypes().GetFunctionType(FI);
-
-  // FIXME: We'd like to put these into a mergable by content, with
-  // internal linkage.
-  llvm::Function *Fn =
-    llvm::Function::Create(LTy, llvm::GlobalValue::InternalLinkage,
-                           "__Block_byref_object_copy_", &CGF.CGM.getModule());
-
-  IdentifierInfo *II
-    = &Context.Idents.get("__Block_byref_object_copy_");
-
-  FunctionDecl *FD = FunctionDecl::Create(Context,
-                                          Context.getTranslationUnitDecl(),
-                                          SourceLocation(),
-                                          SourceLocation(), II, R, nullptr,
-                                          SC_Static,
-                                          false, false);
-
-  CGF.CGM.SetInternalFunctionAttributes(nullptr, Fn, FI);
-
-  CGF.StartFunction(FD, R, Fn, FI, args);
-
-  if (generator.needsCopy()) {
-    llvm::Type *byrefPtrType = byrefInfo.Type->getPointerTo(0);
-
-    // dst->x
-    Address destField = CGF.GetAddrOfLocalVar(&Dst);
-    destField = Address(CGF.Builder.CreateLoad(destField),
-                        byrefInfo.ByrefAlignment);
-    destField = CGF.Builder.CreateBitCast(destField, byrefPtrType);
-    destField = CGF.emitBlockByrefAddress(destField, byrefInfo, false,
-                                          "dest-object");
-
-    // src->x
-    Address srcField = CGF.GetAddrOfLocalVar(&Src);
-    srcField = Address(CGF.Builder.CreateLoad(srcField),
-                       byrefInfo.ByrefAlignment);
-    srcField = CGF.Builder.CreateBitCast(srcField, byrefPtrType);
-    srcField = CGF.emitBlockByrefAddress(srcField, byrefInfo, false,
-                                         "src-object");
-
-    generator.emitCopy(CGF, destField, srcField);
-  }  
-
-  CGF.FinishFunction();
-
-  return llvm::ConstantExpr::getBitCast(Fn, CGF.Int8PtrTy);
-}
-
-/// Build the copy helper for a __block variable.
-static llvm::Constant *buildByrefCopyHelper(CodeGenModule &CGM,
-                                            const BlockByrefInfo &byrefInfo,
-                                            BlockByrefHelpers &generator) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  CodeGenFunction CGF(CGM);
-  return generateByrefCopyHelper(CGF, byrefInfo, generator);
-}
-
-/// Generate code for a __block variable's dispose helper.
-static llvm::Constant *
-generateByrefDisposeHelper(CodeGenFunction &CGF,
-                           const BlockByrefInfo &byrefInfo,
-                           BlockByrefHelpers &generator) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  ASTContext &Context = CGF.getContext();
-  QualType R = Context.VoidTy;
-
-  FunctionArgList args;
-  ImplicitParamDecl Src(CGF.getContext(), Context.VoidPtrTy,
-                        ImplicitParamDecl::Other);
-  args.push_back(&Src);
-
-  const CGFunctionInfo &FI =
-    CGF.CGM.getTypes().arrangeBuiltinFunctionDeclaration(R, args);
-
-  llvm::FunctionType *LTy = CGF.CGM.getTypes().GetFunctionType(FI);
-
-  // FIXME: We'd like to put these into a mergable by content, with
-  // internal linkage.
-  llvm::Function *Fn =
-    llvm::Function::Create(LTy, llvm::GlobalValue::InternalLinkage,
-                           "__Block_byref_object_dispose_",
-                           &CGF.CGM.getModule());
-
-  IdentifierInfo *II
-    = &Context.Idents.get("__Block_byref_object_dispose_");
-
-  FunctionDecl *FD = FunctionDecl::Create(Context,
-                                          Context.getTranslationUnitDecl(),
-                                          SourceLocation(),
-                                          SourceLocation(), II, R, nullptr,
-                                          SC_Static,
-                                          false, false);
-
-  CGF.CGM.SetInternalFunctionAttributes(nullptr, Fn, FI);
-
-  CGF.StartFunction(FD, R, Fn, FI, args);
-
-  if (generator.needsDispose()) {
-    Address addr = CGF.GetAddrOfLocalVar(&Src);
-    addr = Address(CGF.Builder.CreateLoad(addr), byrefInfo.ByrefAlignment);
-    auto byrefPtrType = byrefInfo.Type->getPointerTo(0);
-    addr = CGF.Builder.CreateBitCast(addr, byrefPtrType);
-    addr = CGF.emitBlockByrefAddress(addr, byrefInfo, false, "object");
-
-    generator.emitDispose(CGF, addr);
-  }
-
-  CGF.FinishFunction();
-
-  return llvm::ConstantExpr::getBitCast(Fn, CGF.Int8PtrTy);
-}
-
-/// Build the dispose helper for a __block variable.
-static llvm::Constant *buildByrefDisposeHelper(CodeGenModule &CGM,
-                                               const BlockByrefInfo &byrefInfo,
-                                               BlockByrefHelpers &generator) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  CodeGenFunction CGF(CGM);
-  return generateByrefDisposeHelper(CGF, byrefInfo, generator);
 }
 
 /// Lazily build the copy and dispose helpers for a __block variable
@@ -1997,20 +1235,6 @@ template <class T>
 static T *buildByrefHelpers(CodeGenModule &CGM, const BlockByrefInfo &byrefInfo,
                             T &&generator) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  llvm::FoldingSetNodeID id;
-  generator.Profile(id);
-
-  void *insertPos;
-  BlockByrefHelpers *node
-    = CGM.ByrefHelpersCache.FindNodeOrInsertPos(id, insertPos);
-  if (node) return static_cast<T*>(node);
-
-  generator.CopyHelper = buildByrefCopyHelper(CGM, byrefInfo, generator);
-  generator.DisposeHelper = buildByrefDisposeHelper(CGM, byrefInfo, generator);
-
-  T *copy = new (CGM.getContext()) T(std::forward<T>(generator));
-  CGM.ByrefHelpersCache.InsertNode(copy, insertPos);
-  return copy;
 }
 
 /// Build the copy and dispose helpers for the given __block variable
@@ -2020,86 +1244,12 @@ BlockByrefHelpers *
 CodeGenFunction::buildByrefHelpers(llvm::StructType &byrefType,
                                    const AutoVarEmission &emission) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  const VarDecl &var = *emission.Variable;
-  QualType type = var.getType();
-
-  auto &byrefInfo = getBlockByrefInfo(&var);
-
-  // The alignment we care about for the purposes of uniquing byref
-  // helpers is the alignment of the actual byref value field.
-  CharUnits valueAlignment =
-    byrefInfo.ByrefAlignment.alignmentAtOffset(byrefInfo.FieldOffset);
-
-  if (const CXXRecordDecl *record = type->getAsCXXRecordDecl()) {
-    const Expr *copyExpr = CGM.getContext().getBlockVarCopyInits(&var);
-    if (!copyExpr && record->hasTrivialDestructor()) return nullptr;
-
-    return ::buildByrefHelpers(
-        CGM, byrefInfo, CXXByrefHelpers(valueAlignment, type, copyExpr));
-  }
-
-  // Otherwise, if we don't have a retainable type, there's nothing to do.
-  // that the runtime does extra copies.
-  if (!type->isObjCRetainableType()) return nullptr;
-
-  Qualifiers qs = type.getQualifiers();
-
-  // If we have lifetime, that dominates.
-  if (Qualifiers::ObjCLifetime lifetime = qs.getObjCLifetime()) {
-    switch (lifetime) {
-    case Qualifiers::OCL_None: llvm_unreachable("impossible");
-
-    // These are just bits as far as the runtime is concerned.
-    case Qualifiers::OCL_ExplicitNone:
-    case Qualifiers::OCL_Autoreleasing:
-      return nullptr;
-
-    // Tell the runtime that this is ARC __weak, called by the
-    // byref routines.
-    case Qualifiers::OCL_Weak:
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-
-    // ARC __strong __block variables need to be retained.
-    case Qualifiers::OCL_Strong:
-      // Block pointers need to be copied, and there's no direct
-      // transfer possible.
-      if (type->isBlockPointerType()) {
-        return ::buildByrefHelpers(CGM, byrefInfo,
-                                   ARCStrongBlockByrefHelpers(valueAlignment));
-
-      // Otherwise, we transfer ownership of the retain from the stack
-      // to the heap.
-      } else {
-        return ::buildByrefHelpers(CGM, byrefInfo,
-                                   ARCStrongByrefHelpers(valueAlignment));
-      }
-    }
-    llvm_unreachable("fell out of lifetime switch!");
-  }
-
-  BlockFieldFlags flags;
-  if (type->isBlockPointerType()) {
-    flags |= BLOCK_FIELD_IS_BLOCK;
-  } else if (CGM.getContext().isObjCNSObjectType(type) || 
-             type->isObjCObjectPointerType()) {
-    flags |= BLOCK_FIELD_IS_OBJECT;
-  } else {
-    return nullptr;
-  }
-
-  if (type.isObjCGCWeak())
-    flags |= BLOCK_FIELD_IS_WEAK;
-
-  return ::buildByrefHelpers(CGM, byrefInfo,
-                             ObjectByrefHelpers(valueAlignment, flags));
 }
 
 Address CodeGenFunction::emitBlockByrefAddress(Address baseAddr,
                                                const VarDecl *var,
                                                bool followForward) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  auto &info = getBlockByrefInfo(var);
-  return emitBlockByrefAddress(baseAddr, info, followForward, var->getName());
 }
 
 Address CodeGenFunction::emitBlockByrefAddress(Address baseAddr,
@@ -2107,15 +1257,6 @@ Address CodeGenFunction::emitBlockByrefAddress(Address baseAddr,
                                                bool followForward,
                                                const llvm::Twine &name) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  // Chase the forwarding address if requested.
-  if (followForward) {
-    Address forwardingAddr =
-      Builder.CreateStructGEP(baseAddr, 1, getPointerSize(), "forwarding");
-    baseAddr = Address(Builder.CreateLoad(forwardingAddr), info.ByrefAlignment);
-  }
-
-  return Builder.CreateStructGEP(baseAddr, info.FieldIndex,
-                                 info.FieldOffset, name);
 }
 
 /// BuildByrefInfo - This routine changes a __block variable declared as T x
@@ -2135,89 +1276,6 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 ///
 const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  auto it = BlockByrefInfos.find(D);
-  if (it != BlockByrefInfos.end())
-    return it->second;
-
-  llvm::StructType *byrefType =
-    llvm::StructType::create(getLLVMContext(),
-                             "struct.__block_byref_" + D->getNameAsString());
-  
-  QualType Ty = D->getType();
-
-  CharUnits size;
-  SmallVector<llvm::Type *, 8> types;
-  
-  // void *__isa;
-  types.push_back(Int8PtrTy);
-  size += getPointerSize();
-  
-  // void *__forwarding;
-  types.push_back(llvm::PointerType::getUnqual(byrefType));
-  size += getPointerSize();
-  
-  // int32_t __flags;
-  types.push_back(Int32Ty);
-  size += CharUnits::fromQuantity(4);
-    
-  // int32_t __size;
-  types.push_back(Int32Ty);
-  size += CharUnits::fromQuantity(4);
-
-  // Note that this must match *exactly* the logic in buildByrefHelpers.
-  bool hasCopyAndDispose = getContext().BlockRequiresCopying(Ty, D);
-  if (hasCopyAndDispose) {
-    /// void *__copy_helper;
-    types.push_back(Int8PtrTy);
-    size += getPointerSize();
-    
-    /// void *__destroy_helper;
-    types.push_back(Int8PtrTy);
-    size += getPointerSize();
-  }
-
-  bool HasByrefExtendedLayout = false;
-  Qualifiers::ObjCLifetime Lifetime;
-  if (getContext().getByrefLifetime(Ty, Lifetime, HasByrefExtendedLayout) &&
-      HasByrefExtendedLayout) {
-    /// void *__byref_variable_layout;
-    types.push_back(Int8PtrTy);
-    size += CharUnits::fromQuantity(PointerSizeInBytes);
-  }
-
-  // T x;
-  llvm::Type *varTy = ConvertTypeForMem(Ty);
-
-  bool packed = false;
-  CharUnits varAlign = getContext().getDeclAlign(D);
-  CharUnits varOffset = size.alignTo(varAlign);
-
-  // We may have to insert padding.
-  if (varOffset != size) {
-    llvm::Type *paddingTy =
-      llvm::ArrayType::get(Int8Ty, (varOffset - size).getQuantity());
-
-    types.push_back(paddingTy);
-    size = varOffset;
-
-  // Conversely, we might have to prevent LLVM from inserting padding.
-  } else if (CGM.getDataLayout().getABITypeAlignment(varTy)
-               > varAlign.getQuantity()) {
-    packed = true;
-  }
-  types.push_back(varTy);
-
-  byrefType->setBody(types, packed);
-
-  BlockByrefInfo info;
-  info.Type = byrefType;
-  info.FieldIndex = types.size() - 1;
-  info.FieldOffset = varOffset;
-  info.ByrefAlignment = std::max(varAlign, getPointerAlign());
-
-  auto pair = BlockByrefInfos.insert({D, info});
-  assert(pair.second && "info was inserted recursively?");
-  return pair.first->second;
 }
 
 /// Initialize the structural components of a __block variable, i.e.

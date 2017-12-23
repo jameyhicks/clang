@@ -1416,6 +1416,9 @@ Sema::ActOnRuleStmt(SourceLocation RuleLoc, StringRef AName, FullExprArg CondVal
       continue;
     BlockDecl::Capture NewCap(Cap.getVariable(), Cap.isBlockCapture(),
                               Cap.isNested(), Cap.getInitExpr());
+printf("[%s:%d] blockcap %d nested %d\n", __FUNCTION__, __LINE__, Cap.isBlockCapture(), Cap.isNested());
+Cap.getVariable()->dump();
+Cap.getInitExpr()->dump();
     Captures.push_back(NewCap);
   }
   PopFunctionScopeInfo();
