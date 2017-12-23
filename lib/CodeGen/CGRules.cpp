@@ -89,8 +89,7 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
   }
 
   // Signature.  Mandatory ObjC-style method descriptor @encode sequence.
-  std::string typeAtEncoding =
-    CGM.getContext().getObjCEncodingForBlock(blockInfo.getBlockExpr());
+  std::string typeAtEncoding = CGM.getContext().getObjCEncodingForBlock(blockInfo.getBlockExpr());
   elements.add(llvm::ConstantExpr::getBitCast(
     CGM.GetAddrOfConstantCString(typeAtEncoding).getPointer(), i8p));
     elements.addNullPointer(i8p);
@@ -313,9 +312,6 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
     info.CanBeGlobal = true;
     return;
   }
-  else if (C.getLangOpts().ObjC1 &&
-           CGM.getLangOpts().getGC() == LangOptions::NonGC)
-    info.HasCapturedVariableLayout = true;
   
   // Collect the layout chunks.
   SmallVector<BlockLayoutChunk, 16> layout;
@@ -359,8 +355,7 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 
     // If we have a lifetime qualifier, honor it for capture purposes.
     // That includes *not* copying it if it's __unsafe_unretained.
-    Qualifiers::ObjCLifetime lifetime =
-      variable->getType().getObjCLifetime();
+    Qualifiers::ObjCLifetime lifetime = variable->getType().getObjCLifetime();
     if (lifetime) {
       switch (lifetime) {
       case Qualifiers::OCL_None: llvm_unreachable("impossible");
@@ -375,6 +370,7 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 
     // Block pointers require copy/dispose.  So do Objective-C pointers.
     } else if (variable->getType()->isObjCRetainableType()) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
       // But honor the inert __unsafe_unretained qualifier, which doesn't
       // actually make it into the type system.
        if (variable->getType()->isObjCInertUnsafeUnretainedType()) {
@@ -626,7 +622,10 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
 
   // If there is nothing to capture, we can emit this as a global block.
   if (blockInfo.CanBeGlobal)
+{
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
     return buildGlobalBlock(CGM, blockInfo, blockFn);
+}
 
   // Otherwise, we have to emit this as a local block.
 
@@ -733,8 +732,8 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
     } else if (type->isReferenceType()) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
     } else if (type.isConstQualified() &&
-               type.getObjCLifetime() == Qualifiers::OCL_Strong &&
-               CGM.getCodeGenOpts().OptimizationLevel != 0) {
+               type.getObjCLifetime() == Qualifiers::OCL_Strong //&&
+               /*CGM.getCodeGenOpts().OptimizationLevel != 0*/) {
       llvm::Value *value = Builder.CreateLoad(src, "captured");
       Builder.CreateStore(value, blockField);
 
@@ -747,6 +746,7 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
     // contained within the stack block's.
     } else if (type.getObjCLifetime() == Qualifiers::OCL_Strong &&
                type->isBlockPointerType()) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
       // Load the block and do a simple retain.
       llvm::Value *value = Builder.CreateLoad(src, "block.captured_block");
       value = EmitARCRetainNonBlock(value);
@@ -934,6 +934,7 @@ void CodeGenModule::setAddrOfGlobalBlock(const BlockExpr *BE,
 llvm::Constant *
 CodeGenModule::GetAddrOfGlobalBlock(const BlockExpr *BE,
                                     StringRef Name) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
   if (llvm::Constant *Block = getAddrOfGlobalBlockIfEmitted(BE))
     return Block;
 
@@ -960,6 +961,7 @@ CodeGenModule::GetAddrOfGlobalBlock(const BlockExpr *BE,
 static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
                                         const CGBlockInfo &blockInfo,
                                         llvm::Constant *blockFn) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
   assert(blockInfo.CanBeGlobal);
   // Callers should detect this case on their own: calling this function
   // generally requires computing layout information, which is a waste of time
@@ -1010,7 +1012,9 @@ void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,
   assert(BlockInfo && "not emitting prologue of block invocation function?!");
 
   llvm::Value *localAddr = nullptr;
+if (0)
   if (CGM.getCodeGenOpts().OptimizationLevel == 0) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
     // Allocate a stack slot to let the debug info survive the RA.
     Address alloc = CreateMemTemp(D->getType(), D->getName() + ".addr");
     Builder.CreateStore(arg, alloc);
@@ -1100,7 +1104,9 @@ printf("[%s:%d]LDMMMMMM var %p\n", __FUNCTION__, __LINE__, var);
   // At -O0 we generate an explicit alloca for the BlockPointer, so the RA
   // won't delete the dbg.declare intrinsics for captured variables.
   llvm::Value *BlockPointerDbgLoc = BlockPointer;
+if (0)
   if (CGM.getCodeGenOpts().OptimizationLevel == 0) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
     // Allocate a stack slot for it, so we can point the debugger to it
     Address Alloca = CreateTempAlloca(BlockPointer->getType(),
                                       getPointerAlign(),
@@ -1168,7 +1174,7 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 
   return fn;
 }
-
+#if 0
 namespace {
 
 /// Represents a type of copy/destroy operation that should be performed for an
@@ -1194,7 +1200,7 @@ struct BlockCaptureManagedEntity {
 };
 
 } // end anonymous namespace
-
+#endif
 
 llvm::Constant *
 CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
@@ -1236,7 +1242,7 @@ void CodeGenFunction::BuildBlockRelease(llvm::Value *V, BlockFieldFlags flags) {
   };
   EmitNounwindRuntimeCall(F, args); // FIXME: throwing destructors?
 }
-
+#if 0
 namespace {
   /// Release a __block variable.
   struct CallBlockRelease final : EHScopeStack::Cleanup {
@@ -1249,11 +1255,8 @@ namespace {
     }
   };
 } // end anonymous namespace
+#endif
 
-/// Enter a cleanup to destroy a __block variable.  Note that this
-/// cleanup should be a no-op if the variable hasn't left the stack
-/// yet; if a cleanup is required for the variable itself, that needs
-/// to be done externally.
 void CodeGenFunction::enterByrefCleanup(const AutoVarEmission &emission) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 }
@@ -1308,6 +1311,7 @@ llvm::Constant *CodeGenModule::getBlockObjectDispose() {
 }
 
 llvm::Constant *CodeGenModule::getBlockObjectAssign() {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
   if (BlockObjectAssign)
     return BlockObjectAssign;
 
