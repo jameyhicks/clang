@@ -1305,15 +1305,13 @@ static FunctionDecl *getFFun(Sema *s, SourceLocation OpLoc)
         Parent = CLinkageDecl;
         IdentifierInfo *II = &s->Context.Idents.get("fixupFunction");
         DeclarationNameInfo NameInfo(II, OpLoc);
-        QualType ArgTypes[] = {ccharp, voidp, voidpp};
-        auto FnType = s->Context.getFunctionType(voidp, ArrayRef<QualType>(ArgTypes, 3), EPI);
+        QualType ArgTypes[] = {ccharp, voidpp};
+        auto FnType = s->Context.getFunctionType(voidp, ArrayRef<QualType>(ArgTypes, 2), EPI);
         FFDecl = FunctionDecl::Create(s->Context, Parent, OpLoc,
             NameInfo, FnType, nullptr, SC_Extern, false, true, false);
         SmallVector<ParmVarDecl *, 16> Params;
         Params.push_back(ParmVarDecl::Create(s->Context, FFDecl, OpLoc,
             OpLoc, nullptr, ccharp, /*TInfo=*/nullptr, SC_None, nullptr));
-        Params.push_back(ParmVarDecl::Create(s->Context, FFDecl, OpLoc,
-            OpLoc, nullptr, voidp, /*TInfo=*/nullptr, SC_None, nullptr));
         Params.push_back(ParmVarDecl::Create(s->Context, FFDecl, OpLoc,
             OpLoc, nullptr, voidpp, /*TInfo=*/nullptr, SC_None, nullptr));
         FFDecl->setParams(Params);
@@ -1375,14 +1373,8 @@ static CallExpr *buildBlock(Sema &Actions, std::string blockName, ArrayRef<Block
   Expr *Fn = DeclRefExpr::Create(Actions.Context, NNSloc, RuleLoc, FFDecl, false,
       RuleLoc, FFDecl->getType(), VK_LValue, nullptr);
   Fn = Actions.ImpCastExprToType(Fn, Actions.Context.getPointerType(FFDecl->getType()), CK_FunctionToPointerDecay).get();
-  Expr *Args[] = {NameExpr, 
-      ImplicitCastExpr::Create(Actions.Context, voidp, CK_LValueToRValue, new (Actions.Context) ArraySubscriptExpr(Actions.ActOnParenExpr(RuleLoc, RuleLoc,
-         Actions.BuildCStyleCastExpr(RuleLoc, Actions.Context.getTrivialTypeSourceInfo(voidpp, RuleLoc), RuleLoc, vresult).get()).get(),
-             IntegerLiteral::Create(Actions.Context, llvm::APInt(Actions.Context.getTypeSize(Actions.Context.IntTy), 2), Actions.Context.IntTy, RuleLoc),
-             voidp, VK_LValue, OK_Ordinary, RuleLoc), nullptr, VK_RValue),
-      item};
+  Expr *Args[] = {NameExpr, item};
   CallExpr *bcall = new (Actions.Context) CallExpr(Actions.Context, Fn, Args, voidp, VK_RValue, RuleLoc);
-  Actions.ExprCleanupObjects.push_back(TheDecl);
   Actions.ExprCleanupObjects.push_back(TheDecl);
   return bcall;
 }
