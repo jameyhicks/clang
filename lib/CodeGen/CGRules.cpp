@@ -73,26 +73,27 @@ void CodeGenFunction::enterNonTrivialFullExpression(const ExprWithCleanups *E) {
   CGBlockInfo &blockInfo = *new CGBlockInfo(*i, CurFn->getName());
   blockInfo.NextBlockInfo = FirstBlockInfo;
   FirstBlockInfo = &blockInfo; 
-  /// Compute the layout of the given block.
   const BlockDecl *block = blockInfo.getBlockDecl();
-  SmallVector<llvm::Type*, 8> elementTypes;
-  // The header is basically 'struct { void *invoke; }'.
   blockInfo.BlockAlign = CGM.getPointerAlign();
-  blockInfo.BlockSize = 1 * CGM.getPointerSize();
   blockInfo.BlockHeaderForcedGapOffset = blockInfo.BlockSize;
   blockInfo.BlockHeaderForcedGapSize = CharUnits::Zero(); 
+
+  /// Compute the layout of the given block.
+  // The header is basically 'struct { void *invoke; ... data for captures ...}'.
+  SmallVector<llvm::Type*, 8> elementTypes;
+
+  elementTypes.push_back(CGM.VoidPtrTy); // void *invoke;
+  blockInfo.BlockSize = 1 * CGM.getPointerSize();
   CharUnits endAlign = getLowBit(blockInfo.BlockSize); 
-  elementTypes.push_back(CGM.VoidPtrTy);
+
   // Collect the layout chunks.
   // First, 'this'.
-  QualType thisType = cast<CXXMethodDecl>(CurFuncDecl)->getThisType(CGM.getContext());
   blockInfo.CXXThisIndex = elementTypes.size();
   blockInfo.CXXThisOffset = blockInfo.BlockSize;
+  QualType thisType = cast<CXXMethodDecl>(CurFuncDecl)->getThisType(CGM.getContext());
   elementTypes.push_back(CGM.getTypes().ConvertType(thisType));
   blockInfo.BlockSize += CGM.getContext().getTypeSizeInChars(thisType);
   endAlign = getLowBit(blockInfo.BlockSize);
-  // save 'thisType', so that we can use it in Generate()
-  blockInfo.Captures.insert({nullptr, CGBlockInfo::Capture::makeIndex(0, CharUnits(), thisType)});
 
   // Next, all the block captures.
   for (const auto &CI : block->captures()) {
@@ -120,6 +121,9 @@ printf("[%s:%d] STRUCTURETYPE \n", __FUNCTION__, __LINE__);
 blockInfo.StructureType->dump();
   // Make the allocation for the block.
   blockInfo.LocalAddress = CreateTempAlloca(blockInfo.StructureType, blockInfo.BlockAlign, "block"); 
+
+  // save 'thisType', so that we can use it in Generate()
+  blockInfo.Captures.insert({nullptr, CGBlockInfo::Capture::makeIndex(0, CharUnits(), thisType)});
   }
 }
 
@@ -237,13 +241,13 @@ CodeGenFunction::GenerateBlockFunction(GlobalDecl GD,
   Args.push_back(&SelfDecl); 
   const CGBlockInfo::Capture &tcap = BlockInfo->getCapture(nullptr); 
   QualType thisType = tcap.fieldType();
-  Args.push_back(ParmVarDecl::Create(getContext(), const_cast<BlockDecl *>(FD), SourceLocation(),
-      SourceLocation(), nullptr, thisType, /*TInfo=*/nullptr, SC_None, nullptr));
-
+  IdentifierInfo *IThis = &CGM.getContext().Idents.get("thisx"); 
+  ParmVarDecl *thisParm = ParmVarDecl::Create(getContext(), const_cast<BlockDecl *>(FD), SourceLocation(),
+      SourceLocation(), IThis, thisType, /*TInfo=*/nullptr, SC_None, nullptr);
+  Args.push_back(thisParm);
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeBlockFunctionDeclaration(FnType, Args);
   llvm::Function *Fn = llvm::Function::Create(CGM.getTypes().GetFunctionType(FnInfo),
       llvm::GlobalValue::InternalLinkage, CGM.getBlockMangledName(GD, FD), &CGM.getModule());
-
 
   // Emit the standard function prologue.
   StartFunction(FD, FnType->getReturnType(), Fn, FnInfo, Args, FD->getLocation(), Body->getLocStart()); 
@@ -281,7 +285,6 @@ CodeGenModule::GetAddrOfGlobalBlock(const BlockExpr *BE, StringRef Name) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 }
 
-RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E, 
-                                          ReturnValueSlot ReturnValue) {
+RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E, ReturnValueSlot ReturnValue) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 }
