@@ -193,6 +193,7 @@ public:
     QualType fieldType() const {
       return FieldType;
     }
+    llvm::Value *paramItem;
 
     static Capture makeIndex(unsigned index, CharUnits offset,
                              QualType FieldType) {
@@ -200,6 +201,7 @@ public:
       v.Data = (index << 1) | 1;
       v.Offset = offset.getQuantity();
       v.FieldType = FieldType;
+      v.paramItem = nullptr;
       return v;
     }
 
