@@ -86,15 +86,6 @@ void CodeGenFunction::enterNonTrivialFullExpression(const ExprWithCleanups *E) {
   blockInfo.BlockSize = 1 * CGM.getPointerSize();
   CharUnits endAlign = getLowBit(blockInfo.BlockSize); 
 
-  // Collect the layout chunks.
-  // First, 'this'.
-  blockInfo.CXXThisIndex = elementTypes.size();
-  blockInfo.CXXThisOffset = blockInfo.BlockSize;
-  QualType thisType = cast<CXXMethodDecl>(CurFuncDecl)->getThisType(CGM.getContext());
-  elementTypes.push_back(CGM.getTypes().ConvertType(thisType));
-  blockInfo.BlockSize += CGM.getContext().getTypeSizeInChars(thisType);
-  endAlign = getLowBit(blockInfo.BlockSize);
-
   // Next, all the block captures.
   for (const auto &CI : block->captures()) {
     const VarDecl *variable = CI.getVariable(); 
@@ -123,6 +114,7 @@ blockInfo.StructureType->dump();
   blockInfo.LocalAddress = CreateTempAlloca(blockInfo.StructureType, blockInfo.BlockAlign, "block"); 
 
   // save 'thisType', so that we can use it in Generate()
+  QualType thisType = cast<CXXMethodDecl>(CurFuncDecl)->getThisType(CGM.getContext());
   blockInfo.Captures.insert({nullptr, CGBlockInfo::Capture::makeIndex(0, CharUnits(), thisType)});
   }
 }
@@ -175,11 +167,6 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
   storeField(blockFn, 0, CharUnits(), "block.invoke"); // Function *invoke
 
   // Finally, capture all the values into the block.
-  // First, 'this'.
-  Builder.CreateStore(LoadCXXThis(),
-    projectField(blockInfo->CXXThisIndex, blockInfo->CXXThisOffset, "block.captured-this.addr"));
-
-  // Next, captured variables.
   for (const auto &CI : blockDecl->captures()) {
     const VarDecl *variable = CI.getVariable();
     const CGBlockInfo::Capture &capture = blockInfo->getCapture(variable); 
@@ -241,21 +228,20 @@ CodeGenFunction::GenerateBlockFunction(GlobalDecl GD,
   Args.push_back(&SelfDecl); 
   const CGBlockInfo::Capture &tcap = BlockInfo->getCapture(nullptr); 
   QualType thisType = tcap.fieldType();
-  IdentifierInfo *IThis = &CGM.getContext().Idents.get("thisx"); 
-  ParmVarDecl *thisParm = ParmVarDecl::Create(getContext(), const_cast<BlockDecl *>(FD), SourceLocation(),
-      SourceLocation(), IThis, thisType, /*TInfo=*/nullptr, SC_None, nullptr);
-  Args.push_back(thisParm);
+  IdentifierInfo *IThis = &CGM.getContext().Idents.get("this"); 
+  Args.push_back(ParmVarDecl::Create(getContext(), const_cast<BlockDecl *>(FD), SourceLocation(),
+      SourceLocation(), IThis, thisType, /*TInfo=*/nullptr, SC_None, nullptr));
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeBlockFunctionDeclaration(FnType, Args);
   llvm::Function *Fn = llvm::Function::Create(CGM.getTypes().GetFunctionType(FnInfo),
       llvm::GlobalValue::InternalLinkage, CGM.getBlockMangledName(GD, FD), &CGM.getModule());
+  auto aptr = Fn->arg_begin();
+  aptr++;
+  CXXThisValue = aptr;
 
   // Emit the standard function prologue.
   StartFunction(FD, FnType->getReturnType(), Fn, FnInfo, Args, FD->getLocation(), Body->getLocStart()); 
 
   // Generate the body of the function.
-  // Force a C++ 'this' reference into existence now.
-  CXXThisValue = Builder.CreateLoad( Builder.CreateStructGEP(LoadBlockStruct(),
-      blockInfo.CXXThisIndex, blockInfo.CXXThisOffset, "block.captured-this"), "this"); 
   // Save a spot to insert the debug information for all the DeclRefExprs.
   llvm::BasicBlock *entry = Builder.GetInsertBlock();
   llvm::BasicBlock::iterator entry_ptr = Builder.GetInsertPoint();
