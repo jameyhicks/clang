@@ -115,7 +115,6 @@ blockInfo.StructureType->dump();
   auto storeField = [&](llvm::Value *value, unsigned index, CharUnits offset, const Twine &name) {
       Builder.CreateStore(value, projectField(index, offset, name));
     };
-
   storeField(blockFn, 0, CharUnits(), "block.invoke"); // Function *invoke;
   storeField(llvm::Constant::getIntegerValue(CGM.Int64Ty,
     llvm::APInt(64, (uint64_t) blockInfo.StructureType)), 1, CharUnits(), "block.STy"); // Int64Ty STy;

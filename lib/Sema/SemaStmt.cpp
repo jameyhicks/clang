@@ -1373,9 +1373,7 @@ static CallExpr *buildBlock(Sema &Actions, std::string blockName, ArrayRef<Block
   Expr *Fn = DeclRefExpr::Create(Actions.Context, NNSloc, RuleLoc, FFDecl, false,
       RuleLoc, FFDecl->getType(), VK_LValue, nullptr);
   Fn = Actions.ImpCastExprToType(Fn, Actions.Context.getPointerType(FFDecl->getType()), CK_FunctionToPointerDecay).get();
-  CallExpr *bcall = new (Actions.Context) CallExpr(Actions.Context, Fn, Args, voidp, VK_RValue, RuleLoc);
-  Actions.ExprCleanupObjects.push_back(TheDecl);
-  return bcall;
+  return new (Actions.Context) CallExpr(Actions.Context, Fn, Args, voidp, VK_RValue, RuleLoc);
 }
 
 StmtResult
@@ -1410,11 +1408,9 @@ Sema::ActOnRuleStmt(SourceLocation RuleLoc, StringRef AName, Expr *ConditionExpr
   CallExpr *TheCall = new (Context) CallExpr(Context, ImpCastExprToType(Fn,
           Context.getPointerType(ABRDecl->getType()), CK_FunctionToPointerDecay).get(),
       Args, Context.VoidTy, VK_RValue, RuleLoc);
-  Cleanup.setExprNeedsCleanups(true);
-  auto res = MaybeCreateExprWithCleanups(TheCall);
-//printf("[%s:%d]BLEXPER res %p\n", __FUNCTION__, __LINE__, res);
-//res->dump();
-  return res;
+//printf("[%s:%d]BLEXPER TheCall %p\n", __FUNCTION__, __LINE__, TheCall);
+//TheCall->dump();
+  return TheCall;
 }
 
 namespace {
