@@ -77,10 +77,11 @@ void CodeGenFunction::enterNonTrivialFullExpression(const ExprWithCleanups *E) {
   blockInfo.BlockAlign = CGM.getPointerAlign();
 
   /// Compute the layout of the given block.
-  // The header is basically 'struct { void *invoke; ... data for captures ...}'.
+  // The header is basically 'struct { void *invoke; void *STy; ... data for captures ...}'.
   SmallVector<llvm::Type*, 8> elementTypes;
   elementTypes.push_back(CGM.VoidPtrTy); // void *invoke;
-  blockInfo.BlockSize = 1 * CGM.getPointerSize();
+  elementTypes.push_back(CGM.Int64Ty);   // void *STy;
+  blockInfo.BlockSize = 2 * CGM.getPointerSize();
   CharUnits endAlign = getLowBit(blockInfo.BlockSize); 
 
   // Next, all the block captures.
@@ -154,14 +155,13 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       Builder.CreateStore(value, projectField(index, offset, name));
     };
 
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   // Initialize the block header.
-  storeField(blockFn, 0, CharUnits(), "block.invoke"); // Function *invoke
+  storeField(blockFn, 0, CharUnits(), "block.invoke"); // Function *invoke;
+  storeField(llvm::Constant::getIntegerValue(CGM.Int64Ty,
+    llvm::APInt(64, (uint64_t) blockInfo->StructureType)), 1, CharUnits(), "block.STy"); // Int64Ty STy;
 
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   // Finally, capture all the values into the block.
   for (const auto &CI : blockDecl->captures()) {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     const VarDecl *variable = CI.getVariable();
     const CGBlockInfo::Capture &capture = blockInfo->getCapture(variable); 
     QualType VT = capture.fieldType(); 
@@ -180,7 +180,6 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     if (cleanup.isValid())
       ActivateCleanupBlock(cleanup, blockInfo->DominatingIP);
   } 
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   // Cast to the converted block-pointer type, which happens (somewhat
   // unfortunately) to be a pointer to function type.
   return Builder.CreatePointerCast( blockAddr.getPointer(),
@@ -195,14 +194,13 @@ void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,
 
 llvm::DenseMap<int, llvm::Value *> paramMap;
 Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable, bool isByRef) {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   const CGBlockInfo::Capture &capture = BlockInfo->getCapture(variable); 
   if (capture.isConstant() || isByRef) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 } 
-  //return Address(paramMap[capture.getIndex()], BlockInfo->BlockAlign);
-  return Builder.CreateStructGEP(Address(BlockPointer, BlockInfo->BlockAlign),
-      capture.getIndex(), capture.getOffset(), "block.capture.addr"); 
+  return Address(paramMap[capture.getIndex()], BlockInfo->BlockAlign);
+  //return Builder.CreateStructGEP(Address(BlockPointer, BlockInfo->BlockAlign),
+      //capture.getIndex(), capture.getOffset(), "block.capture.addr"); 
 }
 
 llvm::Function *
@@ -247,25 +245,20 @@ paramType->dump();
 item.second->dump();
       IdentifierInfo *II = &CGM.getContext().Idents.get(name); 
       Args.push_back(ParmVarDecl::Create(getContext(), const_cast<BlockDecl *>(FD), SourceLocation(),
-          SourceLocation(), II, paramType, /*TInfo=*/nullptr, SC_None, nullptr));
+          SourceLocation(), II, getContext().getPointerType(paramType), /*TInfo=*/nullptr, SC_None, nullptr));
   }
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeBlockFunctionDeclaration(FnType, Args);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   llvm::Function *Fn = llvm::Function::Create(CGM.getTypes().GetFunctionType(FnInfo),
       llvm::GlobalValue::InternalLinkage, CGM.getBlockMangledName(GD, FD), &CGM.getModule());
   auto AI = Fn->arg_begin(), AE = Fn->arg_end();
   AI++;
   CXXThisValue = AI;
-printf("[%s:%d] Fn %p\n", __FUNCTION__, __LINE__, Fn);
-Fn->dump();
   int paramIndex = 1;
   for (; AI != AE; AI++, paramIndex++)
       paramMap[paramIndex] = AI;
 
-printf("[%s:%d] before startfn\n", __FUNCTION__, __LINE__);
   // Emit the standard function prologue.
   StartFunction(FD, FnType->getReturnType(), Fn, FnInfo, Args, FD->getLocation(), Body->getLocStart()); 
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
   // Generate the body of the function.
   // Save a spot to insert the debug information for all the DeclRefExprs.
@@ -274,9 +267,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   --entry_ptr; 
   PGO.assignRegionCounters(GlobalDecl(FD), Fn);
   incrementProfileCounter(Body);
-printf("[%s:%d] before emitstm\n", __FUNCTION__, __LINE__);
   EmitStmt(Body);
-printf("[%s:%d] after emitstm\n", __FUNCTION__, __LINE__);
   // Remember where we were...
   llvm::BasicBlock *resume = Builder.GetInsertBlock(); 
   // Go back to the entry.
@@ -287,9 +278,7 @@ printf("[%s:%d] after emitstm\n", __FUNCTION__, __LINE__);
     Builder.ClearInsertionPoint();
   else
     Builder.SetInsertPoint(resume); 
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   FinishFunction(CurEHLocation);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   return Fn;
 }
 
