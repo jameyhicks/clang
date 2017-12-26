@@ -174,11 +174,6 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
       ConvertType(blockInfo->getBlockExpr()->getType()));
 } 
 
-void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,
-                                               unsigned argNum,
-                                               llvm::Value *arg) {
-}
-
 llvm::DenseMap<int, llvm::Value *> paramMap;
 Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable, bool isByRef) {
   const CGBlockInfo::Capture &capture = BlockInfo->getCapture(variable); 
@@ -208,9 +203,8 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   // Begin building the function declaration.  
   // The first argument is the block pointer.  Just take it as a void* and cast it later.
   IdentifierInfo *II = &CGM.getContext().Idents.get(".block_descriptor"); 
-  ImplicitParamDecl SelfDecl(getContext(), const_cast<BlockDecl *>(FD),
-       SourceLocation(), II, getContext().VoidPtrTy, ImplicitParamDecl::ObjCSelf);
-  Args.push_back(&SelfDecl); 
+  Args.push_back(ParmVarDecl::Create(getContext(), const_cast<BlockDecl *>(FD), SourceLocation(),
+      SourceLocation(), II, getContext().VoidPtrTy, /*TInfo=*/nullptr, SC_None, nullptr));
   const CGBlockInfo::Capture &tcap = BlockInfo->getCapture(nullptr); 
   QualType thisType = tcap.fieldType();
   IdentifierInfo *IThis = &CGM.getContext().Idents.get("this"); 
@@ -273,5 +267,9 @@ printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 }
 
 RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E, ReturnValueSlot ReturnValue) {
+printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
+}
+
+void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D, unsigned argNum, llvm::Value *arg) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 }
