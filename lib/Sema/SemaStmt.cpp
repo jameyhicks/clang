@@ -1369,66 +1369,48 @@ static CallExpr *buildBlock(Sema &Actions, std::string blockName, ArrayRef<Block
   TheDecl->setBody(bodyStmt);
   TheDecl->setCaptures(Actions.Context, Captures, true);
   BlockExpr *vresult = new (Actions.Context) BlockExpr(TheDecl, blockType);
-  Expr *item = Actions.ImpCastExprToType(vresult, voidpp, CK_BitCast).get();
+  Expr *Args[] = {NameExpr, Actions.ImpCastExprToType(vresult, voidpp, CK_BitCast).get()};
   Expr *Fn = DeclRefExpr::Create(Actions.Context, NNSloc, RuleLoc, FFDecl, false,
       RuleLoc, FFDecl->getType(), VK_LValue, nullptr);
   Fn = Actions.ImpCastExprToType(Fn, Actions.Context.getPointerType(FFDecl->getType()), CK_FunctionToPointerDecay).get();
-  Expr *Args[] = {NameExpr, item};
   CallExpr *bcall = new (Actions.Context) CallExpr(Actions.Context, Fn, Args, voidp, VK_RValue, RuleLoc);
   Actions.ExprCleanupObjects.push_back(TheDecl);
   return bcall;
 }
-StmtResult
-Sema::ActOnRuleStmt(SourceLocation RuleLoc, StringRef AName, FullExprArg CondVal, Stmt *bodyStmt) {
-  std::string Name = AName;
-  if (!CondVal.get()) {
-      getCurFunction()->setHasDroppedStmt();
-      return StmtError();
-  }
-  ExprResult CondResult(CondVal.release());
-  Expr *ConditionExpr = CondResult.getAs<Expr>();
-  if (!ConditionExpr)
-      return StmtError();
 
+StmtResult
+Sema::ActOnRuleStmt(SourceLocation RuleLoc, StringRef AName, Expr *ConditionExpr, CompoundStmt *bodyStmt, ArrayRef<CapturingScopeInfo::Capture> BSICaptures) {
+  std::string Name = AName;
+  SmallVector<BlockDecl::Capture, 4> Captures;
   DiagnoseUnusedExprResult(bodyStmt);
   FunctionDecl *ABRDecl = getABR(this, RuleLoc);
+  for (const CapturingScopeInfo::Capture &Cap : BSICaptures) {
+    if (!Cap.isThisCapture())
+        Captures.push_back(BlockDecl::Capture(Cap.getVariable(),
+            Cap.isBlockCapture(), Cap.isNested(), Cap.getInitExpr()));
+  }
+
+  SmallVector<Stmt*, 32> Stmts;
+  Stmts.push_back(new (Context) ReturnStmt(RuleLoc, ConditionExpr, nullptr));
+  Expr *thisp = ImpCastExprToType(new (Context) CXXThisExpr(RuleLoc, getCurrentThisType(), /*isImplicit=*/true), voidp, CK_BitCast).get();
   Expr *NameExpr = ImpCastExprToType(StringLiteral::Create(Context, Name,
           StringLiteral::Ascii, /*Pascal*/ false,
           Context.getConstantArrayType(Context.CharTy.withConst(),
           llvm::APInt(32, Name.length() + 1), ArrayType::Normal, 0), RuleLoc),
           ccharp, CK_ArrayToPointerDecay).get();
-  Expr *thisp = ImpCastExprToType(new (Context) CXXThisExpr(RuleLoc, getCurrentThisType(), /*isImplicit=*/true), voidp, CK_BitCast).get();
-  NestedNameSpecifierLoc NNSloc;
-  SmallVector<BlockDecl::Capture, 4> Captures;
-  PopExpressionEvaluationContext();
-  PopDeclContext();
-  BlockScopeInfo *BSI = cast<BlockScopeInfo>(FunctionScopes.back());
-  for (CapturingScopeInfo::Capture &Cap : BSI->Captures) {
-    if (Cap.isThisCapture())
-      continue;
-    BlockDecl::Capture NewCap(Cap.getVariable(), Cap.isBlockCapture(),
-                              Cap.isNested(), Cap.getInitExpr());
-printf("[%s:%d] blockcap %d nested %d\n", __FUNCTION__, __LINE__, Cap.isBlockCapture(), Cap.isNested());
-Cap.getVariable()->dump();
-Cap.getInitExpr()->dump();
-    Captures.push_back(NewCap);
-  }
-  PopFunctionScopeInfo();
-
-  StmtResult retStmt = new (Context) ReturnStmt(RuleLoc, ConditionExpr, nullptr);
-  SmallVector<Stmt*, 32> Stmts;
-  Stmts.push_back(retStmt.get());
   CallExpr *bcall = buildBlock(*this, Name + "__RDY", Captures,
     new (Context) class CompoundStmt(Context, Stmts, RuleLoc, RuleLoc), bbool, RuleLoc);
   CallExpr *vcall = buildBlock(*this, Name + "__ENA", Captures,
     cast<CompoundStmt>(bodyStmt), bvoid, RuleLoc);
-  Cleanup.setExprNeedsCleanups(true);
+  Expr *Args[] = {thisp, NameExpr, bcall, vcall};
 
+  NestedNameSpecifierLoc NNSloc;
   Expr *Fn = DeclRefExpr::Create(Context, NNSloc, RuleLoc, ABRDecl, false,
       RuleLoc, ABRDecl->getType(), VK_LValue, nullptr);
-  Fn = ImpCastExprToType(Fn, Context.getPointerType(ABRDecl->getType()), CK_FunctionToPointerDecay).get();
-  Expr *Args[] = {thisp, NameExpr, bcall, vcall};
-  CallExpr *TheCall = new (Context) CallExpr(Context, Fn, Args, Context.VoidTy, VK_RValue, RuleLoc);
+  CallExpr *TheCall = new (Context) CallExpr(Context, ImpCastExprToType(Fn,
+          Context.getPointerType(ABRDecl->getType()), CK_FunctionToPointerDecay).get(),
+      Args, Context.VoidTy, VK_RValue, RuleLoc);
+  Cleanup.setExprNeedsCleanups(true);
   auto res = MaybeCreateExprWithCleanups(TheCall);
 //printf("[%s:%d]BLEXPER res %p\n", __FUNCTION__, __LINE__, res);
 //res->dump();

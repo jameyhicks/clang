@@ -12990,6 +12990,7 @@ Sema::NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl,
   case TTK_Struct:
   case TTK_Interface:
   case TTK_Class:
+  case TTK_AInterface: case TTK_AModule: case TTK_AEModule:
     return getLangOpts().CPlusPlus ? NTK_NonClass : NTK_NonStruct;
   case TTK_Union:
     return NTK_NonUnion;
