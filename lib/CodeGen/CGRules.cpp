@@ -46,18 +46,6 @@ static CharUnits getLowBit(CharUnits v) {
   return CharUnits::fromQuantity(v.getQuantity() & (~v.getQuantity() + 1));
 }
 
-/*
-  Purely notional variadic template describing the layout of a block.
-
-  template <class _ResultType, class... _ParamTypes, class... _CaptureTypes>
-  struct Block_literal {
-    /// Function pointer generated from block literal.
-    _ResultType (*invoke)(Block_literal *, _ParamTypes...);
-    /// Captured values follow.
-    _CapturesTypes captures...;
-  };
- */
-
 /// Enter a full-expression with a non-trivial number of objects to
 /// clean up.  This is in this file because, at the moment, the only
 /// kind of cleanup object is a BlockDecl*.
@@ -77,7 +65,8 @@ void CodeGenFunction::enterNonTrivialFullExpression(const ExprWithCleanups *E) {
   blockInfo.BlockAlign = CGM.getPointerAlign();
 
   /// Compute the layout of the given block.
-  // The header is basically 'struct { void *invoke; void *STy; ... data for captures ...}'.
+  // The header is basically
+  //     'struct { void *invoke; void *STy; ... data for captures ...}'.
   SmallVector<llvm::Type*, 8> elementTypes;
   elementTypes.push_back(CGM.VoidPtrTy); // void *invoke;
   elementTypes.push_back(CGM.Int64Ty);   // void *STy;
@@ -140,7 +129,6 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
    || blockInfo->CanBeGlobal || blockInfo->HasCapturedVariableLayout || blockInfo->HasCXXObject) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
 }
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   // Using the computed layout, generate the actual block function.
   llvm::Constant *blockFn = llvm::ConstantExpr::getBitCast(
       CodeGenFunction(CGM, true).GenerateBlockFunction(CurGD, *blockInfo, LocalDeclMap, false),
@@ -189,18 +177,15 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,
                                                unsigned argNum,
                                                llvm::Value *arg) {
-  BlockPointer = Builder.CreatePointerCast( arg, BlockInfo->StructureType->getPointerTo( 0), "block");
 }
 
 llvm::DenseMap<int, llvm::Value *> paramMap;
 Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable, bool isByRef) {
   const CGBlockInfo::Capture &capture = BlockInfo->getCapture(variable); 
-  if (capture.isConstant() || isByRef) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-} 
+  if (isByRef) {
+      printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
+  } 
   return Address(paramMap[capture.getIndex()], BlockInfo->BlockAlign);
-  //return Builder.CreateStructGEP(Address(BlockPointer, BlockInfo->BlockAlign),
-      //capture.getIndex(), capture.getOffset(), "block.capture.addr"); 
 }
 
 llvm::Function *
@@ -240,9 +225,6 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       const CGBlockInfo::Capture &capture = BlockInfo->getCapture(item.second); 
       std::string name = item.second->getName();
       QualType paramType = capture.fieldType();
-printf("[%s:%d] [%d] = %p; name %s\n", __FUNCTION__, __LINE__, item.first, paramType, name.c_str());
-paramType->dump();
-item.second->dump();
       IdentifierInfo *II = &CGM.getContext().Idents.get(name); 
       Args.push_back(ParmVarDecl::Create(getContext(), const_cast<BlockDecl *>(FD), SourceLocation(),
           SourceLocation(), II, getContext().getPointerType(paramType), /*TInfo=*/nullptr, SC_None, nullptr));
