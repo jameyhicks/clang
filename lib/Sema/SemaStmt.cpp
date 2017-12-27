@@ -1305,13 +1305,11 @@ static FunctionDecl *getFFun(Sema *s, SourceLocation OpLoc)
         Parent = CLinkageDecl;
         IdentifierInfo *II = &s->Context.Idents.get("fixupFunction");
         DeclarationNameInfo NameInfo(II, OpLoc);
-        QualType ArgTypes[] = {ccharp, voidpp};
-        auto FnType = s->Context.getFunctionType(voidp, ArrayRef<QualType>(ArgTypes, 2), EPI);
+        QualType ArgTypes[] = {voidpp};
+        auto FnType = s->Context.getFunctionType(voidp, ArrayRef<QualType>(ArgTypes, 1), EPI);
         FFDecl = FunctionDecl::Create(s->Context, Parent, OpLoc,
             NameInfo, FnType, nullptr, SC_Extern, false, true, false);
         SmallVector<ParmVarDecl *, 16> Params;
-        Params.push_back(ParmVarDecl::Create(s->Context, FFDecl, OpLoc,
-            OpLoc, nullptr, ccharp, /*TInfo=*/nullptr, SC_None, nullptr));
         Params.push_back(ParmVarDecl::Create(s->Context, FFDecl, OpLoc,
             OpLoc, nullptr, voidpp, /*TInfo=*/nullptr, SC_None, nullptr));
         FFDecl->setParams(Params);
@@ -1354,22 +1352,17 @@ static FunctionDecl *getABR(Sema *s, SourceLocation OpLoc)
     return ABRDecl;
 }
 
-static CallExpr *buildBlock(Sema &Actions, std::string blockName, ArrayRef<BlockDecl::Capture> Captures,
+static CallExpr *buildBlock(Sema &Actions, ArrayRef<BlockDecl::Capture> Captures,
     CompoundStmt *bodyStmt, QualType blockType, SourceLocation RuleLoc)
 {
   FunctionDecl *FFDecl = getFFun(&Actions, RuleLoc);
   NestedNameSpecifierLoc NNSloc;
-  Expr *NameExpr = Actions.ImpCastExprToType(StringLiteral::Create(Actions.Context, blockName,
-          StringLiteral::Ascii, /*Pascal*/ false,
-          Actions.Context.getConstantArrayType(Actions.Context.CharTy.withConst(),
-          llvm::APInt(32, blockName.length() + 1), ArrayType::Normal, 0), RuleLoc),
-          ccharp, CK_ArrayToPointerDecay).get();
   BlockDecl *TheDecl = BlockDecl::Create(Actions.Context, Actions.CurContext, RuleLoc, true);
   Actions.CurContext->addDecl(TheDecl);
   TheDecl->setBody(bodyStmt);
   TheDecl->setCaptures(Actions.Context, Captures, true);
   RuleExpr *vresult = new (Actions.Context) RuleExpr(TheDecl, blockType);
-  Expr *Args[] = {NameExpr, Actions.ImpCastExprToType(vresult, voidpp, CK_BitCast).get()};
+  Expr *Args[] = {Actions.ImpCastExprToType(vresult, voidpp, CK_BitCast).get()};
   Expr *Fn = DeclRefExpr::Create(Actions.Context, NNSloc, RuleLoc, FFDecl, false,
       RuleLoc, FFDecl->getType(), VK_LValue, nullptr);
   Fn = Actions.ImpCastExprToType(Fn, Actions.Context.getPointerType(FFDecl->getType()), CK_FunctionToPointerDecay).get();
@@ -1396,10 +1389,9 @@ Sema::ActOnRuleStmt(SourceLocation RuleLoc, StringRef AName, Expr *ConditionExpr
           Context.getConstantArrayType(Context.CharTy.withConst(),
           llvm::APInt(32, Name.length() + 1), ArrayType::Normal, 0), RuleLoc),
           ccharp, CK_ArrayToPointerDecay).get();
-  CallExpr *bcall = buildBlock(*this, Name + "__RDY", Captures,
+  CallExpr *bcall = buildBlock(*this, Captures,
     new (Context) class CompoundStmt(Context, Stmts, RuleLoc, RuleLoc), bbool, RuleLoc);
-  CallExpr *vcall = buildBlock(*this, Name + "__ENA", Captures,
-    cast<CompoundStmt>(bodyStmt), bvoid, RuleLoc);
+  CallExpr *vcall = buildBlock(*this, Captures, cast<CompoundStmt>(bodyStmt), bvoid, RuleLoc);
   Expr *Args[] = {thisp, NameExpr, bcall, vcall};
 
   NestedNameSpecifierLoc NNSloc;

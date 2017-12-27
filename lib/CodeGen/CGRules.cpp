@@ -60,8 +60,8 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   for (const auto &CI : blockDecl->captures()) {
     const VarDecl *variable = CI.getVariable(); 
     QualType VT = variable->getType();
-    if (CI.isByRef() || VT->getAsCXXRecordDecl() || VT->isObjCRetainableType() || CI.hasCopyExpr()
-     || CI.isNested() || VT->isReferenceType()) {
+    if (CI.isByRef() || VT->getAsCXXRecordDecl() || VT->isObjCRetainableType()
+     || CI.hasCopyExpr() || CI.isNested() || VT->isReferenceType()) {
 printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
     }
     if (endAlign < blockInfo.BlockAlign) {
@@ -159,7 +159,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   }
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeBlockFunctionDeclaration(FnType, Args);
   llvm::Function *Fn = llvm::Function::Create(CGM.getTypes().GetFunctionType(FnInfo),
-      llvm::GlobalValue::InternalLinkage, CGM.getBlockMangledName(GD, FD), &CGM.getModule());
+      llvm::GlobalValue::InternalLinkage, "ruleTemplate", &CGM.getModule());
   auto AI = Fn->arg_begin(), AE = Fn->arg_end();
   AI++;
   CXXThisValue = AI;

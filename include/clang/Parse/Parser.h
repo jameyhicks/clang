@@ -1759,7 +1759,7 @@ private:
   StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseDoStatement();
-  StmtResult ParseRuleStatement(SourceLocation *TrailingElseLoc);
+  StmtResult ParseRuleStatement();
   StmtResult ParseForStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseGotoStatement();
   StmtResult ParseContinueStatement();
