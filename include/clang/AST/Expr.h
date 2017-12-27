@@ -4885,7 +4885,7 @@ public:
   Stmt *getBody();
 
   SourceLocation getLocStart() const LLVM_READONLY { return getCaretLocation(); }
-  SourceLocation getLocEnd() const LLVM_READONLY { return getBody()->getLocEnd(); }
+  SourceLocation getLocEnd() const LLVM_READONLY { return getCaretLocation(); }
 
   /// getFunctionType - Return the underlying function type for this block.
   const FunctionProtoType *getFunctionType() const;

@@ -6253,14 +6253,6 @@ bool ASTImporter::IsStructurallyEquivalent(QualType From, QualType To,
   return Ctx.IsStructurallyEquivalent(From, To);
 }
 #if 0
-***************
-*** 878,883 ****
-      break;
-    }
-  
-    } // end switch
-  
-    return true;
 --- 878,892 ----
       break;
     }

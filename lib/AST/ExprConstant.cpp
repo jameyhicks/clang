@@ -7123,6 +7123,7 @@ static int EvaluateBuiltinClassifyType(const CallExpr *E,
     case BuiltinType::ULong:
     case BuiltinType::ULongLong:
     case BuiltinType::UInt128:
+    //???? case BuiltinType::AtomiccBits:
       return integer_type_class;
 
     case BuiltinType::NullPtr:
@@ -7175,6 +7176,7 @@ static int EvaluateBuiltinClassifyType(const CallExpr *E,
     if (const RecordType *RT = CanTy->getAs<RecordType>()) {
       switch (RT->getDecl()->getTagKind()) {
       case TagTypeKind::TTK_Struct:
+      case TagTypeKind::TTK_AInterface: case TagTypeKind::TTK_AModule: case TagTypeKind::TTK_AEModule:
       case TagTypeKind::TTK_Class:
       case TagTypeKind::TTK_Interface:
         return record_type_class;

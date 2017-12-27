@@ -1633,7 +1633,6 @@ private:
   /// no formals.
   ParmVarDecl **ParamInfo;
 
-  LazyDeclStmtPtr Guard;
   LazyDeclStmtPtr Body;
 
   // FIXME: This can be packed into the bitfields in DeclContext.
