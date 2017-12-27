@@ -430,6 +430,13 @@ public:
 
   // l-values.
   Value *VisitDeclRefExpr(DeclRefExpr *E) {
+    if (E->refersToEnclosingVariableOrCapture()) {
+      assert(isa<BlockDecl>(CGF.CurCodeDecl));
+      if (const auto *VD = dyn_cast<VarDecl>(E->getDecl()))
+      if (cast<BlockDecl>(CGF.CurCodeDecl)->isRule())
+        // Atomicc RuleExpr functions return RValues, not LValues
+        return CGF.GetAddrOfBlockDeclRule(VD);
+    }
     if (CodeGenFunction::ConstantEmission result = CGF.tryEmitAsConstant(E)) {
       if (result.isReference())
         return EmitLoadOfLValue(result.getReferenceLValue(CGF, E),

@@ -47,9 +47,6 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   blockInfo.NextBlockInfo = FirstBlockInfo;
   FirstBlockInfo = &blockInfo; 
   blockInfo.BlockAlign = CGM.getPointerAlign();
-  if (!blockDecl->hasCaptures()) {
-printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-}
 
   /// Compute the layout of the given block.  The header is basically:
   //     'struct { void *invoke; void *STy; ... data for captures ...}'.
@@ -126,12 +123,11 @@ blockInfo.StructureType->dump();
 }
 
 llvm::DenseMap<int, llvm::Value *> paramMap;
-Address CodeGenFunction::GetAddrOfBlockDeclRule(const VarDecl *variable, bool isByRef) {
+llvm::Value *CodeGenFunction::GetAddrOfBlockDeclRule(const VarDecl *variable) {
   const CGBlockInfo::Capture &capture = BlockInfo->getCapture(variable); 
-  if (isByRef) {
-      printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  } 
-  return Address(paramMap[capture.getIndex()], BlockInfo->BlockAlign);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+paramMap[capture.getIndex()]->dump();
+  return paramMap[capture.getIndex()];
 }
 
 llvm::Function *
@@ -149,9 +145,6 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   const FunctionProtoType *FnType = blockExpr->getFunctionType();
   CurEHLocation = blockExpr->getLocEnd(); 
   Stmt *Body = FD->getBody();
-  if (FD->getNumParams()) {
-    printf("[%s:%d]ZZZZZ\n", __FUNCTION__, __LINE__); exit(-1);
-  }
   // Begin building the function declaration.  
   // The first argument is the block pointer.  Just take it as a void* and cast it later.
   IdentifierInfo *II = &CGM.getContext().Idents.get(".block_descriptor"); 
@@ -168,7 +161,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       const CGBlockInfo::Capture &capture = BlockInfo->getCapture(item.second); 
       IdentifierInfo *II = &CGM.getContext().Idents.get(item.second->getName()); 
       Args.push_back(ParmVarDecl::Create(getContext(), const_cast<BlockDecl *>(FD), loc,
-          loc, II, getContext().getPointerType(capture.fieldType()),
+          loc, II, capture.fieldType(),
           /*TInfo=*/nullptr, SC_None, nullptr));
   }
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeBlockFunctionDeclaration(FnType, Args);
