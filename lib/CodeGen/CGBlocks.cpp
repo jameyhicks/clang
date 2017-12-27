@@ -1,4 +1,3 @@
-#if 0// temp for CGRule debug
 //===--- CGBlocks.cpp - Emit LLVM Code for declarations ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -2499,4 +2498,3 @@ llvm::Constant *CodeGenModule::getNSConcreteStackBlock() {
   configureBlocksRuntimeObject(*this, NSConcreteStackBlock);
   return NSConcreteStackBlock;
 }
-#endif

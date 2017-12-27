@@ -1364,11 +1364,11 @@ static CallExpr *buildBlock(Sema &Actions, std::string blockName, ArrayRef<Block
           Actions.Context.getConstantArrayType(Actions.Context.CharTy.withConst(),
           llvm::APInt(32, blockName.length() + 1), ArrayType::Normal, 0), RuleLoc),
           ccharp, CK_ArrayToPointerDecay).get();
-  BlockDecl *TheDecl = BlockDecl::Create(Actions.Context, Actions.CurContext, RuleLoc);
+  BlockDecl *TheDecl = BlockDecl::Create(Actions.Context, Actions.CurContext, RuleLoc, true);
   Actions.CurContext->addDecl(TheDecl);
   TheDecl->setBody(bodyStmt);
   TheDecl->setCaptures(Actions.Context, Captures, true);
-  BlockExpr *vresult = new (Actions.Context) BlockExpr(TheDecl, blockType);
+  RuleExpr *vresult = new (Actions.Context) RuleExpr(TheDecl, blockType);
   Expr *Args[] = {NameExpr, Actions.ImpCastExprToType(vresult, voidpp, CK_BitCast).get()};
   Expr *Fn = DeclRefExpr::Create(Actions.Context, NNSloc, RuleLoc, FFDecl, false,
       RuleLoc, FFDecl->getType(), VK_LValue, nullptr);

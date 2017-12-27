@@ -736,6 +736,7 @@ public:
 
   // Other Operators.
   Value *VisitBlockExpr(const BlockExpr *BE);
+  Value *VisitRuleExpr(const RuleExpr *BE);
   Value *VisitAbstractConditionalOperator(const AbstractConditionalOperator *);
   Value *VisitChooseExpr(ChooseExpr *CE);
   Value *VisitVAArgExpr(VAArgExpr *VE);
@@ -3634,6 +3635,10 @@ Value *ScalarExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
 
 Value *ScalarExprEmitter::VisitBlockExpr(const BlockExpr *block) {
   return CGF.EmitBlockLiteral(block);
+}
+
+Value *ScalarExprEmitter::VisitRuleExpr(const RuleExpr *block) {
+  return CGF.EmitRuleLiteral(block);
 }
 
 // Convert a vec3 to vec4, or vice versa.

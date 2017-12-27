@@ -2300,7 +2300,9 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
       }
 
       assert(isa<BlockDecl>(CurCodeDecl));
-      Address addr = GetAddrOfBlockDecl(VD, VD->hasAttr<BlocksAttr>());
+      Address addr = (cast<BlockDecl>(CurCodeDecl)->isRule()) ?
+          GetAddrOfBlockDeclRule(VD, VD->hasAttr<BlocksAttr>())
+        : GetAddrOfBlockDecl(VD, VD->hasAttr<BlocksAttr>());
       LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
       return MakeAddrLValue(addr, T, BaseInfo);
     }

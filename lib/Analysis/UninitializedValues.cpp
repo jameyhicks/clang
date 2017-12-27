@@ -510,6 +510,7 @@ public:
 
   void VisitBinaryOperator(BinaryOperator *bo);
   void VisitBlockExpr(BlockExpr *be);
+  void VisitRuleExpr(RuleExpr *be);
   void VisitCallExpr(CallExpr *ce);
   void VisitDeclRefExpr(DeclRefExpr *dr);
   void VisitDeclStmt(DeclStmt *ds);
@@ -691,6 +692,20 @@ void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *FS) {
 }
 
 void TransferFunctions::VisitBlockExpr(BlockExpr *be) {
+  const BlockDecl *bd = be->getBlockDecl();
+  for (const auto &I : bd->captures()) {
+    const VarDecl *vd = I.getVariable();
+    if (!isTrackedVar(vd))
+      continue;
+    if (I.isByRef()) {
+      vals[vd] = Initialized;
+      continue;
+    }
+    reportUse(be, vd);
+  }
+}
+
+void TransferFunctions::VisitRuleExpr(RuleExpr *be) {
   const BlockDecl *bd = be->getBlockDecl();
   for (const auto &I : bd->captures()) {
     const VarDecl *vd = I.getVariable();

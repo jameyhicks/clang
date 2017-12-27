@@ -915,6 +915,11 @@ void ASTStmtReader::VisitBlockExpr(BlockExpr *E) {
   E->setBlockDecl(ReadDeclAs<BlockDecl>());
 }
 
+void ASTStmtReader::VisitRuleExpr(RuleExpr *E) {
+  VisitExpr(E);
+  E->setBlockDecl(ReadDeclAs<BlockDecl>());
+}
+
 void ASTStmtReader::VisitGenericSelectionExpr(GenericSelectionExpr *E) {
   VisitExpr(E);
   E->NumAssocs = Record.readInt();
@@ -3326,6 +3331,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_BLOCK:
       S = new (Context) BlockExpr(Empty);
+      break;
+
+    case EXPR_RULE:
+      S = new (Context) RuleExpr(Empty);
       break;
 
     case EXPR_GENERIC_SELECTION:

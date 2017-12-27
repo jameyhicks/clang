@@ -530,6 +530,7 @@ namespace  {
     void VisitCompoundAssignOperator(const CompoundAssignOperator *Node);
     void VisitAddrLabelExpr(const AddrLabelExpr *Node);
     void VisitBlockExpr(const BlockExpr *Node);
+    void VisitRuleExpr(const RuleExpr *Node);
     void VisitOpaqueValueExpr(const OpaqueValueExpr *Node);
 
     // C++
@@ -2118,6 +2119,11 @@ void ASTDumper::VisitCompoundAssignOperator(
 }
 
 void ASTDumper::VisitBlockExpr(const BlockExpr *Node) {
+  VisitExpr(Node);
+  dumpDecl(Node->getBlockDecl());
+}
+
+void ASTDumper::VisitRuleExpr(const RuleExpr *Node) {
   VisitExpr(Node);
   dumpDecl(Node->getBlockDecl());
 }

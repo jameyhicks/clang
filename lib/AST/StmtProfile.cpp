@@ -1177,6 +1177,11 @@ void StmtProfiler::VisitBlockExpr(const BlockExpr *S) {
   VisitDecl(S->getBlockDecl());
 }
 
+void StmtProfiler::VisitRuleExpr(const RuleExpr *S) {
+  VisitExpr(S);
+  VisitDecl(S->getBlockDecl());
+}
+
 void StmtProfiler::VisitGenericSelectionExpr(const GenericSelectionExpr *S) {
   VisitExpr(S);
   for (unsigned i = 0; i != S->getNumAssocs(); ++i) {

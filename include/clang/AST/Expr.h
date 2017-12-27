@@ -4859,6 +4859,50 @@ public:
   }
 };
 
+/// RuleExpr - Adaptor class for mixing a BlockDecl with expressions.
+/// ^{ statement-body }   or   ^(int arg1, float arg2){ statement-body }
+class RuleExpr : public Expr {
+protected:
+  BlockDecl *TheBlock;
+public:
+  RuleExpr(BlockDecl *BD, QualType ty)
+    : Expr(RuleExprClass, ty, VK_RValue, OK_Ordinary,
+           ty->isDependentType(), ty->isDependentType(),
+           ty->isInstantiationDependentType() || BD->isDependentContext(),
+           false),
+      TheBlock(BD) {}
+
+  /// \brief Build an empty block expression.
+  explicit RuleExpr(EmptyShell Empty) : Expr(RuleExprClass, Empty) { }
+
+  const BlockDecl *getBlockDecl() const { return TheBlock; }
+  BlockDecl *getBlockDecl() { return TheBlock; }
+  void setBlockDecl(BlockDecl *BD) { TheBlock = BD; }
+
+  // Convenience functions for probing the underlying BlockDecl.
+  SourceLocation getCaretLocation() const;
+  const Stmt *getBody() const;
+  Stmt *getBody();
+
+  SourceLocation getLocStart() const LLVM_READONLY { return getCaretLocation(); }
+  SourceLocation getLocEnd() const LLVM_READONLY { return getBody()->getLocEnd(); }
+
+  /// getFunctionType - Return the underlying function type for this block.
+  const FunctionProtoType *getFunctionType() const;
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == RuleExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
 /// AsTypeExpr - Clang builtin function __builtin_astype [OpenCL 6.2.4.2]
 /// This AST node provides support for reinterpreting a type to another
 /// type of the same size.

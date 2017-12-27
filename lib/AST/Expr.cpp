@@ -1952,6 +1952,21 @@ const Stmt *BlockExpr::getBody() const {
 Stmt *BlockExpr::getBody() {
   return TheBlock->getBody();
 }
+const FunctionProtoType *RuleExpr::getFunctionType() const {
+  // The block pointer is never sugared, but the function type might be.
+  return cast<BlockPointerType>(getType())
+           ->getPointeeType()->castAs<FunctionProtoType>();
+}
+
+SourceLocation RuleExpr::getCaretLocation() const {
+  return TheBlock->getCaretLocation();
+}
+const Stmt *RuleExpr::getBody() const {
+  return TheBlock->getBody();
+}
+Stmt *RuleExpr::getBody() {
+  return TheBlock->getBody();
+}
 
 
 //===----------------------------------------------------------------------===//
@@ -2953,6 +2968,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   }
 
   case BlockExprClass:
+  case RuleExprClass:
   case CXXBindTemporaryExprClass:
     if (!IncludePossibleEffects)
       break;

@@ -1348,6 +1348,8 @@ namespace clang {
       EXPR_CONVERT_VECTOR,
       /// \brief BlockExpr
       EXPR_BLOCK,
+      /// \brief RuleExpr
+      EXPR_RULE,
       /// \brief A GenericSelectionExpr record.
       EXPR_GENERIC_SELECTION,
       /// \brief A PseudoObjectExpr record.

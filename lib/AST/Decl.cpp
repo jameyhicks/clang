@@ -4196,12 +4196,13 @@ FunctionDecl *FunctionDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
                                   SC_None, false, false);
 }
 
-BlockDecl *BlockDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L) {
-  return new (C, DC) BlockDecl(DC, L);
+BlockDecl *BlockDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L, bool Rule) {
+printf("[%s:%d] rule %d\n", __FUNCTION__, __LINE__, Rule);
+  return new (C, DC) BlockDecl(DC, L, Rule);
 }
 
 BlockDecl *BlockDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
-  return new (C, ID) BlockDecl(nullptr, SourceLocation());
+  return new (C, ID) BlockDecl(nullptr, SourceLocation(), false);
 }
 
 CapturedDecl::CapturedDecl(DeclContext *DC, unsigned NumParams)

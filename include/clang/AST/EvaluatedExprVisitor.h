@@ -43,6 +43,7 @@ public:
   void VisitUnaryExprOrTypeTraitExpr(PTR(UnaryExprOrTypeTraitExpr) E) { }
   void VisitExpressionTraitExpr(PTR(ExpressionTraitExpr) E) { }
   void VisitBlockExpr(PTR(BlockExpr) E) { }
+  void VisitRuleExpr(PTR(RuleExpr) E) { }
   void VisitCXXUuidofExpr(PTR(CXXUuidofExpr) E) { }
   void VisitCXXNoexceptExpr(PTR(CXXNoexceptExpr) E) { }
 

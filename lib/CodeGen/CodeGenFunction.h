@@ -1578,44 +1578,50 @@ public:
   //===--------------------------------------------------------------------===//
 
   llvm::Value *EmitBlockLiteral(const BlockExpr *);
-  static void destroyBlockInfos(CGBlockInfo *info){}//jca
+  llvm::Value *EmitRuleLiteral(const RuleExpr *);
+  static void destroyBlockInfos(CGBlockInfo *info);
 
   llvm::Function *GenerateBlockFunction(GlobalDecl GD,
                                         const CGBlockInfo &Info,
                                         const DeclMapTy &ldm,
                                         bool IsLambdaConversionToBlock);
+  llvm::Function *GenerateRuleFunction(GlobalDecl GD,
+                                       const CGBlockInfo &Info,
+                                       QualType thisType,
+                                       const RuleExpr *blockExpr);
 
   llvm::Constant *GenerateCopyHelperFunction(const CGBlockInfo &blockInfo);
-  //jca llvm::Constant *GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo);
+  llvm::Constant *GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo);
   llvm::Constant *GenerateObjCAtomicSetterCopyHelperFunction(
                                              const ObjCPropertyImplDecl *PID);
   llvm::Constant *GenerateObjCAtomicGetterCopyHelperFunction(
                                              const ObjCPropertyImplDecl *PID);
   llvm::Value *EmitBlockCopyAndAutorelease(llvm::Value *Block, QualType Ty);
 
-  //jca void BuildBlockRelease(llvm::Value *DeclPtr, BlockFieldFlags flags);
+  void BuildBlockRelease(llvm::Value *DeclPtr, BlockFieldFlags flags);
 
   class AutoVarEmission;
 
-  void emitByrefStructureInit(const AutoVarEmission &emission){}//jca
-  void enterByrefCleanup(const AutoVarEmission &emission){}//jca
+  void emitByrefStructureInit(const AutoVarEmission &emission);
+  void enterByrefCleanup(const AutoVarEmission &emission);
 
   void setBlockContextParameter(const ImplicitParamDecl *D, unsigned argNum,
                                 llvm::Value *ptr);
 
   Address LoadBlockStruct();
   Address GetAddrOfBlockDecl(const VarDecl *var, bool ByRef);
+  Address GetAddrOfBlockDeclRule(const VarDecl *var, bool ByRef);
 
   /// BuildBlockByrefAddress - Computes the location of the
   /// data in a variable which is declared as __block.
   Address emitBlockByrefAddress(Address baseAddr, const VarDecl *V,
-                                bool followForward = true){return baseAddr;} //jca
+                                bool followForward = true);
   Address emitBlockByrefAddress(Address baseAddr,
                                 const BlockByrefInfo &info,
                                 bool followForward,
-                                const llvm::Twine &name){return baseAddr;} //jca
+                                const llvm::Twine &name);
 
-  const BlockByrefInfo &getBlockByrefInfo(const VarDecl *var){}//jca
+  const BlockByrefInfo &getBlockByrefInfo(const VarDecl *var);
 
   QualType BuildFunctionArgList(GlobalDecl GD, FunctionArgList &Args);
 
@@ -2459,7 +2465,7 @@ public:
     Address getObjectAddress(CodeGenFunction &CGF) const {
       if (!IsByRef) return Addr;
 
-      return Addr; //jca return CGF.emitBlockByrefAddress(Addr, Variable, /*forward*/ false);
+      return CGF.emitBlockByrefAddress(Addr, Variable, /*forward*/ false);
     }
   };
   AutoVarEmission EmitAutoVarAlloca(const VarDecl &var);
@@ -3829,8 +3835,8 @@ private:
 
   void EmitDeclMetadata();
 
-  //jca BlockByrefHelpers *buildByrefHelpers(llvm::StructType &byrefType,
-                                  //jca const AutoVarEmission &emission);
+  BlockByrefHelpers *buildByrefHelpers(llvm::StructType &byrefType,
+                                  const AutoVarEmission &emission);
 
   void AddObjCARCExceptionMetadata(llvm::Instruction *Inst);
 
