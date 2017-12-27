@@ -125,8 +125,6 @@ blockInfo.StructureType->dump();
 llvm::DenseMap<int, llvm::Value *> paramMap;
 llvm::Value *CodeGenFunction::GetAddrOfBlockDeclRule(const VarDecl *variable) {
   const CGBlockInfo::Capture &capture = BlockInfo->getCapture(variable); 
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-paramMap[capture.getIndex()]->dump();
   return paramMap[capture.getIndex()];
 }
 
@@ -161,8 +159,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       const CGBlockInfo::Capture &capture = BlockInfo->getCapture(item.second); 
       IdentifierInfo *II = &CGM.getContext().Idents.get(item.second->getName()); 
       Args.push_back(ParmVarDecl::Create(getContext(), const_cast<BlockDecl *>(FD), loc,
-          loc, II, capture.fieldType(),
-          /*TInfo=*/nullptr, SC_None, nullptr));
+          loc, II, capture.fieldType(), /*TInfo=*/nullptr, SC_None, nullptr));
   }
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeBlockFunctionDeclaration(FnType, Args);
   llvm::Function *Fn = llvm::Function::Create(CGM.getTypes().GetFunctionType(FnInfo),
