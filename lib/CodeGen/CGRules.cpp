@@ -151,13 +151,9 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   IdentifierInfo *IThis = &CGM.getContext().Idents.get("this"); 
   Args.push_back(ParmVarDecl::Create(getContext(), const_cast<BlockDecl *>(FD), loc,
       loc, IThis, thisType, /*TInfo=*/nullptr, SC_None, nullptr));
-  llvm::DenseMap<int, const VarDecl *> capIndex;
-  for (auto capture: BlockInfo->Captures)
-      if (capture.first)  // no need to look at 'this' param
-          capIndex[capture.second.getIndex()] = capture.first;
-  for (auto item: capIndex) {
-      const CGBlockInfo::Capture &capture = BlockInfo->getCapture(item.second); 
-      IdentifierInfo *II = &CGM.getContext().Idents.get(item.second->getName()); 
+  for (const auto &CI : FD->captures()) {
+      const CGBlockInfo::Capture &capture = BlockInfo->getCapture(CI.getVariable()); 
+      IdentifierInfo *II = &CGM.getContext().Idents.get(CI.getVariable()->getName()); 
       Args.push_back(ParmVarDecl::Create(getContext(), const_cast<BlockDecl *>(FD), loc,
           loc, II, capture.fieldType(), /*TInfo=*/nullptr, SC_None, nullptr));
   }
@@ -181,7 +177,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   --entry_ptr; 
   PGO.assignRegionCounters(GlobalDecl(FD), Fn);
   incrementProfileCounter(Body);
-  EmitStmt(Body);
+  EmitStmt(Body);  // triggers callbacks to GetAddrOfBlockDeclRule for Captures items
   // Remember where we were...
   llvm::BasicBlock *resume = Builder.GetInsertBlock(); 
   // Go back to the entry.
