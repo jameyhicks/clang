@@ -4197,7 +4197,6 @@ FunctionDecl *FunctionDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
 }
 
 BlockDecl *BlockDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L, bool Rule) {
-printf("[%s:%d] rule %d\n", __FUNCTION__, __LINE__, Rule);
   return new (C, DC) BlockDecl(DC, L, Rule);
 }
 
