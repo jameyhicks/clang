@@ -1588,7 +1588,7 @@ public:
   llvm::Function *GenerateRuleFunction(GlobalDecl GD,
                                        const CGBlockInfo &Info,
                                        QualType thisType,
-                                       const RuleExpr *blockExpr);
+                                       const FunctionProtoType *FnType);
 
   llvm::Constant *GenerateCopyHelperFunction(const CGBlockInfo &blockInfo);
   llvm::Constant *GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo);

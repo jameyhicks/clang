@@ -52,7 +52,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   //     'struct { void *invoke; void *STy; ... data for captures ...}'.
   SmallVector<llvm::Type*, 8> elementTypes;
   elementTypes.push_back(CGM.VoidPtrTy); // void *invoke;
-  elementTypes.push_back(CGM.Int64Ty);   // void *STy;
+  elementTypes.push_back(CGM.Int64Ty);   // i64   STy;
   blockInfo.BlockSize = 2 * CGM.getPointerSize();
   CharUnits endAlign = getLowBit(blockInfo.BlockSize); 
 
@@ -84,7 +84,7 @@ blockInfo.StructureType->dump();
   // Using the computed layout, generate the actual block function.
   QualType thisType = cast<CXXMethodDecl>(CurFuncDecl)->getThisType(CGM.getContext());
   llvm::Constant *blockFn = llvm::ConstantExpr::getBitCast(
-      CodeGenFunction(CGM, true).GenerateRuleFunction(CurGD, blockInfo, thisType, blockExpr),
+      CodeGenFunction(CGM, true).GenerateRuleFunction(CurGD, blockInfo, thisType, blockExpr->getFunctionType()),
       VoidPtrTy);
 
   // Make the allocation for the block.
@@ -97,9 +97,9 @@ blockInfo.StructureType->dump();
   auto storeField = [&](llvm::Value *value, unsigned index, CharUnits offset, const Twine &name) {
       Builder.CreateStore(value, projectField(index, offset, name));
     };
-  storeField(blockFn, 0, CharUnits(), "block.invoke"); // Function *invoke;
-  storeField(llvm::Constant::getIntegerValue(CGM.Int64Ty,
-    llvm::APInt(64, (uint64_t) blockInfo.StructureType)), 1, CharUnits(), "block.STy"); // Int64Ty STy;
+  storeField(blockFn, 0, CharUnits(), "block.invoke");             // Function *invoke;
+  storeField(llvm::Constant::getIntegerValue(CGM.Int64Ty,          // Int64Ty STy;
+    llvm::APInt(64, (uint64_t) blockInfo.StructureType)), 1, CharUnits(), "block.STy");
 
   // Finally, capture all the values into the block.
   for (const auto &CI : blockDecl->captures()) {
@@ -124,15 +124,14 @@ blockInfo.StructureType->dump();
 
 llvm::DenseMap<int, llvm::Value *> paramMap;
 llvm::Value *CodeGenFunction::GetAddrOfBlockDeclRule(const VarDecl *variable) {
-  const CGBlockInfo::Capture &capture = BlockInfo->getCapture(variable); 
-  return paramMap[capture.getIndex()];
+  return paramMap[BlockInfo->getCapture(variable).getIndex()];
 }
 
 llvm::Function *
 CodeGenFunction::GenerateRuleFunction(GlobalDecl GD,
                                        const CGBlockInfo &blockInfo,
                                        QualType thisType,
-                                       const RuleExpr *blockExpr) {
+                                       const FunctionProtoType *FnType) {
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   BlockInfo = &blockInfo; 
   const BlockDecl *FD = blockInfo.getBlockDecl(); 
@@ -140,8 +139,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   CurGD = GD; 
 
   FunctionArgList Args; 
-  const FunctionProtoType *FnType = blockExpr->getFunctionType();
-  CurEHLocation = blockExpr->getLocEnd(); 
+  CurEHLocation = loc;
   Stmt *Body = FD->getBody();
   // Begin building the function declaration.  
   IdentifierInfo *IThis = &CGM.getContext().Idents.get("this"); 
