@@ -144,10 +144,6 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   CurEHLocation = blockExpr->getLocEnd(); 
   Stmt *Body = FD->getBody();
   // Begin building the function declaration.  
-  // The first argument is the block pointer.  Just take it as a void* and cast it later.
-  IdentifierInfo *II = &CGM.getContext().Idents.get(".block_descriptor"); 
-  Args.push_back(ParmVarDecl::Create(getContext(), const_cast<BlockDecl *>(FD), loc,
-      loc, II, getContext().VoidPtrTy, /*TInfo=*/nullptr, SC_None, nullptr));
   IdentifierInfo *IThis = &CGM.getContext().Idents.get("this"); 
   Args.push_back(ParmVarDecl::Create(getContext(), const_cast<BlockDecl *>(FD), loc,
       loc, IThis, thisType, /*TInfo=*/nullptr, SC_None, nullptr));
@@ -161,7 +157,6 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   llvm::Function *Fn = llvm::Function::Create(CGM.getTypes().GetFunctionType(FnInfo),
       llvm::GlobalValue::InternalLinkage, "ruleTemplate", &CGM.getModule());
   auto AI = Fn->arg_begin(), AE = Fn->arg_end();
-  AI++;
   CXXThisValue = AI;
   int paramIndex = 1;
   for (; AI != AE; AI++, paramIndex++)
@@ -169,25 +164,9 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
   // Emit the standard function prologue.
   StartFunction(FD, FnType->getReturnType(), Fn, FnInfo, Args, FD->getLocation(), Body->getLocStart()); 
-
   // Generate the body of the function.
-  // Save a spot to insert the debug information for all the DeclRefExprs.
-  llvm::BasicBlock *entry = Builder.GetInsertBlock();
-  llvm::BasicBlock::iterator entry_ptr = Builder.GetInsertPoint();
-  --entry_ptr; 
-  PGO.assignRegionCounters(GlobalDecl(FD), Fn);
-  incrementProfileCounter(Body);
   EmitStmt(Body);  // triggers callbacks to GetAddrOfBlockDeclRule for Captures items
-  // Remember where we were...
-  llvm::BasicBlock *resume = Builder.GetInsertBlock(); 
-  // Go back to the entry.
-  ++entry_ptr;
-  Builder.SetInsertPoint(entry, entry_ptr); 
-  // And resume where we left off.
-  if (resume == nullptr)
-    Builder.ClearInsertionPoint();
-  else
-    Builder.SetInsertPoint(resume); 
+
   FinishFunction(CurEHLocation);
   return Fn;
 }
